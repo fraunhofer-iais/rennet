@@ -10,6 +10,7 @@ conda install -n r3 -c conda-forge pylint
 pip install yapf
 pip install https://github.com/ipython-contrib/jupyter_contrib_nbextensions/tarball/master
 conda install click
+pip install pydub
 
 echo "Done with r3"
 echo "Starting with r2"
@@ -20,3 +21,4 @@ conda install -n r2 jupyter
 pip install yapf
 pip install https://github.com/ipython-contrib/jupyter_contrib_nbextensions/tarball/master
 conda install -n r2 click
+pip install pydub

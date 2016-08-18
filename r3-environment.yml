@@ -98,6 +98,7 @@ dependencies:
   - prompt-toolkit==1.0.3
   - protobuf==3.0.0b2
   - psutil==4.3.0
+  - pydub==0.16.5
   - pyparsing==2.1.7
   - pytest==2.9.2
   - python-dateutil==2.5.3
