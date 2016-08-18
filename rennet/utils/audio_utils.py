@@ -8,7 +8,7 @@ from __future__ import print_function
 import os
 import struct
 import warnings
-# from pydub import AudioSegment
+from pydub import AudioSegment
 
 FFMPEG_EXEC = "ffmpeg.exe" if os.name == "nt" else "ffmpeg"
 WAVE_FORMAT_PCM = 0x0001
@@ -108,10 +108,8 @@ def get_samplerate(filepath):
 
     # Arguments
         filepath: path to audio file
-        fmt: format of the audio file. If None, will try to detect it
-    """
-    # return AudioSegment.from_file(filepath).frame_rate
-    """
+
+    # Plan
         - check if ffmeg is available
         - if yes
             + get the information from ffmpeg error stdout
@@ -130,7 +128,7 @@ def get_samplerate(filepath):
     TODO: reaname samples thing, refactor
     """
     if _ffmpeg_available():
-        return 32000
+        return AudioSegment.from_file(filepath).frame_rate
     else:
         try:
             _, _, samplerate = read_wavefile_metadata(filepath)
