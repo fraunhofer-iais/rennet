@@ -19,26 +19,46 @@ ValidAudioFile = namedtuple(
         'seconds',
     ]
 )
-@pytest.fixture(scope="module")
-def valid_wav_file():
+
+test_1_wav = ValidAudioFile(
+    "./data/test/test1.wav",  # NOTE: Running from the project root
+    'wav',
+    32000,
+    2,
+    10.00946875
+)
+
+test_1_mp3 = ValidAudioFile(
+    "./data/test/test1.mp3",  # NOTE: Running from the project root
+    'mp3',
+    32000,
+    2,
+    10.00946875
+)
+
+test_1_mp4 = ValidAudioFile(
+    "./data/test/creative_common.mp4",  # NOTE: Running from the project root
+    'mp4',
+    48000,
+    2,
+    2.26133334
+)
+
+
+@pytest.fixture(scope="module", params=[test_1_wav, test_1_mp3])
+def valid_audio_file(request):
     """ A valid wav file for testing
 
     The test1.wav is assumed to exist
     """
-    filepath = "./data/test/test1.wav"  # NOTE: Running from the project root
-    samplerate = 32000
-    seconds = 10.0
-    channels = 2
-
-    return ValidAudioFile(filepath, 'wav', samplerate, channels, seconds)
-
+    return request.param
 
 @pytest.mark.sanity_check
-def test_valid_wav_samplerate(valid_wav_file):
+def test_valid_audio_samplerate(valid_audio_file):
     """ Test the audio_utils.get_samplerate(...) for valid wav file
     """
-    filepath = valid_wav_file.filepath
-    correct_sr = valid_wav_file.samplerate
+    filepath = valid_audio_file.filepath
+    correct_sr = valid_audio_file.samplerate
 
     calculated_sr = au.get_samplerate(filepath)
 
