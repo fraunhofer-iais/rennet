@@ -53,7 +53,10 @@ def valid_audio_file(request):
     """
     return request.param
 
-@pytest.mark.sanity_check
+@pytest.fixture(scope="module", params=[test_1_wav])
+def valid_wav_file(request):
+    return request.param
+
 def test_valid_audio_samplerate(valid_audio_file):
     """ Test the audio_utils.get_samplerate(...) for valid wav file
     """
@@ -63,3 +66,13 @@ def test_valid_audio_samplerate(valid_audio_file):
     calculated_sr = au.get_samplerate(filepath)
 
     assert calculated_sr == correct_sr
+
+def test_valid_wav_metadata(valid_wav_file):
+    filepath = valid_wav_file.filepath
+    correct_sr = valid_wav_file.samplerate
+    correct_noc = valid_wav_file.channels
+
+    _, noc, sr = au.read_wavefile_metadata(filepath)
+
+    assert sr == correct_sr
+    assert noc == correct_noc

@@ -4,6 +4,7 @@ Created: 18-08-2016
 
 Utilities for working with audio
 """
+from __future__ import print_function
 import os
 import struct
 import warnings
@@ -77,7 +78,7 @@ def read_wavefile_metadata(filepath):
 
         while fid.tell() < size:
             chunk = fid.read(4)
-            if chunk == b'fmt':
+            if chunk == b'fmt ':
                 channels, samplerate = _read_fmt_chunk(fid, big_endian)
                 break
     finally:
