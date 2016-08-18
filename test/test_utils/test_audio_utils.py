@@ -17,6 +17,7 @@ ValidAudioFile = namedtuple(
         'samplerate',
         'channels',
         'seconds',
+        'n_samples'
     ]
 )
 
@@ -25,7 +26,8 @@ test_1_wav = ValidAudioFile(
     'wav',
     32000,
     2,
-    10.00946875
+    10.00946875,
+    320303
 )
 
 test_1_mp3 = ValidAudioFile(
@@ -33,7 +35,8 @@ test_1_mp3 = ValidAudioFile(
     'mp3',
     32000,
     2,
-    10.00946875
+    10.00946875,
+    320303
 )
 
 test_1_mp4 = ValidAudioFile(
@@ -41,7 +44,8 @@ test_1_mp4 = ValidAudioFile(
     'mp4',
     48000,
     2,
-    2.26133334
+    2.26133334,
+    None  # FIXME: What are the total number of samples expected
 )
 
 
@@ -71,8 +75,10 @@ def test_valid_wav_metadata(valid_wav_file):
     filepath = valid_wav_file.filepath
     correct_sr = valid_wav_file.samplerate
     correct_noc = valid_wav_file.channels
+    correct_nsamples = valid_wav_file.n_samples
 
-    _, noc, sr = au.read_wavefile_metadata(filepath)
+    ns, noc, sr = au.read_wavefile_metadata(filepath)
 
     assert sr == correct_sr
     assert noc == correct_noc
+    assert ns == correct_nsamples

@@ -66,12 +66,23 @@ def read_wavefile_metadata(filepath):
             fmt = '<'
 
         res = struct.unpack(fmt + 'iHHIIHH', fid.read(20))
-        size2, compression, channels, samplerate, _, _, _ = res
+        size2, compression, channels, samplerate, _, _, bits = res
 
         if compression not in KNOWN_WAVE_FORMATS or size2 > 16:
             warnings.warn("Unknown wave file format", RuntimeWarning)
 
-        return channels, samplerate
+        return channels, samplerate, bits
+
+
+    def _read_n_samples(fid, big_endian, bits):
+        if big_endian:
+            fmt = '>i'
+        else:
+            fmt = '<i'
+
+        size = struct.unpack(fmt, fid.read(4))[0]
+
+        return size // (bits // 8)
 
     try:
         size, big_endian = _read_riff_chunk(fid)
@@ -79,12 +90,14 @@ def read_wavefile_metadata(filepath):
         while fid.tell() < size:
             chunk = fid.read(4)
             if chunk == b'fmt ':
-                channels, samplerate = _read_fmt_chunk(fid, big_endian)
+                channels, samplerate, bits = _read_fmt_chunk(fid, big_endian)
+            elif chunk == b'data':
+                n_samples = _read_n_samples(fid, big_endian, bits)
                 break
     finally:
         fid.close()
 
-    return size, channels, samplerate
+    return n_samples//channels, channels, samplerate
 
 
 def get_samplerate(filepath):
@@ -108,6 +121,13 @@ def get_samplerate(filepath):
                 - do the fmt_chunk thing from wave module
             + if no
                 - raise exception
+
+
+    TODO: check if WAV, then read metadata, else use pydub
+    TODO: replace mentions of FFMPEG, instead delegate to pydub, because, it is
+        okay fast, since it also does not read the complete file straightaway
+        but may involve format conversion.
+    TODO: reaname samples thing, refactor
     """
     if _ffmpeg_available():
         return 32000
