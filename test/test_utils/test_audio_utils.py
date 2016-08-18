@@ -35,11 +35,11 @@ def valid_wav_file():
 
 @pytest.mark.sanity_check
 def test_valid_wav_samplerate(valid_wav_file):
-    """ Test the audio_utils.get_samplerate_wav(...) for valid wav file
+    """ Test the audio_utils.get_samplerate(...) for valid wav file
     """
     filepath = valid_wav_file.filepath
     correct_sr = valid_wav_file.samplerate
 
-    calculated_sr = au.get_samplerate_wav(filepath)
+    calculated_sr = au.get_samplerate(filepath)
 
     assert calculated_sr == correct_sr
