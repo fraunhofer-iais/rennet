@@ -9,7 +9,7 @@ import os
 import struct
 import warnings
 
-from pydub import AudioSegment
+# from pydub import AudioSegment
 
 try:
     from subprocess import DEVNULL
@@ -234,39 +234,37 @@ def read_audio_metadata_ffmpeg(filepath):
 def get_samplerate(filepath):
     """ Get the sample rate of an audio file without reading all of it
 
-    NOTE: Tested only on formats [wav, mp3, mp4]
+    NOTE: Tested only on formats [wav, mp3, mp4], only on macOS
+    TODO: Test on Windows. The decoding my eff up for the ffmpeg one
+
     NOTE: for file formats other than wav, requires FFMPEG installed
+
+    The idea is that getting just the sample rate for the audio in a media file
+    should not require reading the entire file.
+
+    There is a native implementation for reading metada for wav files.
+
+    For other formats, the implementation parses ffmpeg output to get the
+    required information.
 
     # Arguments
         filepath: path to audio file
 
-    # Plan
-        - check if ffmeg is available
-        - if yes
-            + get the information from ffmpeg error stdout
-        - if no
-            + check if is wav file
-            + if yes
-                - do the fmt_chunk thing from wave module
-            + if no
-                - raise exception
+    # Returns
+        samplerate: in Hz
 
-
-    TODO: check if WAV, then read metadata, else use pydub
-    TODO: replace mentions of FFMPEG, instead delegate to pydub, because, it is
-        okay fast, since it also does not read the complete file straightaway
-        but may involve format conversion.
-    TODO: reaname samples thing, refactor
+    TODO: use namedtuple for audio metadata
     """
-    if _ffmpeg_available():
-        return AudioSegment.from_file(filepath).frame_rate
-    else:
-        try:
-            _, _, samplerate, _ = read_wavefile_metadata(filepath)
-        except ValueError:
-            raise RuntimeError(
-                "Neither FFMPEG was found, nor is file a valid WAVE file")
 
+    try:
+        _, _, samplerate, _ = read_wavefile_metadata(filepath)
+    except ValueError:
+        # Was not a wavefile
+        if _ffmpeg_available():
+            _, _, samplerate, _ = read_audio_metadata_ffmpeg(filepath)
+        else:
+            raise RuntimeError(
+                "Neither FFMPEG was found, nor is file %s a valid WAVE file"%filepath)
     return samplerate
 
 # TODO: Raise warning when samplerate > 48000 as pydub won't be able to support it
