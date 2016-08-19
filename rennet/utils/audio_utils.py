@@ -80,6 +80,17 @@ def read_wavefile_metadata(filepath):
 
         return channels, samplerate, bits
 
+    def _skip_unknown_chunk(fid, big_endian):
+        if big_endian:
+            fmt = '>i'
+        else:
+            fmt = '<i'
+
+        data = fid.read(4)
+        size = struct.unpack(fmt, data)[0]
+        fid.seek(size, 1)
+
+
     def _read_n_samples(fid, big_endian, bits):
         if big_endian:
             fmt = '>i'
@@ -100,6 +111,8 @@ def read_wavefile_metadata(filepath):
             elif chunk == b'data':
                 n_samples = _read_n_samples(fid, big_endian, bits)
                 break
+            elif chunk in (b'fact', b'LIST'):
+                _skip_unknown_chunk(fid, big_endian)
     finally:
         fid.close()
 

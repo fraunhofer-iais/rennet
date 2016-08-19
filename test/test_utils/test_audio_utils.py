@@ -22,6 +22,14 @@ test_1_wav = ValidAudioFile(
     10.00946875,
     320303)
 
+test_1_96k_wav = ValidAudioFile(
+    "./data/test/test1_96k.wav",  # NOTE: Running from the project root
+    'wav',
+    96000,
+    2,
+    10.00946875,
+    960909)
+
 test_1_mp3 = ValidAudioFile(
     "./data/test/test1.mp3",  # NOTE: Running from the project root
     'mp3',
@@ -40,7 +48,7 @@ test_1_mp4 = ValidAudioFile(
 )
 
 
-@pytest.fixture(scope="module", params=[test_1_wav, test_1_mp3])
+@pytest.fixture(scope="module", params=[test_1_wav, test_1_mp3, test_1_96k_wav])
 def valid_audio_files(request):
     """ A valid wav file for testing
 
@@ -49,12 +57,12 @@ def valid_audio_files(request):
     return request.param
 
 
-@pytest.fixture(scope="module", params=[test_1_wav])
+@pytest.fixture(scope="module", params=[test_1_wav, test_1_96k_wav])
 def valid_wav_files(request):
     return request.param
 
 
-@pytest.fixture(scope="module", params=[test_1_mp3, test_1_mp4, test_1_wav])
+@pytest.fixture(scope="module", params=[test_1_mp3, test_1_mp4, test_1_wav, test_1_96k_wav])
 def valid_media_files(request):
     """
     ultimate one to pass for get_samplerate(...) ... etc
