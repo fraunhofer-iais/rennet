@@ -35,7 +35,7 @@ test_1_mp4 = ValidAudioFile(
     'mp4',
     48000,
     2,
-    2.26133334,
+    2.27,
     None  # FIXME: What are the total number of samples expected
 )
 
@@ -103,3 +103,18 @@ def test_valid_audio_samplerate(valid_media_files):
 
     assert calculated_sr == correct_sr
     # TODO: Add more asserts
+
+def test_valid_media_metadata_ffmpeg(valid_media_files):
+    filepath = valid_media_files.filepath
+    correct_sr = valid_media_files.samplerate
+    correct_noc = valid_media_files.channels
+    # correct_nsamples = valid_media_files.n_samples
+    correct_duration = valid_media_files.seconds
+
+    ns, noc, sr, ds = au.read_audio_metada_ffmpeg(filepath)
+
+    assert sr == correct_sr
+    assert noc == correct_noc
+    # assert ns == correct_nsamples  # FIXME: FFMPEG not calculating correct n_samples
+    assert type(ns) is int
+    assert_almost_equal(correct_duration, ds, decimal=2)

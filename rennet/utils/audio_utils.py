@@ -170,7 +170,7 @@ def read_audio_metada_ffmpeg(filepath):
     proc = sp.Popen(command, **popen_params)
     proc.stdout.readline()
     proc.terminate()
-    infos = proc.stderr.read().decode('utf8')
+    infos = proc.stderr.read().decode('ISO-8859-1')
     del proc
 
     lines = infos.splitlines()
