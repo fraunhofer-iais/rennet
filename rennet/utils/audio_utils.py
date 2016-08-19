@@ -17,6 +17,7 @@ except ImportError:
     DEVNULL = open(os.devnull, 'wb')
 
 FFMPEG_EXEC = "ffmpeg.exe" if os.name == "nt" else "ffmpeg"
+
 WAVE_FORMAT_PCM = 0x0001
 WAVE_FORMAT_IEEE_FLOAT = 0x0003
 KNOWN_WAVE_FORMATS = (WAVE_FORMAT_PCM, WAVE_FORMAT_IEEE_FLOAT)
@@ -106,7 +107,7 @@ def read_wavefile_metadata(filepath):
     return n_samples // channels, channels, samplerate, duration_seconds
 
 
-def read_audio_metada_ffmpeg(filepath):
+def read_audio_metadata_ffmpeg(filepath):
     """
     TODO: manage imports
     """

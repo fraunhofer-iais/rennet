@@ -84,7 +84,7 @@ def test_valid_audio_metadata_ffmpeg(valid_audio_files):
     # correct_nsamples = valid_audio_files.n_samples
     correct_duration = valid_audio_files.seconds
 
-    ns, noc, sr, ds = au.read_audio_metada_ffmpeg(filepath)
+    ns, noc, sr, ds = au.read_audio_metadata_ffmpeg(filepath)
 
     assert sr == correct_sr
     assert noc == correct_noc
@@ -111,7 +111,7 @@ def test_valid_media_metadata_ffmpeg(valid_media_files):
     # correct_nsamples = valid_media_files.n_samples
     correct_duration = valid_media_files.seconds
 
-    ns, noc, sr, ds = au.read_audio_metada_ffmpeg(filepath)
+    ns, noc, sr, ds = au.read_audio_metadata_ffmpeg(filepath)
 
     assert sr == correct_sr
     assert noc == correct_noc
