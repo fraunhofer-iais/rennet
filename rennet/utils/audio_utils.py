@@ -171,6 +171,7 @@ def read_audio_metadata_ffmpeg(filepath):
     proc = sp.Popen(command, **popen_params)
     proc.stdout.readline()
     proc.terminate()
+    # Ref: http://stackoverflow.com/questions/19699367/unicodedecodeerror-utf-8-codec-cant-decode-byte
     infos = proc.stderr.read().decode('ISO-8859-1')
     del proc
 
