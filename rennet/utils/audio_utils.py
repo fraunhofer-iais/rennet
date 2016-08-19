@@ -11,7 +11,6 @@ import warnings
 
 from pydub import AudioSegment
 
-
 try:
     from subprocess import DEVNULL
 except ImportError:
@@ -80,7 +79,6 @@ def read_wavefile_metadata(filepath):
 
         return channels, samplerate, bits
 
-
     def _read_n_samples(fid, big_endian, bits):
         if big_endian:
             fmt = '>i'
@@ -104,8 +102,8 @@ def read_wavefile_metadata(filepath):
     finally:
         fid.close()
 
-    duration_seconds = (n_samples//channels) / samplerate
-    return n_samples//channels, channels, samplerate, duration_seconds
+    duration_seconds = (n_samples // channels) / samplerate
+    return n_samples // channels, channels, samplerate, duration_seconds
 
 
 def read_audio_metada_ffmpeg(filepath):
@@ -140,17 +138,15 @@ def read_audio_metada_ffmpeg(filepath):
             expr = r"(\d+):(\d+):(\d+)[,|.](\d+)"
             finds = re.findall(expr, time)[0]
             nums = [float(f) for f in finds]
-            return ( 3600*int(finds[0])
-                    + 60*int(finds[1])
-                    + int(finds[2])
-                    + nums[3]/(10**len(finds[3])))
+            return (3600 * int(finds[0]) + 60 * int(finds[1]) + int(finds[2]) +
+                    nums[3] / (10**len(finds[3])))
 
         elif isinstance(time, tuple):
-            if len(time)== 3:
+            if len(time) == 3:
                 hr, mn, sec = time
-            elif len(time)== 2:
+            elif len(time) == 2:
                 hr, mn, sec = 0, time[0], time[1]
-            return 3600*hr + 60*mn + sec
+            return 3600 * hr + 60 * mn + sec
 
         else:
             return time
@@ -159,9 +155,7 @@ def read_audio_metada_ffmpeg(filepath):
     fid = open(filepath)
     fid.close()
 
-    command = [FFMPEG_EXEC,
-        "-i", filepath
-    ]
+    command = [FFMPEG_EXEC, "-i", filepath]
 
     popen_params = {
         "bufsize": 10**5,
@@ -183,7 +177,9 @@ def read_audio_metada_ffmpeg(filepath):
 
     lines_audio = [l for l in lines if ' Audio: ' in l]
     if lines_audio == []:
-        raise RuntimeError("ffmpeg did not find audio in the file %s and produced infos\n%s"%(filepath, infos))
+        raise RuntimeError(
+            "ffmpeg did not find audio in the file %s and produced infos\n%s" %
+            (filepath, infos))
 
     # SAMPLE RATE
     try:
@@ -192,7 +188,9 @@ def read_audio_metada_ffmpeg(filepath):
         matched = line[match.start():match.end()]
         samplerate = int(matched[1:-3])
     except:
-        raise RuntimeError("Failed to load sample rate of file %s from ffmpeg\n the infos from ffmpeg are \n%s"%(filepath, infos))
+        raise RuntimeError(
+            "Failed to load sample rate of file %s from ffmpeg\n the infos from ffmpeg are \n%s"
+            % (filepath, infos))
 
     # N CHANNELS
     try:
@@ -211,17 +209,21 @@ def read_audio_metada_ffmpeg(filepath):
         else:
             channels = int(line[match1.start() + 1:match1.end() - 9])
     except:
-        raise RuntimeError("Failed to load n channels of file %s from ffmpeg\n the infos from ffmpeg are \n%s"%(filepath, infos))
+        raise RuntimeError(
+            "Failed to load n channels of file %s from ffmpeg\n the infos from ffmpeg are \n%s"
+            % (filepath, infos))
 
     # DURATION SECONDS
     try:
         keyword = 'Duration: '
         line = [l for l in lines if keyword in l][0]
-        match = re.findall("([0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9])", line)[0]
+        match = re.findall("([0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9])",
+                           line)[0]
         duration_seconds = cvsecs(match)
     except:
-        raise RuntimeError("Failed to load duration of file %s from ffmpeg\n the infos from ffmpeg are \n%s"%(filepath, infos))
-
+        raise RuntimeError(
+            "Failed to load duration of file %s from ffmpeg\n the infos from ffmpeg are \n%s"
+            % (filepath, infos))
 
     n_samples = int(duration_seconds * samplerate) + 1
 

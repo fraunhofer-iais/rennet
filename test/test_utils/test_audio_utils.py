@@ -10,17 +10,9 @@ from rennet.utils import audio_utils as au
 from numpy.testing import assert_almost_equal
 
 # pylint: disable=redefined-outer-name
-ValidAudioFile = namedtuple(
-    'ValidAudioFile',
-    [
-        'filepath',
-        'format',
-        'samplerate',
-        'channels',
-        'seconds',
-        'n_samples'
-    ]
-)
+ValidAudioFile = namedtuple('ValidAudioFile', [
+    'filepath', 'format', 'samplerate', 'channels', 'seconds', 'n_samples'
+])
 
 test_1_wav = ValidAudioFile(
     "./data/test/test1.wav",  # NOTE: Running from the project root
@@ -28,8 +20,7 @@ test_1_wav = ValidAudioFile(
     32000,
     2,
     10.00946875,
-    320303
-)
+    320303)
 
 test_1_mp3 = ValidAudioFile(
     "./data/test/test1.mp3",  # NOTE: Running from the project root
@@ -37,8 +28,7 @@ test_1_mp3 = ValidAudioFile(
     32000,
     2,
     10.04,  # FIXME: not sure of the correct duration
-    320303
-)
+    320303)
 
 test_1_mp4 = ValidAudioFile(
     "./data/test/creative_common.mp4",  # NOTE: Running from the project root
@@ -58,9 +48,11 @@ def valid_audio_files(request):
     """
     return request.param
 
+
 @pytest.fixture(scope="module", params=[test_1_wav])
 def valid_wav_files(request):
     return request.param
+
 
 @pytest.fixture(scope="module", params=[test_1_mp3, test_1_mp4, test_1_wav])
 def valid_media_files(request):
@@ -68,6 +60,7 @@ def valid_media_files(request):
     ultimate one to pass for get_samplerate(...) ... etc
     """
     return request.param
+
 
 def test_valid_wav_metadata(valid_wav_files):
     filepath = valid_wav_files.filepath
@@ -82,6 +75,7 @@ def test_valid_wav_metadata(valid_wav_files):
     assert noc == correct_noc
     assert ns == correct_nsamples
     assert_almost_equal(correct_duration, ds, decimal=3)
+
 
 def test_valid_audio_metadata_ffmpeg(valid_audio_files):
     filepath = valid_audio_files.filepath
