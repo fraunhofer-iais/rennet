@@ -36,6 +36,51 @@ def _ffmpeg_available():
     return False
 
 
+def is_string(obj):
+    """ Returns true if s is string or string-like object,
+    compatible with Python 2 and Python 3.
+
+    TODO: move to a general / py3to2 module
+    """
+    try:
+        return isinstance(obj, basestring)
+    except NameError:
+        return isinstance(obj, str)
+
+
+def cvsecs(time):
+    """ Will convert any time into seconds.
+    Here are the accepted formats:
+    >>> cvsecs(15.4) -> 15.4 # seconds
+    >>> cvsecs( (1,21.5) ) -> 81.5 # (min,sec)
+    >>> cvsecs( (1,1,2) ) -> 3662 # (hr, min, sec)
+    >>> cvsecs('01:01:33.5') -> 3693.5  #(hr,min,sec)
+    >>> cvsecs('01:01:33.045') -> 3693.045
+    >>> cvsecs('01:01:33,5') #coma works too
+
+    TODO: Add tests to test file
+    """
+    import re
+    if is_string(time):
+        if (',' not in time) and ('.' not in time):
+            time = time + '.0'
+        expr = r"(\d+):(\d+):(\d+)[,|.](\d+)"
+        finds = re.findall(expr, time)[0]
+        nums = [float(f) for f in finds]
+        return (3600 * int(finds[0]) + 60 * int(finds[1]) + int(finds[2]) +
+                nums[3] / (10**len(finds[3])))
+
+    elif isinstance(time, tuple):
+        if len(time) == 3:
+            hr, mn, sec = time
+        elif len(time) == 2:
+            hr, mn, sec = 0, time[0], time[1]
+        return 3600 * hr + 60 * mn + sec
+
+    else:
+        return time
+
+
 def read_wavefile_metadata(filepath):
     """
     # Reference
@@ -126,46 +171,28 @@ def read_audio_metadata_ffmpeg(filepath):
     import re
     import subprocess as sp
 
-    def is_string(obj):
-        """ Returns true if s is string or string-like object,
-        compatible with Python 2 and Python 3.
+    def _read_ffmpeg_error_output(filepath):
+        command = [FFMPEG_EXEC, "-i", filepath]
 
-        TODO: move to a general / py3to2 module
-        """
-        try:
-            return isinstance(obj, basestring)
-        except NameError:
-            return isinstance(obj, str)
+        popen_params = {
+            "bufsize": 10**5,
+            "stdout": sp.PIPE,
+            "stderr": sp.PIPE,
+            "stdin": DEVNULL
+        }
 
-    def cvsecs(time):
-        """ Will convert any time into seconds.
-        Here are the accepted formats:
-        >>> cvsecs(15.4) -> 15.4 # seconds
-        >>> cvsecs( (1,21.5) ) -> 81.5 # (min,sec)
-        >>> cvsecs( (1,1,2) ) -> 3662 # (hr, min, sec)
-        >>> cvsecs('01:01:33.5') -> 3693.5  #(hr,min,sec)
-        >>> cvsecs('01:01:33.045') -> 3693.045
-        >>> cvsecs('01:01:33,5') #coma works too
-        """
+        if os.name == 'nt':
+            popen_params["creationflags"] = 0x08000000
 
-        if is_string(time):
-            if (',' not in time) and ('.' not in time):
-                time = time + '.0'
-            expr = r"(\d+):(\d+):(\d+)[,|.](\d+)"
-            finds = re.findall(expr, time)[0]
-            nums = [float(f) for f in finds]
-            return (3600 * int(finds[0]) + 60 * int(finds[1]) + int(finds[2]) +
-                    nums[3] / (10**len(finds[3])))
+        proc = sp.Popen(command, **popen_params)
+        proc.stdout.readline()
+        proc.terminate()
 
-        elif isinstance(time, tuple):
-            if len(time) == 3:
-                hr, mn, sec = time
-            elif len(time) == 2:
-                hr, mn, sec = 0, time[0], time[1]
-            return 3600 * hr + 60 * mn + sec
+        # Ref: http://stackoverflow.com/questions/19699367/unicodedecodeerror-utf-8-codec-cant-decode-byte
+        infos = proc.stderr.read().decode('ISO-8859-1')
+        del proc
 
-        else:
-            return time
+        return infos
 
     def _read_samplerate(line):
         try:
@@ -214,29 +241,11 @@ def read_audio_metadata_ffmpeg(filepath):
                 % (filepath, infos))
 
     # to throw error for FileNotFound
-    fid = open(filepath)
-    fid.close()
+    # TODO: test error when FileNotFound
+    with open(filepath):
+        pass
 
-    command = [FFMPEG_EXEC, "-i", filepath]
-
-    popen_params = {
-        "bufsize": 10**5,
-        "stdout": sp.PIPE,
-        "stderr": sp.PIPE,
-        "stdin": DEVNULL
-    }
-
-    if os.name == 'nt':
-        popen_params["creationflags"] = 0x08000000
-
-    proc = sp.Popen(command, **popen_params)
-    proc.stdout.readline()
-    proc.terminate()
-
-    # Ref: http://stackoverflow.com/questions/19699367/unicodedecodeerror-utf-8-codec-cant-decode-byte
-    infos = proc.stderr.read().decode('ISO-8859-1')
-    del proc
-
+    infos = _read_ffmpeg_error_output(filepath)
     lines = infos.splitlines()
     lines_audio = [l for l in lines if ' Audio: ' in l]
     if lines_audio == []:
@@ -250,7 +259,9 @@ def read_audio_metadata_ffmpeg(filepath):
 
     n_samples = int(duration_seconds * samplerate) + 1
 
-    warnings.warn("Metadata was read from FFMPEG, duration and number of samples may not be accurate", RuntimeWarning)
+    warnings.warn(
+        "Metadata was read from FFMPEG, duration and number of samples may not be accurate",
+        RuntimeWarning)
 
     return n_samples, channels, samplerate, duration_seconds
 
