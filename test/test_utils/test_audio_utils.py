@@ -5,14 +5,11 @@ Created: 18-08-2016
 Test the audio utilities module
 """
 import pytest
-from collections import namedtuple
 from rennet.utils import audio_utils as au
 from numpy.testing import assert_almost_equal
 
 # pylint: disable=redefined-outer-name
-ValidAudioFile = namedtuple('ValidAudioFile', [
-    'filepath', 'format', 'samplerate', 'channels', 'seconds', 'n_samples'
-])
+ValidAudioFile = au.AudioMetadata
 
 test_1_wav = ValidAudioFile(
     "./data/test/test1.wav",  # NOTE: Running from the project root
@@ -75,8 +72,8 @@ def valid_media_files(request):
 def test_valid_wav_metadata(valid_wav_files):
     filepath = valid_wav_files.filepath
     correct_sr = valid_wav_files.samplerate
-    correct_noc = valid_wav_files.channels
-    correct_nsamples = valid_wav_files.n_samples
+    correct_noc = valid_wav_files.nchannels
+    correct_nsamples = valid_wav_files.nsamples
     correct_duration = valid_wav_files.seconds
 
     ns, noc, sr, ds = au.read_wavefile_metadata(filepath)
@@ -90,7 +87,7 @@ def test_valid_wav_metadata(valid_wav_files):
 def test_valid_media_metadata_ffmpeg(valid_media_files):
     filepath = valid_media_files.filepath
     correct_sr = valid_media_files.samplerate
-    correct_noc = valid_media_files.channels
+    correct_noc = valid_media_files.nchannels
     correct_duration = valid_media_files.seconds
 
     # TODO: Test for raised warnings

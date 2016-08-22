@@ -7,6 +7,7 @@ Utilities for working with audio
 from __future__ import print_function, division
 import os
 import warnings
+from collections import namedtuple
 
 # from pydub import AudioSegment
 
@@ -20,6 +21,16 @@ FFMPEG_EXEC = "ffmpeg.exe" if os.name == "nt" else "ffmpeg"
 WAVE_FORMAT_PCM = 0x0001
 WAVE_FORMAT_IEEE_FLOAT = 0x0003
 KNOWN_WAVE_FORMATS = (WAVE_FORMAT_PCM, WAVE_FORMAT_IEEE_FLOAT)
+
+
+AudioMetadata = namedtuple('AudioMetadata', [
+    'filepath',  # not guaranteed absolute, using user provided
+    'format',  # may get converted if not WAV
+    'samplerate',
+    'nchannels',
+    'seconds',  # duration in seconds, may not be exact beyond 1e-2
+    'nsamples', # may not be accurate if not WAV, since being derived from seconds
+])
 
 
 def _ffmpeg_available():
