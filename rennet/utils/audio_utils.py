@@ -42,7 +42,7 @@ def read_wavefile_metadata(filepath):
     """
     import struct
     import warnings
-    
+
     fid = open(filepath, 'rb')
 
     def _read_riff_chunk(fid):
@@ -122,7 +122,6 @@ def read_wavefile_metadata(filepath):
 
 def read_audio_metadata_ffmpeg(filepath):
     """
-    TODO: manage imports
     """
     import re
     import subprocess as sp
