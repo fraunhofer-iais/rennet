@@ -87,22 +87,6 @@ def test_valid_wav_metadata(valid_wav_files):
     assert_almost_equal(correct_duration, ds, decimal=3)
 
 
-def test_valid_audio_metadata_ffmpeg(valid_audio_files):
-    filepath = valid_audio_files.filepath
-    correct_sr = valid_audio_files.samplerate
-    correct_noc = valid_audio_files.channels
-    # correct_nsamples = valid_audio_files.n_samples
-    correct_duration = valid_audio_files.seconds
-
-    ns, noc, sr, ds = au.read_audio_metadata_ffmpeg(filepath)
-
-    assert sr == correct_sr
-    assert noc == correct_noc
-    # assert ns == correct_nsamples  # FIXME: FFMPEG not calculating correct n_samples
-    assert type(ns) is int
-    assert_almost_equal(correct_duration, ds, decimal=2)
-
-
 def test_valid_media_metadata_ffmpeg(valid_media_files):
     filepath = valid_media_files.filepath
     correct_sr = valid_media_files.samplerate
