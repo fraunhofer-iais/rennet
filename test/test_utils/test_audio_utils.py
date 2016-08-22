@@ -73,23 +73,28 @@ def test_valid_wav_metadata(valid_wav_files):
     """ Test au.read_wavefile_metadata(...)"""
 
     filepath = valid_wav_files.filepath
-    
+
     assert au.read_wavefile_metadata(filepath) == valid_wav_files
 
 
 def test_valid_media_metadata_ffmpeg(valid_media_files):
+    """ test au.read_audio_metadata_ffmpeg(...)
+    The function does not return exact nsamples or seconds
+    It is expected that the function will raise a RuntimeWarning for that
+    Such files will be converted to wav before reading anyway
+    """
     filepath = valid_media_files.filepath
     correct_sr = valid_media_files.samplerate
     correct_noc = valid_media_files.nchannels
     correct_duration = valid_media_files.seconds
 
     # TODO: Test for raised warnings
-    _, noc, sr, ds = au.read_audio_metadata_ffmpeg(filepath)
+    metadata = au.read_audio_metadata_ffmpeg(filepath)
 
-    assert sr == correct_sr
-    assert noc == correct_noc
+    assert metadata.samplerate == correct_sr
+    assert metadata.nchannels == correct_noc
 
-    assert_almost_equal(correct_duration, ds, decimal=2)
+    assert_almost_equal(correct_duration, metadata.seconds, decimal=2)
 
 
 def test_valid_audio_samplerate(valid_media_files):

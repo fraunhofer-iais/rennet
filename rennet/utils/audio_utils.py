@@ -177,14 +177,13 @@ def read_wavefile_metadata(filepath):
 
     duration_seconds = (n_samples // channels) / samplerate
 
-    return AudioMetadata(
-        filepath=filepath,
-        format='wav',
-        samplerate=samplerate,
-        nchannels=channels,
-        seconds=duration_seconds,
-        nsamples=n_samples//channels  # per channel nsamples
-    )
+    return AudioMetadata(filepath=filepath,
+                         format='wav',
+                         samplerate=samplerate,
+                         nchannels=channels,
+                         seconds=duration_seconds,
+                         nsamples=n_samples // channels  # per channel nsamples
+                         )
 
 
 def read_audio_metadata_ffmpeg(filepath):
@@ -286,7 +285,14 @@ def read_audio_metadata_ffmpeg(filepath):
         "Metadata was read from FFMPEG, duration and number of samples may not be accurate",
         RuntimeWarning)
 
-    return n_samples, channels, samplerate, duration_seconds
+    return AudioMetadata(
+        filepath=filepath,
+        format=os.path.splitext(filepath)[1][1:],  # extension after the dot
+        samplerate=samplerate,
+        nchannels=channels,
+        seconds=duration_seconds,
+        nsamples=n_samples
+    )
 
 
 def get_samplerate(filepath):
@@ -317,8 +323,7 @@ def get_samplerate(filepath):
     except ValueError:
         # Was not a wavefile
         if is_ffmpeg_available():
-            _, _, samplerate, _ = read_audio_metadata_ffmpeg(filepath)
-            return samplerate
+            return read_audio_metadata_ffmpeg(filepath).samplerate
         else:
             raise RuntimeError(
                 "Neither FFMPEG was found, nor is file %s a valid WAVE file" %
