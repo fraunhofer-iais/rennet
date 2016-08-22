@@ -85,6 +85,8 @@ def read_wavefile_metadata(filepath):
     """
     # Reference
         https://github.com/scipy/scipy/blob/v0.14.0/scipy/io/wavfile.py#L116
+
+    TODO: Add documentation
     """
     import struct
 
@@ -167,6 +169,7 @@ def read_wavefile_metadata(filepath):
 
 def read_audio_metadata_ffmpeg(filepath):
     """
+    TODO: Add documentation
     """
     import re
     import subprocess as sp
