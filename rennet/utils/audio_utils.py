@@ -176,7 +176,15 @@ def read_wavefile_metadata(filepath):
         fid.close()
 
     duration_seconds = (n_samples // channels) / samplerate
-    return n_samples // channels, channels, samplerate, duration_seconds
+
+    return AudioMetadata(
+        filepath=filepath,
+        format='wav',
+        samplerate=samplerate,
+        nchannels=channels,
+        seconds=duration_seconds,
+        nsamples=n_samples//channels  # per channel nsamples
+    )
 
 
 def read_audio_metadata_ffmpeg(filepath):
@@ -305,8 +313,7 @@ def get_samplerate(filepath):
     """
 
     try:  # if it is a WAV file (most likely)
-        _, _, samplerate, _ = read_wavefile_metadata(filepath)
-        return samplerate
+        return read_wavefile_metadata(filepath).samplerate
     except ValueError:
         # Was not a wavefile
         if is_ffmpeg_available():

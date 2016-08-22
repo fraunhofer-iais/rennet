@@ -70,18 +70,11 @@ def valid_media_files(request):
 
 
 def test_valid_wav_metadata(valid_wav_files):
+    """ Test au.read_wavefile_metadata(...)"""
+
     filepath = valid_wav_files.filepath
-    correct_sr = valid_wav_files.samplerate
-    correct_noc = valid_wav_files.nchannels
-    correct_nsamples = valid_wav_files.nsamples
-    correct_duration = valid_wav_files.seconds
-
-    ns, noc, sr, ds = au.read_wavefile_metadata(filepath)
-
-    assert sr == correct_sr
-    assert noc == correct_noc
-    assert ns == correct_nsamples
-    assert_almost_equal(correct_duration, ds, decimal=3)
+    
+    assert au.read_wavefile_metadata(filepath) == valid_wav_files
 
 
 def test_valid_media_metadata_ffmpeg(valid_media_files):
