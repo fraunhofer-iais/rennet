@@ -90,7 +90,6 @@ def read_wavefile_metadata(filepath):
         size = struct.unpack(fmt, data)[0]
         fid.seek(size, 1)
 
-
     def _read_n_samples(fid, big_endian, bits):
         if big_endian:
             fmt = '>i'
@@ -249,16 +248,16 @@ def get_samplerate(filepath):
     """ Get the sample rate of an audio file without reading all of it
 
     NOTE: Tested only on formats [wav, mp3, mp4], only on macOS
-    TODO: Test on Windows. The decoding my eff up for the ffmpeg one
+    TODO: Test on Windows. The decoding may eff up for the ffmpeg one
 
     NOTE: for file formats other than wav, requires FFMPEG installed
 
     The idea is that getting just the sample rate for the audio in a media file
     should not require reading the entire file.
 
-    There is a native implementation for reading metada for wav files.
+    There is a native implementation for reading metadata for wav files.
 
-    For other formats, the implementation parses ffmpeg output to get the
+    For other formats, the implementation parses ffmpeg (error) output to get the
     required information.
 
     # Arguments
@@ -266,19 +265,17 @@ def get_samplerate(filepath):
 
     # Returns
         samplerate: in Hz
-
-    TODO: use namedtuple for audio metadata
     """
 
-    try:
+    try:  # if it is a WAV file (most likely)
         _, _, samplerate, _ = read_wavefile_metadata(filepath)
+        return samplerate
     except ValueError:
         # Was not a wavefile
         if _ffmpeg_available():
             _, _, samplerate, _ = read_audio_metadata_ffmpeg(filepath)
+            return samplerate
         else:
             raise RuntimeError(
-                "Neither FFMPEG was found, nor is file %s a valid WAVE file"%filepath)
-    return samplerate
-
-# TODO: Raise warning when samplerate > 48000 as pydub won't be able to support it
+                "Neither FFMPEG was found, nor is file %s a valid WAVE file" %
+                filepath)

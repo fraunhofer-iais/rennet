@@ -48,7 +48,8 @@ test_1_mp4 = ValidAudioFile(
 )
 
 
-@pytest.fixture(scope="module", params=[test_1_wav, test_1_mp3, test_1_96k_wav])
+@pytest.fixture(scope="module",
+                params=[test_1_wav, test_1_mp3, test_1_96k_wav])
 def valid_audio_files(request):
     """ A valid wav file for testing
 
@@ -62,7 +63,8 @@ def valid_wav_files(request):
     return request.param
 
 
-@pytest.fixture(scope="module", params=[test_1_mp3, test_1_mp4, test_1_wav, test_1_96k_wav])
+@pytest.fixture(scope="module",
+                params=[test_1_mp3, test_1_mp4, test_1_wav, test_1_96k_wav])
 def valid_media_files(request):
     """
     ultimate one to pass for get_samplerate(...) ... etc
@@ -101,17 +103,6 @@ def test_valid_audio_metadata_ffmpeg(valid_audio_files):
     assert_almost_equal(correct_duration, ds, decimal=2)
 
 
-def test_valid_audio_samplerate(valid_media_files):
-    """ Test the audio_utils.get_samplerate(...) for valid wav file
-    """
-    filepath = valid_media_files.filepath
-    correct_sr = valid_media_files.samplerate
-
-    calculated_sr = au.get_samplerate(filepath)
-
-    assert calculated_sr == correct_sr
-    # TODO: Add more asserts
-
 def test_valid_media_metadata_ffmpeg(valid_media_files):
     filepath = valid_media_files.filepath
     correct_sr = valid_media_files.samplerate
@@ -126,3 +117,14 @@ def test_valid_media_metadata_ffmpeg(valid_media_files):
     # assert ns == correct_nsamples  # FIXME: FFMPEG not calculating correct n_samples
     assert type(ns) is int
     assert_almost_equal(correct_duration, ds, decimal=2)
+
+
+def test_valid_audio_samplerate(valid_media_files):
+    """ Test the audio_utils.get_samplerate(...) for valid wav file
+    """
+    filepath = valid_media_files.filepath
+    correct_sr = valid_media_files.samplerate
+
+    calculated_sr = au.get_samplerate(filepath)
+
+    assert calculated_sr == correct_sr
