@@ -6,6 +6,7 @@ Utilities for working with audio
 """
 from __future__ import print_function, division
 import os
+import warnings
 
 # from pydub import AudioSegment
 
@@ -41,7 +42,6 @@ def read_wavefile_metadata(filepath):
         https://github.com/scipy/scipy/blob/v0.14.0/scipy/io/wavfile.py#L116
     """
     import struct
-    import warnings
 
     fid = open(filepath, 'rb')
 
@@ -240,6 +240,8 @@ def read_audio_metadata_ffmpeg(filepath):
             % (filepath, infos))
 
     n_samples = int(duration_seconds * samplerate) + 1
+
+    warnings.warn("Metadata was read from FFMPEG, duration and number of samples may not be accurate", RuntimeWarning)
 
     return n_samples, channels, samplerate, duration_seconds
 
