@@ -22,18 +22,19 @@ WAVE_FORMAT_PCM = 0x0001
 WAVE_FORMAT_IEEE_FLOAT = 0x0003
 KNOWN_WAVE_FORMATS = (WAVE_FORMAT_PCM, WAVE_FORMAT_IEEE_FLOAT)
 
+AudioMetadata = namedtuple(
+    'AudioMetadata',
+    [
+        'filepath',  # not guaranteed absolute, using user provided
+        'format',  # may get converted if not WAV
+        'samplerate',
+        'nchannels',
+        'seconds',  # duration in seconds, may not be exact beyond 1e-2
+        'nsamples',  # may not be accurate if not WAV, since being derived from seconds
+    ])
 
-AudioMetadata = namedtuple('AudioMetadata', [
-    'filepath',  # not guaranteed absolute, using user provided
-    'format',  # may get converted if not WAV
-    'samplerate',
-    'nchannels',
-    'seconds',  # duration in seconds, may not be exact beyond 1e-2
-    'nsamples', # may not be accurate if not WAV, since being derived from seconds
-])
 
-
-def _ffmpeg_available():
+def is_ffmpeg_available():
     """ Check if FFMPEG is available """
 
     envdir_list = [os.curdir] + os.environ["PATH"].split(os.pathsep)
@@ -308,7 +309,7 @@ def get_samplerate(filepath):
         return samplerate
     except ValueError:
         # Was not a wavefile
-        if _ffmpeg_available():
+        if is_ffmpeg_available():
             _, _, samplerate, _ = read_audio_metadata_ffmpeg(filepath)
             return samplerate
         else:
