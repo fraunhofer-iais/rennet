@@ -6,8 +6,6 @@ Utilities for working with audio
 """
 from __future__ import print_function, division
 import os
-import struct
-import warnings
 
 # from pydub import AudioSegment
 
@@ -42,6 +40,9 @@ def read_wavefile_metadata(filepath):
     # Reference
         https://github.com/scipy/scipy/blob/v0.14.0/scipy/io/wavfile.py#L116
     """
+    import struct
+    import warnings
+    
     fid = open(filepath, 'rb')
 
     def _read_riff_chunk(fid):
