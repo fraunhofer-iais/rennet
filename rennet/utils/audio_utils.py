@@ -128,7 +128,10 @@ def read_audio_metadata_ffmpeg(filepath):
 
     def is_string(obj):
         """ Returns true if s is string or string-like object,
-        compatible with Python 2 and Python 3."""
+        compatible with Python 2 and Python 3.
+
+        TODO: move to a general / py3to2 module
+        """
         try:
             return isinstance(obj, basestring)
         except NameError:
@@ -164,6 +167,52 @@ def read_audio_metadata_ffmpeg(filepath):
         else:
             return time
 
+    def _read_samplerate(line):
+        try:
+            match = re.search(" [0-9]* Hz", line)
+            matched = line[match.start():match.end()]
+            samplerate = int(matched[1:-3])
+            return samplerate
+        except:
+            raise RuntimeError(
+                "Failed to load sample rate of file %s from ffmpeg\n the infos from ffmpeg are \n%s"
+                % (filepath, infos))
+
+    def _read_n_channels(line):
+        try:
+            match1 = re.search(" [0-9]* channels", line)
+
+            if match1 is None:
+                match2 = re.search(" stereo", line)
+                match3 = re.search(" mono", line)
+                if match2 is None and match3 is not None:
+                    channels = 1
+                elif match2 is not None and match3 is None:
+                    channels = 2
+                else:
+                    raise RuntimeError()
+            else:
+                channels = int(line[match1.start() + 1:match1.end() - 9])
+
+            return channels
+        except:
+            raise RuntimeError(
+                "Failed to load n channels of file %s from ffmpeg\n the infos from ffmpeg are \n%s"
+                % (filepath, infos))
+
+    def _read_duration(line):
+        try:
+            keyword = 'Duration: '
+            line = [l for l in lines if keyword in l][0]
+            match = re.findall("([0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9])",
+                               line)[0]
+            duration_seconds = cvsecs(match)
+            return duration_seconds
+        except:
+            raise RuntimeError(
+                "Failed to load duration of file %s from ffmpeg\n the infos from ffmpeg are \n%s"
+                % (filepath, infos))
+
     # to throw error for FileNotFound
     fid = open(filepath)
     fid.close()
@@ -183,61 +232,21 @@ def read_audio_metadata_ffmpeg(filepath):
     proc = sp.Popen(command, **popen_params)
     proc.stdout.readline()
     proc.terminate()
+
     # Ref: http://stackoverflow.com/questions/19699367/unicodedecodeerror-utf-8-codec-cant-decode-byte
     infos = proc.stderr.read().decode('ISO-8859-1')
     del proc
 
     lines = infos.splitlines()
-
     lines_audio = [l for l in lines if ' Audio: ' in l]
     if lines_audio == []:
         raise RuntimeError(
             "ffmpeg did not find audio in the file %s and produced infos\n%s" %
             (filepath, infos))
 
-    # SAMPLE RATE
-    try:
-        line = lines_audio[0]
-        match = re.search(" [0-9]* Hz", line)
-        matched = line[match.start():match.end()]
-        samplerate = int(matched[1:-3])
-    except:
-        raise RuntimeError(
-            "Failed to load sample rate of file %s from ffmpeg\n the infos from ffmpeg are \n%s"
-            % (filepath, infos))
-
-    # N CHANNELS
-    try:
-        line = lines_audio[0]
-        match1 = re.search(" [0-9]* channels", line)
-
-        if match1 is None:
-            match2 = re.search(" stereo", line)
-            match3 = re.search(" mono", line)
-            if match2 is None and match3 is not None:
-                channels = 1
-            elif match2 is not None and match3 is None:
-                channels = 2
-            else:
-                raise RuntimeError()
-        else:
-            channels = int(line[match1.start() + 1:match1.end() - 9])
-    except:
-        raise RuntimeError(
-            "Failed to load n channels of file %s from ffmpeg\n the infos from ffmpeg are \n%s"
-            % (filepath, infos))
-
-    # DURATION SECONDS
-    try:
-        keyword = 'Duration: '
-        line = [l for l in lines if keyword in l][0]
-        match = re.findall("([0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9])",
-                           line)[0]
-        duration_seconds = cvsecs(match)
-    except:
-        raise RuntimeError(
-            "Failed to load duration of file %s from ffmpeg\n the infos from ffmpeg are \n%s"
-            % (filepath, infos))
+    samplerate = _read_samplerate(lines_audio[0])
+    channels = _read_n_channels(lines_audio[0])
+    duration_seconds = _read_duration(lines)
 
     n_samples = int(duration_seconds * samplerate) + 1
 
