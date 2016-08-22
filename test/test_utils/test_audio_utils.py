@@ -88,7 +88,7 @@ def test_valid_media_metadata_ffmpeg(valid_media_files):
     correct_noc = valid_media_files.nchannels
     correct_duration = valid_media_files.seconds
 
-    # TODO: Test for raised warnings
+    # TODO: [A] Test for raised warnings
     metadata = au.read_audio_metadata_ffmpeg(filepath)
 
     assert metadata.samplerate == correct_sr

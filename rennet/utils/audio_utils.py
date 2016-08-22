@@ -52,7 +52,7 @@ def is_string(obj):
     """ Returns true if s is string or string-like object,
     compatible with Python 2 and Python 3.
 
-    TODO: move to a general / py3to2 module
+    TODO: [A] move to a general / py3to2 module
     """
     try:
         return isinstance(obj, basestring)
@@ -70,7 +70,7 @@ def cvsecs(time):
     >>> cvsecs('01:01:33.045') -> 3693.045
     >>> cvsecs('01:01:33,5') #coma works too
 
-    TODO: Add tests to test file
+    TODO: [A] Add tests to test file
     """
     import re
     if is_string(time):
@@ -98,7 +98,7 @@ def read_wavefile_metadata(filepath):
     # Reference
         https://github.com/scipy/scipy/blob/v0.14.0/scipy/io/wavfile.py#L116
 
-    TODO: Add documentation
+    TODO: [A] Add documentation
     """
     import struct
 
@@ -188,7 +188,7 @@ def read_wavefile_metadata(filepath):
 
 def read_audio_metadata_ffmpeg(filepath):
     """
-    TODO: Add documentation
+    TODO: [A] Add documentation
     """
     import re
     import subprocess as sp
@@ -263,7 +263,7 @@ def read_audio_metadata_ffmpeg(filepath):
                 % (filepath, infos))
 
     # to throw error for FileNotFound
-    # TODO: test error when FileNotFound
+    # TODO: [A] test error when FileNotFound
     with open(filepath):
         pass
 
@@ -299,7 +299,7 @@ def get_samplerate(filepath):
     """ Get the sample rate of an audio file without reading all of it
 
     NOTE: Tested only on formats [wav, mp3, mp4], only on macOS
-    TODO: Test on Windows. The decoding may eff up for the ffmpeg one
+    TODO: [A] Test on Windows. The decoding may eff up for the ffmpeg one
 
     NOTE: for file formats other than wav, requires FFMPEG installed
 
