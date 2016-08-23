@@ -98,11 +98,11 @@ def test_valid_media_metadata_ffmpeg(valid_media_files):
 
 
 def test_valid_audio_metadata(valid_media_files):
-    """ Test the audio_utils.get_metadata(...) for valid wav file"""
+    """ Test the audio_utils.get_audio_metadata(...) for valid wav file"""
     filepath = valid_media_files.filepath
     fmt = valid_media_files.format
 
-    metadata = au.get_metadata(filepath)
+    metadata = au.get_audio_metadata(filepath)
     if fmt == 'wav':
         assert valid_media_files == metadata
     else:

@@ -295,7 +295,7 @@ def read_audio_metadata_ffmpeg(filepath):
     )
 
 
-def get_metadata(filepath):
+def get_audio_metadata(filepath):
     """ Get the metadat for an audio file without reading all of it
 
     NOTE: Tested only on formats [wav, mp3, mp4], only on macOS
@@ -357,5 +357,5 @@ class AudioIO(AudioSegment):
 
         data = self.get_array_of_samples()
         nchannels = self.channels
-        
+
         return nparr([data[i::nchannels] for i in range(nchannels)]).T
