@@ -337,7 +337,7 @@ class AudioIO(AudioSegment):
     def from_audiometadata(cls, audiometadata):
         obj = cls.from_file(audiometadata.filepath)
 
-        nframes = obj.frame_count
+        nframes = obj.frame_count()
         if nframes != int(nframes):
             warnings.warn(
                 "Frame Count is calculated as float = {} by pydub".format(
