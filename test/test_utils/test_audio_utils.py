@@ -32,7 +32,7 @@ test_1_mp3 = ValidAudioFile(
     'mp3',
     32000,
     2,
-    10.04,  # FIXME: not sure of the correct duration
+    10.00946875,
     320303)
 
 test_1_mp4 = ValidAudioFile(
@@ -40,9 +40,8 @@ test_1_mp4 = ValidAudioFile(
     'mp4',
     48000,
     2,
-    2.27,
-    None  # FIXME: What are the total number of samples expected
-)
+    2.2613333333333334,
+    108544)
 
 
 @pytest.fixture(scope="module",
@@ -94,15 +93,44 @@ def test_valid_media_metadata_ffmpeg(valid_media_files):
     assert metadata.samplerate == correct_sr
     assert metadata.nchannels == correct_noc
 
-    assert_almost_equal(correct_duration, metadata.seconds, decimal=2)
+    assert_almost_equal(correct_duration, metadata.seconds, decimal=1)
 
 
-def test_valid_audio_samplerate(valid_media_files):
-    """ Test the audio_utils.get_samplerate(...) for valid wav file
-    """
+def test_valid_audio_metadata(valid_media_files):
+    """ Test the audio_utils.get_audio_metadata(...) for valid wav file"""
     filepath = valid_media_files.filepath
-    correct_sr = valid_media_files.samplerate
+    fmt = valid_media_files.format
 
-    calculated_sr = au.get_samplerate(filepath)
+    metadata = au.get_audio_metadata(filepath)
+    if fmt == 'wav':
+        assert valid_media_files == metadata
+    else:
+        assert metadata.samplerate == valid_media_files.samplerate
+        assert metadata.nchannels == valid_media_files.nchannels
 
-    assert calculated_sr == correct_sr
+
+def test_AudioIO_from_audiometadata(valid_media_files):
+    """Test if the returned updated metadata is accurate"""
+
+    # known unsipported functionality for >48kHz files
+    if valid_media_files.samplerate <= 48000:
+        _, updated_metadata = au.AudioIO.from_audiometadata(valid_media_files)
+
+        assert valid_media_files == updated_metadata
+    else:
+        pytest.skip(">48khz audio not supported by AudioIO")
+
+
+def test_AudioIO_get_numpy_data(valid_media_files):
+    """ Test for correct nsamples and nchannels """
+
+    correct_ns = valid_media_files.nsamples
+    correct_noc = valid_media_files.nchannels
+
+    if valid_media_files.samplerate <= 48000:
+        data = au.AudioIO.from_audiometadata(valid_media_files)[
+            0].get_numpy_data()
+
+        assert data.shape == (correct_ns, correct_noc)
+    else:
+        pytest.skip(">48khz audio not supported by AudioIO")

@@ -9,7 +9,7 @@ import os
 import warnings
 from collections import namedtuple
 
-# from pydub import AudioSegment
+from pydub import AudioSegment
 
 try:
     from subprocess import DEVNULL
@@ -295,8 +295,8 @@ def read_audio_metadata_ffmpeg(filepath):
     )
 
 
-def get_samplerate(filepath):
-    """ Get the sample rate of an audio file without reading all of it
+def get_audio_metadata(filepath):
+    """ Get the metadat for an audio file without reading all of it
 
     NOTE: Tested only on formats [wav, mp3, mp4], only on macOS
     TODO: [A] Test on Windows. The decoding may eff up for the ffmpeg one
@@ -319,12 +319,65 @@ def get_samplerate(filepath):
     """
 
     try:  # if it is a WAV file (most likely)
-        return read_wavefile_metadata(filepath).samplerate
+        return read_wavefile_metadata(filepath)
     except ValueError:
         # Was not a wavefile
         if is_ffmpeg_available():
-            return read_audio_metadata_ffmpeg(filepath).samplerate
+            return read_audio_metadata_ffmpeg(filepath)
         else:
             raise RuntimeError(
                 "Neither FFMPEG was found, nor is file %s a valid WAVE file" %
                 filepath)
+
+
+class AudioIO(AudioSegment):
+    """ A extension of the pydub.AudioSegment class with some added methods"""
+
+    @classmethod
+    def from_audiometadata(cls, audiometadata):
+        """ classmethod to create new AudioIO object from AudioMetadata, PLUS
+            update the metadata
+
+        The file will most likely be read for this.
+        The file may also be temporarily converted to WAV file, if not originally so.
+
+        Refer to pydub.AudioSegment docuemntation for further reference
+
+        The updated metadata will be from the read file, hence expected to be
+        correct.
+        # Arguments
+            audiometadata: AudioMetadata instance
+
+        # Returns
+            obj: instance of AudioIO (pydub.AudioSegment)
+            updated_metadata: Updated metadata for the read file
+        """
+        obj = cls.from_file(audiometadata.filepath)
+
+        nframes = obj.frame_count()
+        if nframes != int(nframes):
+            warnings.warn(
+                "Frame Count is calculated as float = {} by pydub".format(
+                    nframes), RuntimeWarning)
+
+        updated_metadata = AudioMetadata(filepath=audiometadata.filepath,
+                                         format=audiometadata.format,
+                                         samplerate=obj.frame_rate,
+                                         nchannels=obj.channels,
+                                         seconds=obj.duration_seconds,
+                                         nsamples=int(nframes))
+
+        return obj, updated_metadata
+
+    def get_numpy_data(self):
+        """ Get the raw data as numpy array
+
+        # Returns
+            data: numpy array of shape (nsamples x nchannels)
+        """
+        from numpy import array as nparr
+
+        data = self.get_array_of_samples()
+        nchannels = self.channels
+
+        return nparr([data[i::nchannels] for i in range(nchannels)]).T
