@@ -32,7 +32,7 @@ test_1_mp3 = ValidAudioFile(
     'mp3',
     32000,
     2,
-    10.04,  # FIXME: not sure of the correct duration
+    10.00946875,
     320303)
 
 test_1_mp4 = ValidAudioFile(
@@ -40,9 +40,8 @@ test_1_mp4 = ValidAudioFile(
     'mp4',
     48000,
     2,
-    2.27,
-    None  # FIXME: What are the total number of samples expected
-)
+    2.2613333333333334,
+    108544)
 
 
 @pytest.fixture(scope="module",
@@ -94,7 +93,7 @@ def test_valid_media_metadata_ffmpeg(valid_media_files):
     assert metadata.samplerate == correct_sr
     assert metadata.nchannels == correct_noc
 
-    assert_almost_equal(correct_duration, metadata.seconds, decimal=2)
+    assert_almost_equal(correct_duration, metadata.seconds, decimal=1)
 
 
 def test_valid_audio_metadata(valid_media_files):
@@ -108,3 +107,15 @@ def test_valid_audio_metadata(valid_media_files):
     else:
         assert metadata.samplerate == valid_media_files.samplerate
         assert metadata.nchannels == valid_media_files.nchannels
+
+
+def test_AudioIO_from_audiometadata(valid_media_files):
+    """Test if the returned updated metadata is accurate"""
+
+    # known unsipported functionality for >48kHz files
+    if valid_media_files.samplerate <= 48000:
+        _, updated_metadata = au.AudioIO.from_audiometadata(valid_media_files)
+
+        assert valid_media_files == updated_metadata
+    else:
+        pytest.skip(">48khz audio not supported by AudioIO")
