@@ -295,8 +295,8 @@ def read_audio_metadata_ffmpeg(filepath):
     )
 
 
-def get_samplerate(filepath):
-    """ Get the sample rate of an audio file without reading all of it
+def get_metadata(filepath):
+    """ Get the metadat for an audio file without reading all of it
 
     NOTE: Tested only on formats [wav, mp3, mp4], only on macOS
     TODO: [A] Test on Windows. The decoding may eff up for the ffmpeg one
@@ -319,11 +319,11 @@ def get_samplerate(filepath):
     """
 
     try:  # if it is a WAV file (most likely)
-        return read_wavefile_metadata(filepath).samplerate
+        return read_wavefile_metadata(filepath)
     except ValueError:
         # Was not a wavefile
         if is_ffmpeg_available():
-            return read_audio_metadata_ffmpeg(filepath).samplerate
+            return read_audio_metadata_ffmpeg(filepath)
         else:
             raise RuntimeError(
                 "Neither FFMPEG was found, nor is file %s a valid WAVE file" %

@@ -97,12 +97,14 @@ def test_valid_media_metadata_ffmpeg(valid_media_files):
     assert_almost_equal(correct_duration, metadata.seconds, decimal=2)
 
 
-def test_valid_audio_samplerate(valid_media_files):
-    """ Test the audio_utils.get_samplerate(...) for valid wav file
-    """
+def test_valid_audio_metadata(valid_media_files):
+    """ Test the audio_utils.get_metadata(...) for valid wav file"""
     filepath = valid_media_files.filepath
-    correct_sr = valid_media_files.samplerate
+    fmt = valid_media_files.format
 
-    calculated_sr = au.get_samplerate(filepath)
-
-    assert calculated_sr == correct_sr
+    metadata = au.get_metadata(filepath)
+    if fmt == 'wav':
+        assert valid_media_files == metadata
+    else:
+        assert metadata.samplerate == valid_media_files.samplerate
+        assert metadata.nchannels == valid_media_files.nchannels
