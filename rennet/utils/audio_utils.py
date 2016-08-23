@@ -9,7 +9,7 @@ import os
 import warnings
 from collections import namedtuple
 
-# from pydub import AudioSegment
+from pydub import AudioSegment
 
 try:
     from subprocess import DEVNULL
@@ -328,3 +328,34 @@ def get_metadata(filepath):
             raise RuntimeError(
                 "Neither FFMPEG was found, nor is file %s a valid WAVE file" %
                 filepath)
+
+
+class AudioIO(AudioSegment):
+    """ A extension of the pydub.AudioSegment class with some added methods"""
+
+    @classmethod
+    def from_audiometadata(cls, audiometadata):
+        obj = cls.from_file(audiometadata.filepath)
+
+        nframes = obj.frame_count
+        if nframes != int(nframes):
+            warnings.warn(
+                "Frame Count is calculated as float = {} by pydub".format(
+                    nframes), RuntimeWarning)
+
+        updated_metadata = AudioMetadata(filepath=audiometadata.filepath,
+                                         format=audiometadata.format,
+                                         samplerate=obj.frame_rate,
+                                         nchannels=obj.channels,
+                                         seconds=obj.duration_seconds,
+                                         nsamples=int(nframes))
+
+        return obj, updated_metadata
+
+    def get_numpy_data(self):
+        from numpy import array as nparr
+
+        data = self.get_array_of_samples()
+        nchannels = self.channels
+        
+        return nparr([data[i::nchannels] for i in range(nchannels)]).T
