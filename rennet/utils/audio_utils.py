@@ -335,6 +335,23 @@ class AudioIO(AudioSegment):
 
     @classmethod
     def from_audiometadata(cls, audiometadata):
+        """ classmethod to create new AudioIO object from AudioMetadata, PLUS
+            update the metadata
+
+        The file will most likely be read for this.
+        The file may also be temporarily converted to WAV file, if not originally so.
+
+        Refer to pydub.AudioSegment docuemntation for further reference
+
+        The updated metadata will be from the read file, hence expected to be
+        correct.
+        # Arguments
+            audiometadata: AudioMetadata instance
+
+        # Returns
+            obj: instance of AudioIO (pydub.AudioSegment)
+            updated_metadata: Updated metadata for the read file
+        """
         obj = cls.from_file(audiometadata.filepath)
 
         nframes = obj.frame_count()
@@ -353,6 +370,11 @@ class AudioIO(AudioSegment):
         return obj, updated_metadata
 
     def get_numpy_data(self):
+        """ Get the raw data as numpy array
+
+        # Returns
+            data: numpy array of shape (nsamples x nchannels)
+        """
         from numpy import array as nparr
 
         data = self.get_array_of_samples()
