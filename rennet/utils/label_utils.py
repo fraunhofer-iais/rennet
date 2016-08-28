@@ -41,6 +41,11 @@ class SequenceLabels(object):
                                                 " mismatch in length "
 
         self._starts_ends = np.array(starts_ends)
+
+        assert all(
+            e - s > 0. for s, e in
+            self._starts_ends), "(ends - starts) should be > 0 for all pairs"
+
         self.labels = labels
         self._orig_samplerate = samplerate
         self._samplerate = self._orig_samplerate
