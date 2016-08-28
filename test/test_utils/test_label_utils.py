@@ -39,10 +39,10 @@ def test_SequenceLabels_from_samples(sample_seqlabel):
     seqlabels = lu.SequenceLabels(sample_startsends, sample_seqlabel.labels,
                                   sample_seqlabel.samplerate)
 
-    with seqlabels.npersec_as(1.0):
+    with seqlabels.samplerate_as(1.0):
         npt.assert_equal(seqlabels.starts, sample_seqlabel.starts_secs)
         npt.assert_equal(seqlabels.ends, sample_seqlabel.ends_secs)
-        assert seqlabels.npersec == sample_seqlabel.samplerate
+        assert seqlabels.samplerate == sample_seqlabel.samplerate
 
 
 def test_SequenceLabels_from_secs(sample_seqlabel):
@@ -51,7 +51,7 @@ def test_SequenceLabels_from_secs(sample_seqlabel):
 
     seqlabels = lu.SequenceLabels(sample_startsends, sample_seqlabel.labels, 1)
 
-    with seqlabels.npersec_as(sample_seqlabel.samplerate):
+    with seqlabels.samplerate_as(sample_seqlabel.samplerate):
         npt.assert_equal(seqlabels.starts, sample_seqlabel.starts_samples)
         npt.assert_equal(seqlabels.ends, sample_seqlabel.ends_samples)
-        assert seqlabels.npersec == 1
+        assert seqlabels.samplerate == 1

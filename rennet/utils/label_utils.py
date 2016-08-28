@@ -27,19 +27,19 @@ class SequenceLabels(object):
     TODO: [P] Check if something can be done about plotting it nicely too!
     """
 
-    def __init__(self, starts_ends, labels, npersec=1, ids=None):
+    def __init__(self, starts_ends, labels, samplerate=1):
+        # TODO: Test ends come after starts
         assert all(isinstance(x, Iterable)
                    for x in [starts_ends, labels
                              ]), "starts, ends, and labels should be iterable"
 
         self._starts_ends = np.array(starts_ends)
         self.labels = labels
-        self._samplerate = npersec
+        self._samplerate = samplerate
         self._tempsr = self._samplerate
-        self.ids = np.arange(len(labels)) if ids is None else ids
 
     @property
-    def npersec(self):
+    def samplerate(self):
         return self._samplerate
 
     @property
@@ -55,9 +55,25 @@ class SequenceLabels(object):
         return self.starts_ends[:, 1]
 
     @contextmanager
-    def npersec_as(self, new_sr):
+    def samplerate_as(self, new_sr):
         self._tempsr = new_sr
         try:
             yield
         finally:
             self._tempsr = self._samplerate
+
+
+    def __len__(self):
+        return len(self.starts_ends)
+
+    def __getitem__(self, idx):
+        se = self.starts_ends[idx]
+        l = self.labels[idx]
+
+        if not isinstance(l, Iterable):  # case with only one segment
+            se = np.expand_dims(se, axis=0)  # shape (2,) to shape (1, 2)
+            l = [l]
+
+        nps = self.samplerate
+
+        return SequenceLabels(se, l, nps)
