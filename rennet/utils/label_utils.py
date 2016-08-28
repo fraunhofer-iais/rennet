@@ -12,13 +12,18 @@ from contextlib import contextmanager
 class SequenceLabels(object):
     """ Base class for working with contiguous labels for sequences
 
+    By default the samplerate is 1, but a default one can be set at the time
+    of instantiating. The samplerate should reflect the one used in calculating
+    the starts_ends.
+
+    The starts, ends and starts_ends can be retrieved at a different
+    samplerate by using the `with SequenceLabel.samplerate_as(new_samplerate)`.
+    While in the scope of the `with` context will act as if the samplerate is
+    set to `new_samplerate`, except `SequenceLabel.samplerate`, which will
+    always return the original samplerate.
+
     Supports normal slicing as in numpy, but the returned value will be another
     instance of the SequenceLabels class.
-
-    FIXME: [A] update the doc for the with statement
-    NOTE: You can get the properties `starts` and `ends` at a different
-    sample-rate by passing a sample-rate other than the default value of 1 to
-    `get_starts`, or setting the property `samplerate` to change the default.
 
     This class is not a monolith, but should be able to work with normal
     numpy tricks. Plus, you should extend it for specific data, etc.
@@ -42,7 +47,7 @@ class SequenceLabels(object):
 
     @property
     def samplerate(self):
-        return self._orig_samplerate
+        return self._orig_samplerate  # always the original samplerate
 
     @property
     def starts_ends(self):
