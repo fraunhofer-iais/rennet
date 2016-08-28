@@ -6,6 +6,7 @@ Utilities for working with labels
 """
 import numpy as np
 from collections import Iterable
+from contextlib import contextmanager
 
 
 class SequenceLabels(object):
@@ -26,30 +27,37 @@ class SequenceLabels(object):
     TODO: [P] Check if something can be done about plotting it nicely too!
     """
 
-    def __init__(self, starts_ends, labels, samplerate=1, ids=None):
+    def __init__(self, starts_ends, labels, npersec=1, ids=None):
         assert all(isinstance(x, Iterable)
                    for x in [starts_ends, labels
                              ]), "starts, ends, and labels should be iterable"
 
-        self._starts_ends = np.array(starts_ends, np.int)
+        self._starts_ends = np.array(starts_ends)
         self.labels = labels
-        self.samplerate = samplerate
+        self._samplerate = npersec
+        self._tempsr = self._samplerate
         self.ids = np.arange(len(labels)) if ids is None else ids
 
-    def get_starts(self, samplerate=None):
-        samplerate = self.samplerate if samplerate is None else samplerate
-        return self._starts_ends[:, 0] / samplerate
+    @property
+    def npersec(self):
+        return self._samplerate
 
-    starts = property(get_starts)
+    @property
+    def starts_ends(self):
+        return self._starts_ends * (self._tempsr / self._samplerate)
 
-    def get_ends(self, samplerate=None):
-        samplerate = self.samplerate if samplerate is None else samplerate
-        return self.ends_ends[:, 1] / samplerate
+    @property
+    def starts(self):
+        return self.starts_ends[:, 0]
 
-    ends = property(get_ends)
+    @property
+    def ends(self):
+        return self.starts_ends[:, 1]
 
-    def get_starts_ends(self, samplerate=None):
-        samplerate = self.samplerate if samplerate is None else samplerate
-        return self.starts_ends_starts_ends / samplerate
-
-    starts_ends = property(get_starts_ends)
+    @contextmanager
+    def npersec_as(self, new_sr):
+        self._tempsr = new_sr
+        try:
+            yield
+        finally:
+            self._tempsr = self._samplerate
