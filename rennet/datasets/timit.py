@@ -16,7 +16,7 @@ class TIMITSequenceLabels(lu.SequenceLabels):
         super().__init__(*args, **kwargs)
 
     @classmethod
-    def from_TIMIT_labels(cls, filepath, delimiter=' ', samplerate=16000):
+    def from_file(cls, filepath, delimiter=' ', samplerate=16000):
 
         se = []
         l = []
