@@ -25,14 +25,15 @@ class SequenceLabels(object):
 
     Plus, there is nice printing.
 
-    TODO: [P] Check if something can be done about plotting it nicely too!
+    TODO: [A] Check if something can be done about plotting it nicely too!
     """
 
     def __init__(self, starts_ends, labels, samplerate=1):
-        # TODO: [P] Test ends come after starts
         assert all(isinstance(x, Iterable)
                    for x in [starts_ends, labels
-                             ]), "starts, ends, and labels should be iterable"
+                             ]), "starts_ends and labels should be iterable"
+        assert len(starts_ends) == len(labels), "starts_ends and labels" + \
+                                                " mismatch in length "
 
         self._starts_ends = np.array(starts_ends)
         self.labels = labels
