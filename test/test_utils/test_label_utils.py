@@ -39,10 +39,12 @@ def test_SequenceLabels_from_samples(sample_seqlabel):
     seqlabels = lu.SequenceLabels(sample_startsends, sample_seqlabel.labels,
                                   sample_seqlabel.samplerate)
 
+    print(seqlabels)
     with seqlabels.samplerate_as(1.0):
         npt.assert_equal(seqlabels.starts, sample_seqlabel.starts_secs)
         npt.assert_equal(seqlabels.ends, sample_seqlabel.ends_secs)
         assert seqlabels.samplerate == sample_seqlabel.samplerate
+        print(seqlabels)
 
 
 def test_SequenceLabels_from_secs(sample_seqlabel):
