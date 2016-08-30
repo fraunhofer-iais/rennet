@@ -199,8 +199,8 @@ class ActiveSpeakers(Annotations):
 
     @staticmethod
     def group_by_values(values):
-        # TODO: [P] add to a generic util module
-        # TODO: [P] make it work with 1 dimensional arrays
+        # TODO: [A] add to a generic util module
+        # TODO: [A] make it work with 1 dimensional arrays
         # Ref: http://stackoverflow.com/questions/4651683/numpy-grouping-using-itertools-groupby-performance
 
         initones = [[1] * values.shape[1]]
@@ -222,8 +222,8 @@ class ActiveSpeakers(Annotations):
             se_ = ann.starts_ends
             se = se_.astype(np.int)
 
-            # TODO: [P] better error statement
-            # FIXME: [P] the below assert fails for something that I think is correct
+            # TODO: [A] better error statement
+            # FIXME: [A] the below assert fails for something that I think is correct
             # assert all(se == se_), "The provided sample rate does not cover all decimals"
 
         n_speakers = len(ann.speakers)
