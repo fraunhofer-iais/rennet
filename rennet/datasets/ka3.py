@@ -142,7 +142,8 @@ def parse_mpeg7(filepath):
         confidences.append(conf)
         transcriptions.append(tr)
 
-    return starts_ends, speakerids, genders, givennames, confidences, transcriptions
+    return (starts_ends, speakerids, genders, givennames, confidences,
+            transcriptions)
 # pylint: enable=too-many-locals
 
 Speaker = namedtuple('Speaker', ['speakerid', 'gender', 'givenname'])
