@@ -7,6 +7,7 @@ Helpers for working with KA3 dataset
 from __future__ import print_function
 from collections import namedtuple
 import xml.etree.ElementTree as et
+import numpy as np
 
 import rennet.utils.label_utils as lu
 
@@ -129,6 +130,9 @@ def parse_mpeg7(filepath):
             print("Segment number :%d" % (i + 1))
             raise
 
+        if startend[1] <= startend[0]:  # (end - start) <= 0
+            continue
+
         starts_ends.append(startend)
 
         try:
@@ -142,7 +146,8 @@ def parse_mpeg7(filepath):
         confidences.append(conf)
         transcriptions.append(tr)
 
-    return starts_ends, speakerids, genders, givennames, confidences, transcriptions
+    return (starts_ends, speakerids, genders, givennames, confidences,
+            transcriptions)
 # pylint: enable=too-many-locals
 
 Speaker = namedtuple('Speaker', ['speakerid', 'gender', 'givenname'])
@@ -183,3 +188,63 @@ class Annotations(lu.SequenceLabels):
                    transcriptions,
                    samplerate=1)
     # pylint: enable=too-many-locals
+
+    def idx_for_speaker(self, speaker):
+        speakerid = speaker.speakerid
+        for i, l in enumerate(self.labels):
+            if l.speakerid == speakerid:
+                yield i
+
+
+class ActiveSpeakers(Annotations):
+    def __init__(self, filepath, speakers, *args, **kwargs):
+        super().__init__(filepath, speakers, *args, **kwargs)
+
+    @staticmethod
+    def group_by_values(values):
+        # TODO: [A] add to a generic util module
+        # TODO: [A] make it work with 1 dimensional arrays
+        # Ref: http://stackoverflow.com/questions/4651683/numpy-grouping-using-itertools-groupby-performance
+
+        initones = [[1] * values.shape[1]]
+        diff = np.concatenate([initones, np.diff(values, axis=0)])
+        starts = np.unique(np.where(diff)[0])  # remove duplicate starts
+
+        ends = np.ones(len(starts), dtype=np.int)
+        ends[:-1] = starts[1:]
+        ends[-1] = len(values)
+
+        labels = values[starts]
+
+        return np.vstack([starts, ends]).T, labels
+
+
+    @classmethod
+    def from_annotations(cls, ann, samplerate=100):  # default 100 for ka3
+        with ann.samplerate_as(samplerate):
+            se_ = ann.starts_ends
+            se = se_.astype(np.int)
+
+            # TODO: [A] better error statement
+            # FIXME: [A] the below assert fails for something that I think is correct
+            # assert all(se == se_), "The provided sample rate does not cover all decimals"
+
+        n_speakers = len(ann.speakers)
+        total_duration = se[:, 1].max()
+        active_speakers = np.zeros(shape=(total_duration, n_speakers), dtype=np.int)
+
+        for s, speaker in enumerate(ann.speakers):
+            for i in ann.idx_for_speaker(speaker):
+                start, end = se[i]
+                active_speakers[start:end, s] += 1
+
+        starts_ends, active_speakers = cls.group_by_values(active_speakers)
+
+        return cls(
+            ann.sourcefile, ann.speakers,
+            starts_ends, active_speakers, samplerate=samplerate
+        )
+
+    @classmethod
+    def from_file(cls, filepath):
+        return cls.from_annotations(super().from_file(filepath))

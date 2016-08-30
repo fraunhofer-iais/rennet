@@ -18,12 +18,9 @@ dependencies:
 - click=6.6=py35_0
 - conda-forge::blas=1.1=openblas
 - conda-forge::cycler=0.10.0=py35_0
-- conda-forge::freetype=2.6.3=1
 - conda-forge::libgfortran=3.0.0=0
-- conda-forge::matplotlib=1.5.2=np111py35_5
 - conda-forge::numpy=1.11.1=py35_blas_openblas_201
 - conda-forge::openblas=0.2.18=4
-- conda-forge::pip=8.1.2=py35_0
 - conda-forge::protobuf=3.0.0b2=py35_0
 - conda-forge::pyparsing=2.1.7=py35_0
 - conda-forge::pytest=2.9.2=py35_0
@@ -34,6 +31,7 @@ dependencies:
 - conda-forge::tensorflow=0.9.0=py35_0
 - decorator=4.0.10=py35_0
 - entrypoints=0.2.2=py35_0
+- freetype=2.5.5=1
 - ipykernel=4.4.1=py35_0
 - ipython=5.1.0=py35_0
 - ipython_genutils=0.1.0=py35_0
@@ -48,6 +46,7 @@ dependencies:
 - libpng=1.6.22=0
 - logilab-common=1.0.2=py35_0
 - markupsafe=0.23=py35_2
+- matplotlib=1.5.1=np111py35_0
 - mistune=0.7.2=py35_1
 - mkl=11.3.3=0
 - nbconvert=4.2.0=py35_0
@@ -57,6 +56,7 @@ dependencies:
 - path.py=8.2.1=py35_0
 - pexpect=4.0.1=py35_0
 - pickleshare=0.7.3=py35_0
+- pip=8.1.2=py35_0
 - prompt_toolkit=1.0.3=py35_0
 - ptyprocess=0.5.1=py35_0
 - py=1.4.31=py35_0
@@ -69,7 +69,7 @@ dependencies:
 - qt=4.8.7=4
 - qtconsole=4.2.1=py35_0
 - readline=6.2=2
-- setuptools=25.1.6=py35_0
+- setuptools=26.1.1=py35_0
 - simplegeneric=0.8.1=py35_1
 - sip=4.18=py35_0
 - sqlite=3.13.0=0
@@ -92,9 +92,7 @@ dependencies:
   - jupyter-contrib-nbextensions==0.1.0
   - jupyter-core==4.1.1
   - jupyter-nbextensions-configurator==0.2.1
-  - matplotlib==1.5.2
   - numpy==1.11.1
-  - pip==8.1.2
   - prompt-toolkit==1.0.3
   - protobuf==3.0.0b2
   - psutil==4.3.0
