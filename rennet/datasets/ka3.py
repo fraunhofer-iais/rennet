@@ -7,6 +7,7 @@ Helpers for working with KA3 dataset
 from __future__ import print_function
 from collections import namedtuple
 import xml.etree.ElementTree as et
+import numpy as np
 
 import rennet.utils.label_utils as lu
 
@@ -185,15 +186,61 @@ class Annotations(lu.SequenceLabels):
                    samplerate=1)
     # pylint: enable=too-many-locals
 
+    def idx_for_speaker(self, speaker):
+        speakerid = speaker.speakerid
+        for i, l in enumerate(self.labels):
+            if l.speakerid == speakerid:
+                yield i
 
-class OverlappingSpeakers(Annotations):
+
+class ActiveSpeakers(Annotations):
     def __init__(self, filepath, speakers, *args, **kwargs):
         super().__init__(filepath, speakers, *args, **kwargs)
 
+    @staticmethod
+    def group_by_values(values):
+        # TODO: [P] add to a generic util module
+        # TODO: [P] make it work with 1 dimensional arrays
+        # Ref: http://stackoverflow.com/questions/4651683/numpy-grouping-using-itertools-groupby-performance
+
+        initones = [[1] * values.shape[1]]
+        diff = np.concatenate([initones, np.diff(values, axis=0)])
+        starts = np.unique(np.where(diff)[0])  # remove duplicate starts
+
+        ends = np.ones(len(starts), dtype=np.int)
+        ends[:-1] = starts[1:]
+        ends[-1] = len(values)
+
+        labels = values[starts]
+
+        return np.vstack([starts, ends]).T, labels
+
 
     @classmethod
-    def from_annotations(cls, ann):
-        pass
+    def from_annotations(cls, ann, samplerate=100):  # default 100 for ka3
+        with ann.samplerate_as(samplerate):
+            se_ = ann.starts_ends
+            se = se_.astype(np.int)
+
+            # TODO: [P] better error statement
+            # FIXME: [P] the below assert fails for something that I think is correct
+            # assert all(se == se_), "The provided sample rate does not cover all decimals"
+
+        n_speakers = len(ann.speakers)
+        total_duration = se[:, 1].max()
+        active_speakers = np.zeros(shape=(total_duration, n_speakers), dtype=np.int)
+
+        for s, speaker in enumerate(ann.speakers):
+            for i in ann.idx_for_speaker(speaker):
+                start, end = se[i]
+                active_speakers[start:end, s] += 1
+
+        starts_ends, active_speakers = cls.group_by_values(active_speakers)
+
+        return cls(
+            ann.sourcefile, ann.speakers,
+            starts_ends, active_speakers, samplerate=samplerate
+        )
 
     @classmethod
     def from_file(cls, filepath):
