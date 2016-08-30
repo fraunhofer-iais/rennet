@@ -130,6 +130,9 @@ def parse_mpeg7(filepath):
             print("Segment number :%d" % (i + 1))
             raise
 
+        if startend[1] <= startend[0]:  # (end - start) <= 0
+            continue
+
         starts_ends.append(startend)
 
         try:
