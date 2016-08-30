@@ -184,3 +184,17 @@ class Annotations(lu.SequenceLabels):
                    transcriptions,
                    samplerate=1)
     # pylint: enable=too-many-locals
+
+
+class OverlappingSpeakers(Annotations):
+    def __init__(self, filepath, speakers, *args, **kwargs):
+        super().__init__(filepath, speakers, *args, **kwargs)
+
+
+    @classmethod
+    def from_annotations(cls, ann):
+        pass
+
+    @classmethod
+    def from_file(cls, filepath):
+        return cls.from_annotations(super().from_file(filepath))
