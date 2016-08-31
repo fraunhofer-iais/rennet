@@ -5,8 +5,10 @@ Created: 18-08-2016
 Test the audio utilities module
 """
 import pytest
-from rennet.utils import audio_utils as au
 from numpy.testing import assert_almost_equal
+from glob import glob
+
+from rennet.utils import audio_utils as au
 
 # pylint: disable=redefined-outer-name
 ValidAudioFile = au.AudioMetadata
@@ -43,14 +45,18 @@ test_1_mp4 = ValidAudioFile(
     2.2613333333333334,
     108544)
 
+WORKING_DATA_RAW_MEDIA = glob("./data/working/*/*/media/raw/*.*")
+
+@pytest.fixture(scope="module",
+                params=WORKING_DATA_RAW_MEDIA)
+def working_data_raw_media(request):
+    """ All raw media files for all projects and datasets """
+    return request.param
 
 @pytest.fixture(scope="module",
                 params=[test_1_wav, test_1_mp3, test_1_96k_wav])
 def valid_audio_files(request):
-    """ A valid wav file for testing
-
-    The test1.wav is assumed to exist
-    """
+    """ Valid audio files for testing """
     return request.param
 
 
@@ -138,3 +144,28 @@ def test_AudioIO_get_numpy_data(valid_media_files):
         assert data.shape == (correct_ns, correct_noc)
     else:
         pytest.skip(">48khz audio not supported by AudioIO")
+
+
+@pytest.mark.check_dataset
+def test_able_to_get_metadata_for_all_raw_dataset(working_data_raw_media):
+    """ Test if able to use au.get_audio_metadata(...) for all raw datasets """
+    fp = working_data_raw_media
+
+    if not fp.endswith("wav") and not au.is_ffmpeg_available():
+        pytest.skip("FFMPEG not available")
+    else:
+        _ = au.get_audio_metadata(fp)
+        assert True
+
+
+@pytest.mark.long_running
+@pytest.mark.check_dataset
+def test_able_to_create_AudioIO_for_all_raw_dataset(working_data_raw_media):
+    """ Test if able to create AudioIO object for all raw datasets """
+    fp = working_data_raw_media
+
+    if not fp.endswith("wav") and not au.is_ffmpeg_available():
+        pytest.skip("FFMPEG not available")
+    else:
+        _ = au.AudioIO.from_file(fp)
+        assert True
