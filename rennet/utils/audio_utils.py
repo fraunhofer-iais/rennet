@@ -124,29 +124,23 @@ def read_wavefile_metadata(filepath):
                 fmt_chunk = _read_fmt_chunk(fid, is_big_endian)
                 channels, samplerate = fmt_chunk[2:4]
                 bits = fmt_chunk[6]
-            elif chunk == b'fact':
-                _skip_unknown_chunk(fid, is_big_endian)
             elif chunk == b'data':
                 n_samples = _read_n_samples(fid, is_big_endian, bits)
                 break
-            elif chunk == b'LIST':
-                _skip_unknown_chunk(fid, is_big_endian)
-            elif chunk in (b'JUNK', b'Fake'):
+            elif chunk in (b'JUNK', b'Fake', b'LIST', b'fact'):
                 _skip_unknown_chunk(fid, is_big_endian)
             else:
                 warnings.warn("Chunk (non-data) not understood, skipping it.",
-                        RuntimeWarning)
+                              RuntimeWarning)
                 _skip_unknown_chunk(fid, is_big_endian)
     finally:
         fid.close()
-
-    duration_seconds = (n_samples // channels) / samplerate
 
     return AudioMetadata(filepath=filepath,
                          format='wav',
                          samplerate=samplerate,
                          nchannels=channels,
-                         seconds=duration_seconds,
+                         seconds=(n_samples // channels) / samplerate,
                          nsamples=n_samples // channels  # per channel nsamples
                          )
 
