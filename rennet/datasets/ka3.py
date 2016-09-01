@@ -236,7 +236,8 @@ class ActiveSpeakers(Annotations):
             try:
                 np.testing.assert_almost_equal(se, se_)
             except AssertionError:
-                print("The provided sample rate does not evenly divide the starts and ends")
+                print(
+                    "The provided sample rate does not evenly divide the starts and ends")
                 raise
 
         n_speakers = len(ann.speakers)
@@ -259,4 +260,5 @@ class ActiveSpeakers(Annotations):
 
     @classmethod
     def from_file(cls, filepath):
-        return cls.from_annotations(super().from_file(filepath), samplerate=100)
+        return cls.from_annotations(super().from_file(filepath),
+                                    samplerate=100)
