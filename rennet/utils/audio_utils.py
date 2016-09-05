@@ -96,59 +96,14 @@ def cvsecs(time):
 def read_wavefile_metadata(filepath):
     """
     # Reference
-        https://github.com/scipy/scipy/blob/v0.14.0/scipy/io/wavfile.py#L116
+        https://github.com/scipy/scipy/blob/master/scipy/io/wavfile.py#L116
 
     TODO: [A] Add documentation
     """
     import struct
+    from scipy.io.wavfile import _read_riff_chunk, _read_fmt_chunk, _skip_unknown_chunk
 
     fid = open(filepath, 'rb')
-
-    def _read_riff_chunk(fid):
-        s = fid.read(4)
-        big_endian = False
-
-        if s == b'RIFX':
-            big_endian = True
-        elif s != b'RIFF':
-            raise ValueError("Not a WAVE file")
-
-        if big_endian:
-            fmt = '>I'
-        else:
-            fmt = '<I'
-
-        size = struct.unpack(fmt, fid.read(4))[0] + 8
-
-        s2 = fid.read(4)
-        if s2 != b'WAVE':
-            raise ValueError("Not a WAVE file")
-
-        return size, big_endian
-
-    def _read_fmt_chunk(fid, big_endian):
-        if big_endian:
-            fmt = '>'
-        else:
-            fmt = '<'
-
-        res = struct.unpack(fmt + 'iHHIIHH', fid.read(20))
-        size2, compression, channels, samplerate, _, _, bits = res
-
-        if compression not in KNOWN_WAVE_FORMATS or size2 > 16:
-            warnings.warn("Unknown wave file format", RuntimeWarning)
-
-        return channels, samplerate, bits
-
-    def _skip_unknown_chunk(fid, big_endian):
-        if big_endian:
-            fmt = '>i'
-        else:
-            fmt = '<i'
-
-        data = fid.read(4)
-        size = struct.unpack(fmt, data)[0]
-        fid.seek(size, 1)
 
     def _read_n_samples(fid, big_endian, bits):
         if big_endian:
@@ -161,29 +116,34 @@ def read_wavefile_metadata(filepath):
         return size // (bits // 8)
 
     try:
-        size, big_endian = _read_riff_chunk(fid)
+        size, is_big_endian = _read_riff_chunk(fid)
 
         while fid.tell() < size:
             chunk = fid.read(4)
             if chunk == b'fmt ':
-                channels, samplerate, bits = _read_fmt_chunk(fid, big_endian)
+                fmt_chunk = _read_fmt_chunk(fid, is_big_endian)
+                channels, samplerate = fmt_chunk[2:4]
+                bits = fmt_chunk[6]
             elif chunk == b'data':
-                n_samples = _read_n_samples(fid, big_endian, bits)
+                n_samples = _read_n_samples(fid, is_big_endian, bits)
                 break
-            elif chunk in (b'fact', b'LIST'):
-                _skip_unknown_chunk(fid, big_endian)
+            elif chunk in (b'JUNK', b'Fake', b'LIST', b'fact'):
+                _skip_unknown_chunk(fid, is_big_endian)
+            else:
+                warnings.warn("Chunk (non-data) not understood, skipping it.",
+                              RuntimeWarning)
+                _skip_unknown_chunk(fid, is_big_endian)
     finally:
         fid.close()
 
-    duration_seconds = (n_samples // channels) / samplerate
-
-    return AudioMetadata(filepath=filepath,
-                         format='wav',
-                         samplerate=samplerate,
-                         nchannels=channels,
-                         seconds=duration_seconds,
-                         nsamples=n_samples // channels  # per channel nsamples
-                         )
+    return AudioMetadata(
+        filepath=filepath,
+        format='wav',
+        samplerate=samplerate,
+        nchannels=channels,
+        seconds=(n_samples // channels) / samplerate,
+        nsamples=n_samples // channels  # per channel nsamples
+    )
 
 
 def read_audio_metadata_ffmpeg(filepath):
@@ -291,14 +251,13 @@ def read_audio_metadata_ffmpeg(filepath):
         samplerate=samplerate,
         nchannels=channels,
         seconds=duration_seconds,
-        nsamples=n_samples
-    )
+        nsamples=n_samples)
 
 
 def get_audio_metadata(filepath):
     """ Get the metadat for an audio file without reading all of it
 
-    NOTE: Tested only on formats [wav, mp3, mp4], only on macOS
+    NOTE: Tested only on formats [wav, mp3, mp4, avi], only on macOS
     TODO: [A] Test on Windows. The decoding may eff up for the ffmpeg one
 
     NOTE: for file formats other than wav, requires FFMPEG installed
@@ -306,7 +265,7 @@ def get_audio_metadata(filepath):
     The idea is that getting just the sample rate for the audio in a media file
     should not require reading the entire file.
 
-    There is a native implementation for reading metadata for wav files.
+    The implementation for reading metadata for wav files REQUIRES scipy
 
     For other formats, the implementation parses ffmpeg (error) output to get the
     required information.
@@ -360,12 +319,13 @@ class AudioIO(AudioSegment):
                 "Frame Count is calculated as float = {} by pydub".format(
                     nframes), RuntimeWarning)
 
-        updated_metadata = AudioMetadata(filepath=audiometadata.filepath,
-                                         format=audiometadata.format,
-                                         samplerate=obj.frame_rate,
-                                         nchannels=obj.channels,
-                                         seconds=obj.duration_seconds,
-                                         nsamples=int(nframes))
+        updated_metadata = AudioMetadata(
+            filepath=audiometadata.filepath,
+            format=audiometadata.format,
+            samplerate=obj.frame_rate,
+            nchannels=obj.channels,
+            seconds=obj.duration_seconds,
+            nsamples=int(nframes))
 
         return obj, updated_metadata
 
@@ -381,3 +341,28 @@ class AudioIO(AudioSegment):
         nchannels = self.channels
 
         return nparr([data[i::nchannels] for i in range(nchannels)]).T
+
+    def export_standard(self,
+                        outfilepath,
+                        samplerate=16000,
+                        channels=1,
+                        fmt="wav"):
+
+        channeled = self.set_channels(channels)
+        framed = channeled.set_frame_rate(samplerate)
+
+        return framed.export(outfilepath, format=fmt)
+
+
+def convert_to_standard(filepath,
+                        todir,
+                        tofmt="wav",
+                        samplerate=16000,
+                        channels=1):
+    """ Convert a single media file to the standard format """
+    tofilename = os.path.splitext(os.path.basename(filepath))[0] + "." + tofmt
+    tofilepath = os.path.join(todir, tofilename)
+    s = AudioIO.from_file(filepath)
+    f = s.export_standard(
+        tofilepath, samplerate=samplerate, channels=channels, fmt=tofmt)
+    f.close()

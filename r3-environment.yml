@@ -29,6 +29,7 @@ dependencies:
 - conda-forge::scipy=0.18.0=np111py35_blas_openblas_201
 - conda-forge::six=1.10.0=py35_0
 - conda-forge::tensorflow=0.9.0=py35_0
+- conda-forge::tqdm=4.8.2=py35_0
 - decorator=4.0.10=py35_0
 - entrypoints=0.2.2=py35_0
 - freetype=2.5.5=1
@@ -105,6 +106,7 @@ dependencies:
   - scipy==0.18.0
   - six==1.10.0
   - tensorflow==0.9.0
+  - tqdm==4.8.2
   - yapf==0.11.1
 prefix: /Users/myrmidon/.conda/envs/r3
 

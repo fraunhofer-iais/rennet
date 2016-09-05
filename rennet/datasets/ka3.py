@@ -8,6 +8,7 @@ from __future__ import print_function
 from collections import namedtuple
 import xml.etree.ElementTree as et
 import numpy as np
+import warnings
 
 import rennet.utils.label_utils as lu
 
@@ -40,10 +41,12 @@ def _parse_timepoint(timepoint):
     # N = the standard number of fractions per second
     val, persec = timepoint.split('F')
 
-    res = (int(hours) * 3600 + int(minutes) * 60 + int(sec) + int(val) /
-           int(persec))
+    res = int(hours) * 3600 +\
+          int(minutes) * 60 +\
+          int(sec)
 
-    return res
+    return res, int(val) / int(
+        persec)  # need to send separately as the float sum is not great
 
 
 def _parse_duration(duration):
@@ -58,17 +61,19 @@ def _parse_duration(duration):
             splits[i] = 0
 
     hours, minutes, sec, val, persec = splits
-    res = (int(hours) * 3600 + int(minutes) * 60 + int(sec) + int(val) /
-           int(persec))
+    res = int(hours) * 3600 +\
+          int(minutes) * 60 +\
+          int(sec)
 
-    return res
+    return res, int(val) / int(
+        persec)  # need to send separately as the float sum is not great
 
 
 def _parse_timestring(timepoint, duration):
-    tp = _parse_timepoint(timepoint)
-    dur = _parse_duration(duration)
+    tp, tval = _parse_timepoint(timepoint)
+    dur, dval = _parse_duration(duration)
 
-    return tp, tp + dur
+    return tp + tval, (tp + dur + (tval + dval))
 
 
 def _parse_segment(segment):
@@ -131,6 +136,9 @@ def parse_mpeg7(filepath):
             raise
 
         if startend[1] <= startend[0]:  # (end - start) <= 0
+            warnings.warn(
+                "(end - start) <= 0 ignored for annotation at {} with values {}".format(
+                    i, startend))
             continue
 
         starts_ends.append(startend)
@@ -218,20 +226,24 @@ class ActiveSpeakers(Annotations):
 
         return np.vstack([starts, ends]).T, labels
 
-
     @classmethod
     def from_annotations(cls, ann, samplerate=100):  # default 100 for ka3
         with ann.samplerate_as(samplerate):
             se_ = ann.starts_ends
-            se = se_.astype(np.int)
+            se = np.round(se_).astype(np.int)
 
             # TODO: [A] better error statement
-            # FIXME: [A] the below assert fails for something that I think is correct
-            # assert all(se == se_), "The provided sample rate does not cover all decimals"
+            try:
+                np.testing.assert_almost_equal(se, se_)
+            except AssertionError:
+                print(
+                    "The provided sample rate does not evenly divide the starts and ends")
+                raise
 
         n_speakers = len(ann.speakers)
         total_duration = se[:, 1].max()
-        active_speakers = np.zeros(shape=(total_duration, n_speakers), dtype=np.int)
+        active_speakers = np.zeros(shape=(total_duration, n_speakers),
+                                   dtype=np.int)
 
         for s, speaker in enumerate(ann.speakers):
             for i in ann.idx_for_speaker(speaker):
@@ -240,11 +252,13 @@ class ActiveSpeakers(Annotations):
 
         starts_ends, active_speakers = cls.group_by_values(active_speakers)
 
-        return cls(
-            ann.sourcefile, ann.speakers,
-            starts_ends, active_speakers, samplerate=samplerate
-        )
+        return cls(ann.sourcefile,
+                   ann.speakers,
+                   starts_ends,
+                   active_speakers,
+                   samplerate=samplerate)
 
     @classmethod
     def from_file(cls, filepath):
-        return cls.from_annotations(super().from_file(filepath))
+        return cls.from_annotations(super().from_file(filepath),
+                                    samplerate=100)

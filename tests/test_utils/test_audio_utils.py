@@ -5,8 +5,13 @@ Created: 18-08-2016
 Test the audio utilities module
 """
 import pytest
-from rennet.utils import audio_utils as au
 from numpy.testing import assert_almost_equal
+from glob import glob
+from tempfile import NamedTemporaryFile
+
+# pylint: disable=import-error
+from rennet.utils import audio_utils as au
+# pylint: enable=import-error
 
 # pylint: disable=redefined-outer-name
 ValidAudioFile = au.AudioMetadata
@@ -43,14 +48,19 @@ test_1_mp4 = ValidAudioFile(
     2.2613333333333334,
     108544)
 
+WORKING_DATA_RAW_MEDIA = glob("./data/working/*/*/media/raw/*.*")
 
-@pytest.fixture(scope="module",
-                params=[test_1_wav, test_1_mp3, test_1_96k_wav])
+
+@pytest.fixture(scope="module", params=WORKING_DATA_RAW_MEDIA)
+def working_data_raw_media(request):
+    """ All raw media files for all projects and datasets """
+    return request.param
+
+
+@pytest.fixture(
+    scope="module", params=[test_1_wav, test_1_mp3, test_1_96k_wav])
 def valid_audio_files(request):
-    """ A valid wav file for testing
-
-    The test1.wav is assumed to exist
-    """
+    """ Valid audio files for testing """
     return request.param
 
 
@@ -59,8 +69,9 @@ def valid_wav_files(request):
     return request.param
 
 
-@pytest.fixture(scope="module",
-                params=[test_1_mp3, test_1_mp4, test_1_wav, test_1_96k_wav])
+@pytest.fixture(
+    scope="module",
+    params=[test_1_mp3, test_1_mp4, test_1_wav, test_1_96k_wav])
 def valid_media_files(request):
     """
     ultimate one to pass for get_samplerate(...) ... etc
@@ -76,7 +87,8 @@ def test_valid_wav_metadata(valid_wav_files):
     assert au.read_wavefile_metadata(filepath) == valid_wav_files
 
 
-@pytest.mark.skipif(not au.is_ffmpeg_available(), reason="FFMPEG not available")
+@pytest.mark.skipif(
+    not au.is_ffmpeg_available(), reason="FFMPEG not available")
 def test_valid_media_metadata_ffmpeg(valid_media_files):
     """ test au.read_audio_metadata_ffmpeg(...)
     The function does not return exact nsamples or seconds
@@ -97,7 +109,8 @@ def test_valid_media_metadata_ffmpeg(valid_media_files):
     assert_almost_equal(correct_duration, metadata.seconds, decimal=1)
 
 
-@pytest.mark.skipif(not au.is_ffmpeg_available(), reason="FFMPEG not available")
+@pytest.mark.skipif(
+    not au.is_ffmpeg_available(), reason="FFMPEG not available")
 def test_valid_audio_metadata(valid_media_files):
     """ Test the audio_utils.get_audio_metadata(...) for valid wav file"""
     filepath = valid_media_files.filepath
@@ -111,7 +124,8 @@ def test_valid_audio_metadata(valid_media_files):
         assert metadata.nchannels == valid_media_files.nchannels
 
 
-@pytest.mark.skipif(not au.is_ffmpeg_available(), reason="FFMPEG not available")
+@pytest.mark.skipif(
+    not au.is_ffmpeg_available(), reason="FFMPEG not available")
 def test_AudioIO_from_audiometadata(valid_media_files):
     """Test if the returned updated metadata is accurate"""
 
@@ -124,7 +138,8 @@ def test_AudioIO_from_audiometadata(valid_media_files):
         pytest.skip(">48khz audio not supported by AudioIO")
 
 
-@pytest.mark.skipif(not au.is_ffmpeg_available(), reason="FFMPEG not available")
+@pytest.mark.skipif(
+    not au.is_ffmpeg_available(), reason="FFMPEG not available")
 def test_AudioIO_get_numpy_data(valid_media_files):
     """ Test for correct nsamples and nchannels """
 
@@ -138,3 +153,42 @@ def test_AudioIO_get_numpy_data(valid_media_files):
         assert data.shape == (correct_ns, correct_noc)
     else:
         pytest.skip(">48khz audio not supported by AudioIO")
+
+
+@pytest.mark.check_dataset
+def test_able_to_get_metadata_for_all_raw_dataset(working_data_raw_media):
+    """ Test if able to use au.get_audio_metadata(...) for all raw datasets """
+    fp = working_data_raw_media
+
+    if not fp.endswith("wav") and not au.is_ffmpeg_available():
+        pytest.skip("FFMPEG not available")
+    else:
+        _ = au.get_audio_metadata(fp)
+        assert True
+
+
+@pytest.mark.long_running
+@pytest.mark.check_dataset
+def test_able_to_create_AudioIO_for_all_raw_dataset(working_data_raw_media):
+    """ Test if able to create AudioIO object for all raw datasets """
+    fp = working_data_raw_media
+
+    if not fp.endswith("wav") and not au.is_ffmpeg_available():
+        pytest.skip("FFMPEG not available")
+    else:
+        _ = au.AudioIO.from_file(fp)
+        assert True
+
+
+def test_AudioIO_export_standard(valid_media_files):
+    vml = valid_media_files
+    if vml.samplerate > 48000:
+        pytest.skip(">48kHz audio not supported by AudioIO")
+    s, um = au.AudioIO.from_audiometadata(vml)
+
+    with NamedTemporaryFile() as tfp:
+        s.export_standard(tfp)
+        nm = au.get_audio_metadata(tfp.name)
+        assert nm.samplerate == 16000
+        assert nm.nchannels == 1
+        assert_almost_equal(nm.seconds, um.seconds, decimal=3)
