@@ -136,13 +136,14 @@ def read_wavefile_metadata(filepath):
     finally:
         fid.close()
 
-    return AudioMetadata(filepath=filepath,
-                         format='wav',
-                         samplerate=samplerate,
-                         nchannels=channels,
-                         seconds=(n_samples // channels) / samplerate,
-                         nsamples=n_samples // channels  # per channel nsamples
-                         )
+    return AudioMetadata(
+        filepath=filepath,
+        format='wav',
+        samplerate=samplerate,
+        nchannels=channels,
+        seconds=(n_samples // channels) / samplerate,
+        nsamples=n_samples // channels  # per channel nsamples
+    )
 
 
 def read_audio_metadata_ffmpeg(filepath):
@@ -250,8 +251,7 @@ def read_audio_metadata_ffmpeg(filepath):
         samplerate=samplerate,
         nchannels=channels,
         seconds=duration_seconds,
-        nsamples=n_samples
-    )
+        nsamples=n_samples)
 
 
 def get_audio_metadata(filepath):
@@ -319,12 +319,13 @@ class AudioIO(AudioSegment):
                 "Frame Count is calculated as float = {} by pydub".format(
                     nframes), RuntimeWarning)
 
-        updated_metadata = AudioMetadata(filepath=audiometadata.filepath,
-                                         format=audiometadata.format,
-                                         samplerate=obj.frame_rate,
-                                         nchannels=obj.channels,
-                                         seconds=obj.duration_seconds,
-                                         nsamples=int(nframes))
+        updated_metadata = AudioMetadata(
+            filepath=audiometadata.filepath,
+            format=audiometadata.format,
+            samplerate=obj.frame_rate,
+            nchannels=obj.channels,
+            seconds=obj.duration_seconds,
+            nsamples=int(nframes))
 
         return obj, updated_metadata
 
@@ -340,3 +341,14 @@ class AudioIO(AudioSegment):
         nchannels = self.channels
 
         return nparr([data[i::nchannels] for i in range(nchannels)]).T
+
+    def export_standard(self,
+                        outfilepath,
+                        samplerate=16000,
+                        channels=1,
+                        fmt="wav"):
+
+        channeled = self.set_channels(channels)
+        framed = channeled.set_frame_rate(samplerate)
+
+        return framed.export(outfilepath, format=fmt)
