@@ -7,8 +7,11 @@ Test the audio utilities module
 import pytest
 from numpy.testing import assert_almost_equal
 from glob import glob
+from tempfile import NamedTemporaryFile
 
+# pylint: disable=import-error
 from rennet.utils import audio_utils as au
+# pylint: enable=import-error
 
 # pylint: disable=redefined-outer-name
 ValidAudioFile = au.AudioMetadata
@@ -174,3 +177,20 @@ def test_able_to_create_AudioIO_for_all_raw_dataset(working_data_raw_media):
     else:
         _ = au.AudioIO.from_file(fp)
         assert True
+
+def test_AudioIO_export_standard(valid_media_files):
+    vml = valid_media_files
+
+    if vml.samplerate > 48000:
+        pytest.skip(">48kHz audio not supported by AudioIO")
+
+    s, um = au.AudioIO.from_audiometadata(vml)
+
+    with NamedTemporaryFile() as tfp:
+        s.export_standard(tfp)
+
+        nm = au.get_audio_metadata(tfp.name)
+
+        assert nm.samplerate == 16000
+        assert nm.nchannels == 1
+        assert_almost_equal(nm.seconds, um.seconds, decimal=3)
