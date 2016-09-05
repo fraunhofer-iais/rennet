@@ -352,3 +352,17 @@ class AudioIO(AudioSegment):
         framed = channeled.set_frame_rate(samplerate)
 
         return framed.export(outfilepath, format=fmt)
+
+
+def convert_to_standard(filepath,
+                        todir,
+                        tofmt="wav",
+                        samplerate=16000,
+                        channels=1):
+    """ Convert a single media file to the standard format """
+    tofilename = os.path.splitext(os.path.basename(filepath))[0] + "." + tofmt
+    tofilepath = os.path.join(todir, tofilename)
+    s = AudioIO.from_file(filepath)
+    f = s.export_standard(
+        tofilepath, samplerate=samplerate, channels=channels, fmt=tofmt)
+    f.close()
