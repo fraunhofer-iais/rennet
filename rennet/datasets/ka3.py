@@ -37,7 +37,8 @@ MPEG7_TAGS = {
     "audiosegment": ".//mpeg7:AudioSegment",
     "timepoint": ".//mpeg7:MediaTimePoint",
     "duration": ".//mpeg7:MediaDuration",
-    "descriptor": ".//mpeg7:AudioDescriptor[@xsi:type='ifinder:SpokenContentType']",
+    "descriptor":
+    ".//mpeg7:AudioDescriptor[@xsi:type='ifinder:SpokenContentType']",
     "speakerid": ".//ifinder:Identifier",
     "transcription": ".//ifinder:SpokenUnitVector",
     "confidence": ".//ifinder:ConfidenceVector",
@@ -96,7 +97,7 @@ def _parse_segment(segment, TAGS):
     duration = segment.find(TAGS["duration"], MPEG7_NAMESPACES).text
     descriptor = segment.find(TAGS["descriptor"], MPEG7_NAMESPACES)
 
-    if any(d is None for d in [timepoint, duration, descriptor]):
+    if any(d is None for d in [timepoint, duration]):  #, descriptor]):
         raise ValueError(
             "timepoint, duration or decriptor not found in segment")
 
@@ -153,10 +154,14 @@ def parse_mpeg7(filepath, use_tags="mpeg7"):
             print("Segment number :%d" % (i + 1))
             raise
 
+        if descriptor is None:
+            # if there is not descriptor, there is no speech. Ignore!
+            continue
+
         if startend[1] <= startend[0]:  # (end - start) <= 0
             warnings.warn(
-                "(end - start) <= 0 ignored for annotation at {} with values {}".
-                format(i, startend))
+                "(end - start) <= 0 ignored for annotation at {} with values {} in file {}".
+                format(i, startend, filepath))
             continue
 
         starts_ends.append(startend)
