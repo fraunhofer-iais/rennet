@@ -14,12 +14,7 @@ from pydub import AudioSegment
 try:
     from subprocess import DEVNULL
 except ImportError:
-    DEVNULL = open(os.devnull, 'wb')
-
-
-WAVE_FORMAT_PCM = 0x0001
-WAVE_FORMAT_IEEE_FLOAT = 0x0003
-KNOWN_WAVE_FORMATS = (WAVE_FORMAT_PCM, WAVE_FORMAT_IEEE_FLOAT)
+    DEVNULL = open(os.devnull, 'wb')  # FIXME: Okay to never close this?
 
 AudioMetadata = namedtuple(
     'AudioMetadata',
@@ -34,7 +29,7 @@ AudioMetadata = namedtuple(
 
 
 def which(executable):
-    """ Check if FFMPEG is available """
+    """ Check if executable is available """
 
     envdir_list = [os.curdir] + os.environ["PATH"].split(os.pathsep)
 
@@ -44,7 +39,8 @@ def which(executable):
             return executable
 
     # executable was not found
-    return False
+    return False  # Sorry for type-stability
+
 
 def get_codec():
     if os.name == "nt":
@@ -57,7 +53,7 @@ def get_codec():
             return ffmpeg
 
 
-FFMPEG_EXEC = get_codec()
+CODEC_EXEC = get_codec()
 
 
 def is_string(obj):
@@ -166,7 +162,7 @@ def read_audio_metadata_codec(filepath):
     import subprocess as sp
 
     def _read_codec_error_output(filepath):
-        command = [FFMPEG_EXEC, "-i", filepath]
+        command = [CODEC_EXEC, "-i", filepath]
 
         popen_params = {
             "bufsize": 10**5,
@@ -197,7 +193,7 @@ def read_audio_metadata_codec(filepath):
         except:
             raise RuntimeError(
                 "Failed to load sample rate of file %s from %s\n the infos from %s are \n%s"
-                % (filepath, FFMPEG_EXEC, FFMPEG_EXEC, infos))
+                % (filepath, CODEC_EXEC, CODEC_EXEC, infos))
 
     def _read_n_channels(line):
         try:
@@ -219,7 +215,7 @@ def read_audio_metadata_codec(filepath):
         except:
             raise RuntimeError(
                 "Failed to load n channels of file %s from %s\n the infos from %s are \n%s"
-                % (filepath, FFMPEG_EXEC, FFMPEG_EXEC, infos))
+                % (filepath, CODEC_EXEC, CODEC_EXEC, infos))
 
     def _read_duration(line):
         try:
@@ -232,7 +228,7 @@ def read_audio_metadata_codec(filepath):
         except:
             raise RuntimeError(
                 "Failed to load duration of file %s from %s\n the infos from %s are \n%s"
-                % (filepath, FFMPEG_EXEC, FFMPEG_EXEC, infos))
+                % (filepath, CODEC_EXEC, CODEC_EXEC, infos))
 
     # to throw error for FileNotFound
     # TODO: [A] test error when FileNotFound
@@ -248,7 +244,7 @@ def read_audio_metadata_codec(filepath):
     if lines_audio == []:
         raise RuntimeError(
             "%s did not find audio in the file %s and produced infos\n%s" %
-            (FFMPEG_EXEC, filepath, infos))
+            (CODEC_EXEC, filepath, infos))
 
     samplerate = _read_samplerate(lines_audio[0])
     channels = _read_n_channels(lines_audio[0])
@@ -257,8 +253,8 @@ def read_audio_metadata_codec(filepath):
     n_samples = int(duration_seconds * samplerate) + 1
 
     warnings.warn(
-        "Metadata was read from %s, duration and number of samples may not be accurate"%FFMPEG_EXEC,
-        RuntimeWarning)
+        "Metadata was read from %s, duration and number of samples may not be accurate"
+        % CODEC_EXEC, RuntimeWarning)
 
     return AudioMetadata(
         filepath=filepath,
@@ -273,16 +269,15 @@ def get_audio_metadata(filepath):
     """ Get the metadata for an audio file without reading all of it
 
     NOTE: Tested only on formats [wav, mp3, mp4, avi], only on macOS
-    TODO: [A] Test on Windows. The decoding may eff up for the ffmpeg one
 
-    NOTE: for file formats other than wav, requires FFMPEG installed
+    NOTE: for file formats other than wav, requires FFMPEG or AVCONV installed
 
     The idea is that getting just the sample rate for the audio in a media file
     should not require reading the entire file.
 
     The implementation for reading metadata for wav files REQUIRES scipy
 
-    For other formats, the implementation parses ffmpeg (error) output to get the
+    For other formats, the implementation parses ffmpeg or avconv (error) output to get the
     required information.
 
     # Arguments
@@ -300,8 +295,8 @@ def get_audio_metadata(filepath):
             return read_audio_metadata_codec(filepath)
         else:
             raise RuntimeError(
-                "Neither FFMPEG or AVCONV was found, nor is file %s a valid WAVE file" %
-                filepath)
+                "Neither FFMPEG or AVCONV was found, nor is file %s a valid WAVE file"
+                % filepath)
 
 
 class AudioIO(AudioSegment):

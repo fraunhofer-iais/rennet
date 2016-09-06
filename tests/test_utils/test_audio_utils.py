@@ -87,8 +87,7 @@ def test_valid_wav_metadata(valid_wav_files):
     assert au.read_wavefile_metadata(filepath) == valid_wav_files
 
 
-@pytest.mark.skipif(
-    not au.get_codec(), reason="FFMPEG not available")
+@pytest.mark.skipif(not au.get_codec(), reason="No FFMPEG or AVCONV found")
 def test_valid_media_metadata_codec(valid_media_files):
     """ test au.read_audio_metadata_codec(...)
     The function does not return exact nsamples or seconds
@@ -109,8 +108,7 @@ def test_valid_media_metadata_codec(valid_media_files):
     assert_almost_equal(correct_duration, metadata.seconds, decimal=1)
 
 
-@pytest.mark.skipif(
-    not au.get_codec(), reason="FFMPEG not available")
+@pytest.mark.skipif(not au.get_codec(), reason="No FFMPEG or AVCONV found")
 def test_valid_audio_metadata(valid_media_files):
     """ Test the audio_utils.get_audio_metadata(...) for valid wav file"""
     filepath = valid_media_files.filepath
@@ -124,8 +122,7 @@ def test_valid_audio_metadata(valid_media_files):
         assert metadata.nchannels == valid_media_files.nchannels
 
 
-@pytest.mark.skipif(
-    not au.get_codec(), reason="FFMPEG not available")
+@pytest.mark.skipif(not au.get_codec(), reason="No FFMPEG or AVCONV found")
 def test_AudioIO_from_audiometadata(valid_media_files):
     """Test if the returned updated metadata is accurate"""
 
@@ -138,16 +135,15 @@ def test_AudioIO_from_audiometadata(valid_media_files):
             vm = valid_media_files
             sr = vm.samplerate
             assert abs(vm.nsamples - updated_metadata.nsamples) <= sr * 5e-2
-            assert_almost_equal(updated_metadata.seconds, vm.seconds,
-                    decimal=1)
+            assert_almost_equal(
+                updated_metadata.seconds, vm.seconds, decimal=1)
         else:
             assert valid_media_files == updated_metadata
     else:
         pytest.skip(">48khz audio not supported by AudioIO")
 
 
-@pytest.mark.skipif(
-    not au.get_codec(), reason="FFMPEG not available")
+@pytest.mark.skipif(not au.get_codec(), reason="No FFMPEG or AVCONV found")
 def test_AudioIO_get_numpy_data(valid_media_files):
     """ Test for correct nsamples and nchannels """
 
@@ -175,7 +171,7 @@ def test_able_to_get_metadata_for_all_raw_dataset(working_data_raw_media):
     fp = working_data_raw_media
 
     if not fp.endswith("wav") and not au.get_codec():
-        pytest.skip("FFMPEG not available")
+        pytest.skip("No FFMPEG or AVCONV found")
     else:
         _ = au.get_audio_metadata(fp)
         assert True
@@ -188,7 +184,7 @@ def test_able_to_create_AudioIO_for_all_raw_dataset(working_data_raw_media):
     fp = working_data_raw_media
 
     if not fp.endswith("wav") and not au.get_codec():
-        pytest.skip("FFMPEG not available")
+        pytest.skip("No FFMPEG or AVCONV found")
     else:
         _ = au.AudioIO.from_file(fp)
         assert True
