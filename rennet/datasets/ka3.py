@@ -226,6 +226,13 @@ class Annotations(lu.SequenceLabels):
             if l.speakerid == speakerid:
                 yield i
 
+    def __str__(self):
+        s = "Source filepath: {}".format(self.sourcefile)
+        s += "\nSpeakers: {}\n".format(len(self.speakers))
+        s += "\n".join(str(s) for s in self.speakers)
+        s += "\n" + super().__str__()
+        return s
+
 
 class ActiveSpeakers(Annotations):
     def __init__(self, filepath, speakers, *args, **kwargs):
