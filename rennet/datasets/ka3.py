@@ -196,8 +196,8 @@ class Annotations(lu.SequenceLabels):
 
     # pylint: disable=too-many-locals
     @classmethod
-    def from_file(cls, filepath):
-        se, sids, gen, gn, conf, trn = parse_mpeg7(filepath)
+    def from_file(cls, filepath, use_tags="mpeg7"):
+        se, sids, gen, gn, conf, trn = parse_mpeg7(filepath, use_tags)
 
         uniq_sids = sorted(set(sids))
 
@@ -282,6 +282,6 @@ class ActiveSpeakers(Annotations):
                    samplerate=samplerate)
 
     @classmethod
-    def from_file(cls, filepath):
+    def from_file(cls, filepath, use_tags="mpeg7"):
         return cls.from_annotations(
-            super().from_file(filepath), samplerate=100)
+            super().from_file(filepath, use_tags), samplerate=100)
