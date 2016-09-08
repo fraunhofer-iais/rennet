@@ -384,9 +384,13 @@ def convert_to_standard_split(filepath, todir, tofmt="wav", samplerate=16000):
     splits = s.split_to_mono()
 
     tofilename = os.path.splitext(os.path.basename(filepath))[0]
+    tofilenames = []
     for i, split in enumerate(splits):
-        tofilepath = os.path.join(todir,
-                                  tofilename + "_c{}.".format(i) + tofmt)
+        _tofilename = tofilename + "_c{}.".format(i) + tofmt
+        tofilepath = os.path.join(todir, _tofilename)
+        tofilenames.append(_tofilename)
 
         f = split.export(tofilepath, format=tofmt)
         f.close()
+
+    return tofilenames
