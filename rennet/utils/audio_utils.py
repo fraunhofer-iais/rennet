@@ -360,7 +360,6 @@ class AudioIO(AudioSegment):
 
         channeled = self.set_channels(channels)
         framed = channeled.set_frame_rate(samplerate)
-
         return framed.export(outfilepath, format=fmt)
 
 
@@ -376,3 +375,18 @@ def convert_to_standard(filepath,
     f = s.export_standard(
         tofilepath, samplerate=samplerate, channels=channels, fmt=tofmt)
     f.close()
+
+
+def convert_to_standard_split(filepath, todir, tofmt="wav", samplerate=16000):
+    s = AudioIO.from_file(filepath)
+    s = s.set_frame_rate(samplerate)
+
+    splits = s.split_to_mono()
+
+    tofilename = os.path.splitext(os.path.basename(filepath))[0]
+    for i, split in enumerate(splits):
+        tofilepath = os.path.join(todir,
+                                  tofilename + "_c{}.".format(i) + tofmt)
+
+        f = split.export(tofilepath, format=tofmt)
+        f.close()
