@@ -90,7 +90,7 @@ class SequenceLabels(object):
         return SequenceLabels(se, l, sr)
 
     def __str__(self):
-        s = self.__class__.__name__ + "with sample rate: " + str(
+        s = self.__class__.__name__ + " with sample rate: " + str(
             self.samplerate)
         s += "\n"
         s += "{:8} - {:8} : {}\n".format("Start", "End", "Label")
