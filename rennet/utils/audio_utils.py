@@ -375,6 +375,7 @@ def convert_to_standard(filepath,
     f = s.export_standard(
         tofilepath, samplerate=samplerate, channels=channels, fmt=tofmt)
     f.close()
+    return [tofilename, ]
 
 
 def convert_to_standard_split(filepath, todir, tofmt="wav", samplerate=16000):
@@ -386,7 +387,7 @@ def convert_to_standard_split(filepath, todir, tofmt="wav", samplerate=16000):
     tofilename = os.path.splitext(os.path.basename(filepath))[0]
     tofilenames = []
     for i, split in enumerate(splits):
-        _tofilename = tofilename + "_c{}.".format(i) + tofmt
+        _tofilename = tofilename + ".c{}.".format(i) + tofmt
         tofilepath = os.path.join(todir, _tofilename)
         tofilenames.append(_tofilename)
 
