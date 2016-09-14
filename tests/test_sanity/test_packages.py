@@ -1,5 +1,5 @@
 import pytest
-from rennet.utils.audio_utils import is_ffmpeg_available
+from rennet.utils.audio_utils import get_codec
 
 
 @pytest.mark.trivial
@@ -32,5 +32,5 @@ def test_pydub_installed():
 
 @pytest.mark.trivial
 @pytest.mark.sanity_check
-def test_ffmpeg_available():
-    assert is_ffmpeg_available()
+def test_codec_available():
+    assert get_codec()
