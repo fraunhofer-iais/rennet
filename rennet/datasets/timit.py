@@ -53,7 +53,7 @@ class TIMITSequenceLabels(lu.SequenceLabels):
         active_speakers = np.zeros(shape=(total_duration, 2), dtype=np.int)
 
         for s, e in se:
-            active_speakers[s:e, 0] += 1
+            active_speakers[s:e, 0] = 1
 
         with other.samplerate_as(samplerate):
             se_other = np.round(other.starts_ends).astype(np.int)
@@ -61,9 +61,9 @@ class TIMITSequenceLabels(lu.SequenceLabels):
         for s, e in se_other:
             if s - 1 < total_duration:
                 if e < total_duration:
-                    active_speakers[s:e, 1] += 1
+                    active_speakers[s:e, 1] = 1
                 else:
-                    active_speakers[s:, 1] += 1
+                    active_speakers[s:, 1] = 1
             else:
                 continue
 
