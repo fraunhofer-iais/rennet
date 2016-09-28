@@ -11,6 +11,7 @@ import numpy as np
 import warnings
 
 import rennet.utils.label_utils as lu
+from rennet.utils.np_utils import group_by_values
 
 MPEG7_NAMESPACES = {
     "ns": "http://www.iais.fraunhofer.de/ifinder",
@@ -160,8 +161,8 @@ def parse_mpeg7(filepath, use_tags="mpeg7"):
 
         if startend[1] <= startend[0]:  # (end - start) <= 0
             warnings.warn(
-                "(end - start) <= 0 ignored for annotation at {} with values {} in file {}".
-                format(i, startend, filepath))
+                "(end - start) <= 0 ignored for annotation at {} with values {} in file {}".format(
+                    i, startend, filepath))
             continue
 
         starts_ends.append(startend)
@@ -210,8 +211,8 @@ class Annotations(lu.SequenceLabels):
         transcriptions = []
         for i, (s, e) in enumerate(se):
             starts_ends.append((s, e))
-            transcriptions.append(
-                Transcription(sids[i], float(conf[i]), trn[i]))
+            transcriptions.append(Transcription(sids[i], float(conf[i]), trn[
+                i]))
 
         return cls(filepath,
                    speakers,
@@ -238,24 +239,6 @@ class ActiveSpeakers(Annotations):
     def __init__(self, filepath, speakers, *args, **kwargs):
         super().__init__(filepath, speakers, *args, **kwargs)
 
-    @staticmethod
-    def group_by_values(values):
-        # TODO: [A] add to a generic util module
-        # TODO: [A] make it work with 1 dimensional arrays
-        # Ref: http://stackoverflow.com/questions/4651683/numpy-grouping-using-itertools-groupby-performance
-
-        initones = [[1] * values.shape[1]]
-        diff = np.concatenate([initones, np.diff(values, axis=0)])
-        starts = np.unique(np.where(diff)[0])  # remove duplicate starts
-
-        ends = np.ones(len(starts), dtype=np.int)
-        ends[:-1] = starts[1:]
-        ends[-1] = len(values)
-
-        labels = values[starts]
-
-        return np.vstack([starts, ends]).T, labels
-
     @classmethod
     def from_annotations(cls, ann, samplerate=100):  # default 100 for ka3
         with ann.samplerate_as(samplerate):
@@ -272,15 +255,15 @@ class ActiveSpeakers(Annotations):
 
         n_speakers = len(ann.speakers)
         total_duration = se[:, 1].max()
-        active_speakers = np.zeros(
-            shape=(total_duration, n_speakers), dtype=np.int)
+        active_speakers = np.zeros(shape=(total_duration, n_speakers),
+                                   dtype=np.int)
 
         for s, speaker in enumerate(ann.speakers):
             for i in ann.idx_for_speaker(speaker):
                 start, end = se[i]
                 active_speakers[start:end, s] += 1
 
-        starts_ends, active_speakers = cls.group_by_values(active_speakers)
+        starts_ends, active_speakers = group_by_values(active_speakers)
 
         return cls(ann.sourcefile,
                    ann.speakers,
@@ -290,5 +273,5 @@ class ActiveSpeakers(Annotations):
 
     @classmethod
     def from_file(cls, filepath, use_tags="mpeg7"):
-        return cls.from_annotations(
-            super().from_file(filepath, use_tags), samplerate=100)
+        return cls.from_annotations(super().from_file(filepath, use_tags),
+                                    samplerate=100)

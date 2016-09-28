@@ -6,8 +6,10 @@ Helpers for working with TIMIT dataset
 """
 from os.path import abspath
 from csv import reader
+import numpy as np
 
 import rennet.utils.label_utils as lu
+from rennet.utils.np_utils import group_by_values
 
 
 class TIMITSequenceLabels(lu.SequenceLabels):
@@ -30,3 +32,44 @@ class TIMITSequenceLabels(lu.SequenceLabels):
                 l.append(" ".join(row[2:]))
 
         return cls(absfp, se, l, samplerate=samplerate)
+
+    def overlay(self, other, samplerate=None):
+        """ Overlay the TIMIT annotation with another one
+        NOTE: The other annotation will be clipped if it is longer than the current one
+        """
+
+        assert isinstance(
+            other,
+            lu.SequenceLabels), "The other label should be a TIMIT single speaker label"
+
+        if samplerate is None:
+            samplerate = self.samplerate
+
+        with self.samplerate_as(samplerate):
+            se = np.round(self.starts_ends).astype(np.int)
+
+        total_duration = se[:, 1].max()
+
+        active_speakers = np.zeros(shape=(total_duration, 2), dtype=np.int)
+
+        for s, e in se:
+            active_speakers[s:e, 0] = 1
+
+        with other.samplerate_as(samplerate):
+            se_other = np.round(other.starts_ends).astype(np.int)
+
+        for s, e in se_other:
+            if s - 1 < total_duration:
+                if e < total_duration:
+                    active_speakers[s:e, 1] = 1
+                else:
+                    active_speakers[s:, 1] = 1
+            else:
+                continue
+
+        starts_ends, active_speakers = group_by_values(active_speakers)
+
+        return self.__class__(self.sourcefile,
+                              starts_ends,
+                              active_speakers,
+                              samplerate=samplerate)
