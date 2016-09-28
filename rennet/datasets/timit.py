@@ -33,16 +33,21 @@ class TIMITSequenceLabels(lu.SequenceLabels):
 
         return cls(absfp, se, l, samplerate=samplerate)
 
-    def overlay(self, other):
+    def overlay(self, other, samplerate=None):
         """ Overlay the TIMIT annotation with another one
         NOTE: The other annotation will be clipped if it is longer than the current one
         """
 
         assert isinstance(
             other,
-            TIMITSequenceLabels), "The other label should be a TIMIT single speaker label"
+            lu.SequenceLabels), "The other label should be a TIMIT single speaker label"
 
-        se = self.starts_ends
+        if samplerate is None:
+            samplerate = self.samplerate
+
+        with self.samplerate_as(samplerate):
+            se = np.round(self.starts_ends).astype(np.int)
+
         total_duration = se[:, 1].max()
 
         active_speakers = np.zeros(shape=(total_duration, 2), dtype=np.int)
@@ -50,8 +55,8 @@ class TIMITSequenceLabels(lu.SequenceLabels):
         for s, e in se:
             active_speakers[s:e, 0] += 1
 
-        with other.samplerate_as(self.samplerate):
-            se_other = other.starts_ends
+        with other.samplerate_as(samplerate):
+            se_other = np.round(other.starts_ends).astype(np.int)
 
         for s, e in se_other:
             if s - 1 < total_duration:
@@ -64,9 +69,7 @@ class TIMITSequenceLabels(lu.SequenceLabels):
 
         starts_ends, active_speakers = group_by_values(active_speakers)
 
-        return self.__class__.__init__(
-            type(self),
-            self.sourcefile,
-            starts_ends,
-            active_speakers,
-            samplerate=self.samplerate)
+        return self.__class__(self.sourcefile,
+                              starts_ends,
+                              active_speakers,
+                              samplerate=samplerate)
