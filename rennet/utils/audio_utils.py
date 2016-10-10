@@ -9,7 +9,7 @@ import os
 import warnings
 from collections import namedtuple
 
-from pydub import AudioSegment
+from pydub import AudioSegment  # external dependency
 
 try:
     from subprocess import DEVNULL
@@ -71,7 +71,7 @@ def get_codec():
             return ffmpeg
 
 
-CODEC_EXEC = get_codec()
+CODEC_EXEC = get_codec()  # NOTE: Available codec; False when none available
 
 
 def is_string(obj):
