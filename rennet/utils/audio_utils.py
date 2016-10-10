@@ -29,7 +29,17 @@ AudioMetadata = namedtuple(
 
 
 def which(executable):
-    """ Check if executable is available """
+    """ Check if executable is available on the system
+
+    Works with Unix type systems and Windows
+    NOTE: no changes are made to the executable's name, only path is added
+
+    # Arguments
+        executable: str name of the executable (with `.exe` for Windows)
+
+    # Returns:
+        False or executable: depending on if the executable is accessible
+    """
 
     envdir_list = [os.curdir] + os.environ["PATH"].split(os.pathsep)
 
