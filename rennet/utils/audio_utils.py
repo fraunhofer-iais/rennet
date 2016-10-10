@@ -53,6 +53,14 @@ def which(executable):
 
 
 def get_codec():
+    """ Get codec to use for the audio file
+
+    Searches for existence of `FFMPEG` first, then `AVCONV`
+    NOTE: `.exe` is appended to name if on Windows
+
+    # Returns
+        False or executable: bool or str : executable of the codec if available
+    """
     if os.name == "nt":
         return which("ffmpeg.exe")
     else:
