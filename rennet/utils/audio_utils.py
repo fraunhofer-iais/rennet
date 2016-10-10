@@ -77,11 +77,19 @@ CODEC_EXEC = get_codec()  # NOTE: Available codec; False when none available
 
 
 def read_wavefile_metadata(filepath):
-    """
+    """ Read AudioMetadata of a WAV file without reading all of it
+
+    Heavily depends on `scipy.io.wavfile`.
+
+    # Arguments
+        filepath: str: full path to the WAV file
+
+    # Returns
+        meta: AudioMetadata object (namedtuple): with information as:
+
     # Reference
         https://github.com/scipy/scipy/blob/master/scipy/io/wavfile.py#L116
 
-    TODO: [A] Add documentation
     """
     import struct
     from scipy.io.wavfile import _read_riff_chunk, _read_fmt_chunk, _skip_unknown_chunk
@@ -96,7 +104,7 @@ def read_wavefile_metadata(filepath):
 
         size = struct.unpack(fmt, fid.read(4))[0]
 
-        return size // (bits // 8)
+        return size // (bits // 8)  # indicates total number of samples
 
     try:
         size, is_big_endian = _read_riff_chunk(fid)
@@ -105,18 +113,18 @@ def read_wavefile_metadata(filepath):
             chunk = fid.read(4)
             if chunk == b'fmt ':
                 fmt_chunk = _read_fmt_chunk(fid, is_big_endian)
-                channels, samplerate = fmt_chunk[2:4]
+                channels, samplerate = fmt_chunk[2:4]  # info relevant to us
                 bits = fmt_chunk[6]
             elif chunk == b'data':
                 n_samples = _read_n_samples(fid, is_big_endian, bits)
-                break
+                break  # NOTE: break as now we have all info we need
             elif chunk in (b'JUNK', b'Fake', b'LIST', b'fact'):
                 _skip_unknown_chunk(fid, is_big_endian)
             else:
                 warnings.warn("Chunk (non-data) not understood, skipping it.",
                               RuntimeWarning)
                 _skip_unknown_chunk(fid, is_big_endian)
-    finally:
+    finally:  # always close
         fid.close()
 
     return AudioMetadata(filepath=filepath,
@@ -124,7 +132,7 @@ def read_wavefile_metadata(filepath):
                          samplerate=samplerate,
                          nchannels=channels,
                          seconds=(n_samples // channels) / samplerate,
-                         nsamples=n_samples // channels  # per channel nsamples
+                         nsamples=n_samples // channels  # for one channel
                          )
 
 
