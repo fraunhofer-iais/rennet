@@ -9,7 +9,9 @@ import os
 import warnings
 from collections import namedtuple
 
-from pydub import AudioSegment
+from pydub import AudioSegment  # external dependency
+
+from rennet.utils.py_utils import cvsecs
 
 try:
     from subprocess import DEVNULL
@@ -29,7 +31,17 @@ AudioMetadata = namedtuple(
 
 
 def which(executable):
-    """ Check if executable is available """
+    """ Check if executable is available on the system
+
+    Works with Unix type systems and Windows
+    NOTE: no changes are made to the executable's name, only path is added
+
+    # Arguments
+        executable: str name of the executable (with `.exe` for Windows)
+
+    # Returns:
+        False or executable: depending on if the executable is accessible
+    """
 
     envdir_list = [os.curdir] + os.environ["PATH"].split(os.pathsep)
 
@@ -43,6 +55,14 @@ def which(executable):
 
 
 def get_codec():
+    """ Get codec to use for the audio file
+
+    Searches for existence of `FFMPEG` first, then `AVCONV`
+    NOTE: `.exe` is appended to name if on Windows
+
+    # Returns
+        False or executable: bool or str : executable of the codec if available
+    """
     if os.name == "nt":
         return which("ffmpeg.exe")
     else:
@@ -53,60 +73,23 @@ def get_codec():
             return ffmpeg
 
 
-CODEC_EXEC = get_codec()
-
-
-def is_string(obj):
-    """ Returns true if s is string or string-like object,
-    compatible with Python 2 and Python 3.
-
-    TODO: [A] move to a general / py3to2 module
-    """
-    try:
-        return isinstance(obj, basestring)
-    except NameError:
-        return isinstance(obj, str)
-
-
-def cvsecs(time):
-    """ Will convert any time into seconds.
-    Here are the accepted formats:
-    >>> cvsecs(15.4) -> 15.4 # seconds
-    >>> cvsecs( (1,21.5) ) -> 81.5 # (min,sec)
-    >>> cvsecs( (1,1,2) ) -> 3662 # (hr, min, sec)
-    >>> cvsecs('01:01:33.5') -> 3693.5  #(hr,min,sec)
-    >>> cvsecs('01:01:33.045') -> 3693.045
-    >>> cvsecs('01:01:33,5') #coma works too
-
-    TODO: [A] Add tests to test file
-    """
-    import re
-    if is_string(time):
-        if (',' not in time) and ('.' not in time):
-            time = time + '.0'
-        expr = r"(\d+):(\d+):(\d+)[,|.](\d+)"
-        finds = re.findall(expr, time)[0]
-        nums = [float(f) for f in finds]
-        return (3600 * int(finds[0]) + 60 * int(finds[1]) + int(finds[2]) +
-                nums[3] / (10**len(finds[3])))
-
-    elif isinstance(time, tuple):
-        if len(time) == 3:
-            hr, mn, sec = time
-        elif len(time) == 2:
-            hr, mn, sec = 0, time[0], time[1]
-        return 3600 * hr + 60 * mn + sec
-
-    else:
-        return time
+CODEC_EXEC = get_codec()  # NOTE: Available codec; False when none available
 
 
 def read_wavefile_metadata(filepath):
-    """
+    """ Read AudioMetadata of a WAV file without reading all of it
+
+    Heavily depends on `scipy.io.wavfile`.
+
+    # Arguments
+        filepath: str: full path to the WAV file
+
+    # Returns
+        meta: AudioMetadata object (namedtuple): with information as:
+
     # Reference
         https://github.com/scipy/scipy/blob/master/scipy/io/wavfile.py#L116
 
-    TODO: [A] Add documentation
     """
     import struct
     from scipy.io.wavfile import _read_riff_chunk, _read_fmt_chunk, _skip_unknown_chunk
@@ -121,7 +104,7 @@ def read_wavefile_metadata(filepath):
 
         size = struct.unpack(fmt, fid.read(4))[0]
 
-        return size // (bits // 8)
+        return size // (bits // 8)  # indicates total number of samples
 
     try:
         size, is_big_endian = _read_riff_chunk(fid)
@@ -130,28 +113,27 @@ def read_wavefile_metadata(filepath):
             chunk = fid.read(4)
             if chunk == b'fmt ':
                 fmt_chunk = _read_fmt_chunk(fid, is_big_endian)
-                channels, samplerate = fmt_chunk[2:4]
+                channels, samplerate = fmt_chunk[2:4]  # info relevant to us
                 bits = fmt_chunk[6]
             elif chunk == b'data':
                 n_samples = _read_n_samples(fid, is_big_endian, bits)
-                break
+                break  # NOTE: break as now we have all info we need
             elif chunk in (b'JUNK', b'Fake', b'LIST', b'fact'):
                 _skip_unknown_chunk(fid, is_big_endian)
             else:
                 warnings.warn("Chunk (non-data) not understood, skipping it.",
                               RuntimeWarning)
                 _skip_unknown_chunk(fid, is_big_endian)
-    finally:
+    finally:  # always close
         fid.close()
 
-    return AudioMetadata(
-        filepath=filepath,
-        format='wav',
-        samplerate=samplerate,
-        nchannels=channels,
-        seconds=(n_samples // channels) / samplerate,
-        nsamples=n_samples // channels  # per channel nsamples
-    )
+    return AudioMetadata(filepath=filepath,
+                         format='wav',
+                         samplerate=samplerate,
+                         nchannels=channels,
+                         seconds=(n_samples // channels) / samplerate,
+                         nsamples=n_samples // channels  # for one channel
+                         )
 
 
 def read_audio_metadata_codec(filepath):
@@ -329,13 +311,12 @@ class AudioIO(AudioSegment):
                 "Frame Count is calculated as float = {} by pydub".format(
                     nframes), RuntimeWarning)
 
-        updated_metadata = AudioMetadata(
-            filepath=audiometadata.filepath,
-            format=audiometadata.format,
-            samplerate=obj.frame_rate,
-            nchannels=obj.channels,
-            seconds=obj.duration_seconds,
-            nsamples=int(nframes))
+        updated_metadata = AudioMetadata(filepath=audiometadata.filepath,
+                                         format=audiometadata.format,
+                                         samplerate=obj.frame_rate,
+                                         nchannels=obj.channels,
+                                         seconds=obj.duration_seconds,
+                                         nsamples=int(nframes))
 
         return obj, updated_metadata
 
@@ -372,8 +353,10 @@ def convert_to_standard(filepath,
     tofilename = os.path.splitext(os.path.basename(filepath))[0] + "." + tofmt
     tofilepath = os.path.join(todir, tofilename)
     s = AudioIO.from_file(filepath)
-    f = s.export_standard(
-        tofilepath, samplerate=samplerate, channels=channels, fmt=tofmt)
+    f = s.export_standard(tofilepath,
+                          samplerate=samplerate,
+                          channels=channels,
+                          fmt=tofmt)
     f.close()
     return [tofilename, ]
 
