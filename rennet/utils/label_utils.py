@@ -78,10 +78,10 @@ class SequenceLabels(object):
         return len(self.starts_ends)
 
     def __getitem__(self, idx):
-        se = self.starts_ends[idx]
+        se = self._starts_ends[idx]
         l = self.labels[idx]
 
-        if not isinstance(l, Iterable):  # case with only one segment
+        if isinstance(idx, int):  # case with only one segment
             se = np.expand_dims(se, axis=0)  # shape (2,) to shape (1, 2)
             l = [l]
 
