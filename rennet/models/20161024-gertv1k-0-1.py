@@ -1,4 +1,4 @@
-
+#!/usr/bin/python
 # coding: utf-8
 
 # # Initializations
@@ -97,7 +97,7 @@ ger_Y_val = np_utils.to_categorical(ger_y_val, nclasses)
 
 ger_clsw = {
     0: 1,
-    1: 2
+    1: 1.5
 }
 ger_splw = np.ones_like(ger_y_trn)
 for c, w in ger_clsw.items():
@@ -139,14 +139,14 @@ nepochs = 15
 
 true_epoch = 0
 true_time = time.time()
-for i in range(20):
+for i in range(10):
     print("//{:/<70}".format(" TRAIN "))
 
     model.fit(ger_X_trn, ger_Y_trn,
             batch_size=batchsize, nb_epoch=nepochs,
             validation_data=(ger_X_val, ger_Y_val),
             class_weight=ger_clsw, sample_weight=ger_splw,
-            verbose=2,
+            verbose=1,
             shuffle=True
             )
 
@@ -154,7 +154,7 @@ for i in range(20):
     # In[37]:
 
     true_epoch += 15
-    preds = model.predict_classes(ger_X_val, verbose=0)
+    preds = model.predict_classes(ger_X_val, verbose=0, batch_size=batchsize)
     conx = confusion_matrix(ger_y_val, preds)
     conx = conx.astype(np.float) / conx.sum(axis=1)[:, np.newaxis]
     print()
@@ -164,7 +164,7 @@ for i in range(20):
     print(conx)
 
     print()
-    print(model.evaluate(ger_X_val, ger_Y_val, verbose=0))
+    print(model.evaluate(ger_X_val, ger_Y_val, verbose=0, batch_size=batchsize))
 
     print()
     fpreds = medfilt(preds, kernel_size=9)
