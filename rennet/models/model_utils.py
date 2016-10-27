@@ -74,7 +74,8 @@ def get_gertv_data(prenormalize=False):
         'nfeatures': nfeatures,
         'class_counts': trn_Y.sum(axis=0),
         'trn_X_mean': trnxm,
-        'trn_X_std': trnxs
+        'trn_X_std': trnxs,
+        'normalized': prenormalize
     }
 
 
