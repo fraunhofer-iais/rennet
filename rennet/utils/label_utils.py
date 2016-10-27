@@ -39,14 +39,15 @@ class SequenceLabels(object):
                              ]), "starts_ends and labels should be iterable"
         assert len(starts_ends) == len(labels), "starts_ends and labels" + \
                                                 " mismatch in length "
-
-        self._starts_ends = np.array(starts_ends)
-
         assert all(
             e - s > 0. for s, e in
-            self._starts_ends), "(ends - starts) should be > 0 for all pairs"
+            starts_ends), "(ends - starts) should be > 0 for all pairs"
 
-        self.labels = labels
+        starts_ends = np.array(starts_ends)
+        sidx = np.argsort(starts_ends, axis=0)
+
+        self._starts_ends = starts_ends[sidx]  # save sorted by starts
+        self.labels = np.array(labels)[sidx]
         self._orig_samplerate = samplerate
         self._samplerate = self._orig_samplerate
 
