@@ -9,6 +9,7 @@ from collections import namedtuple
 import xml.etree.ElementTree as et
 import numpy as np
 import warnings
+from collections import Iterable
 
 import rennet.utils.label_utils as lu
 from rennet.utils.np_utils import group_by_values
@@ -238,6 +239,7 @@ class Annotations(lu.SequenceLabels):
 class ActiveSpeakers(Annotations):
     def __init__(self, filepath, speakers, *args, **kwargs):
         super().__init__(filepath, speakers, *args, **kwargs)
+        self.labels = np.array(self.labels)  # parent makes it into a list
 
     @classmethod
     def from_annotations(cls, ann, samplerate=100):  # default 100 for ka3
@@ -275,3 +277,43 @@ class ActiveSpeakers(Annotations):
     def from_file(cls, filepath, use_tags="mpeg7"):
         return cls.from_annotations(super().from_file(filepath, use_tags),
                                     samplerate=100)
+
+    def labels_at(self, ends, samplerate=None):
+        """ NOTE: here because he segments are contiguous
+
+        """
+        if not isinstance(ends, Iterable):
+            ends = [ends]
+
+        ends = np.array(ends)
+
+        # Are we in a contextually different samplerate
+        diffcontext = self._samplerate != self._orig_samplerate
+
+        if samplerate is None or samplerate == self._samplerate:
+            # assume that samplerate of given ends == self.samplerate
+            endings = self.ends
+            minstart = self.starts.min()
+        elif diffcontext:
+            cntxt_samplerate = self._samplerate
+            with self.samplerate_as(samplerate):
+                endings = self.ends
+                minstart = self.starts.min()
+            self._samplerate = cntxt_samplerate
+        else:
+            with self.samplerate_as(samplerate):
+                endings = self.ends
+                minstart = self.starts.min()
+
+        maxend = endings.max()
+
+        # Can't resolve for ends that are not inside
+        endswithin = (ends <= maxend) & (ends >= minstart)
+
+        # find labels for valid ends that are smaller than or equal to endings
+        label_idx = np.searchsorted(endings, ends[endswithin], side='left')
+
+        labels = np.zeros((len(ends), *self.labels.shape[1:]), dtype=np.int)
+        labels[endswithin] = self.labels[label_idx]
+
+        return labels
