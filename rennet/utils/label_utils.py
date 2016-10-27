@@ -43,10 +43,10 @@ class SequenceLabels(object):
                    starts_ends), "(ends - starts) should be > 0 for all pairs"
 
         starts_ends = np.array(starts_ends)
-        sidx = np.argsort(starts_ends, axis=0)
+        sidx = np.argsort(starts_ends[:, 0])
 
         self._starts_ends = starts_ends[sidx]  # save sorted by starts
-        self.labels = np.array(labels)[sidx]
+        self.labels = [labels[i] for i in sidx]
         self._orig_samplerate = samplerate
         self._samplerate = self._orig_samplerate
 
@@ -94,7 +94,7 @@ class SequenceLabels(object):
             self.samplerate)
         s += "\n"
         s += "{:8} - {:8} : {}\n".format("Start", "End", "Label")
-        s += "\n".join("{:<8.4} - {:<8.4} : {}".format(s, e, str(l))
+        s += "\n".join("{:<8.4f} - {:<8.4f} : {}".format(s, e, str(l))
                        for (s, e), l in zip(self.starts_ends, self.labels))
 
         return s
