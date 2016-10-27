@@ -78,7 +78,7 @@ def print_confusion(y_true, y_pred):
     print()
 
 
-def model_00_batchnrm_Ndense_softmax(nfeatures, nclasses, denselayers,
+def model_batchnrm_Ndense_softmax(nfeatures, nclasses, denselayers,
                                      dropouts):
     model = Sequential()
     model.add(kl.InputLayer(input_shape=(nfeatures, )))
@@ -96,7 +96,7 @@ def model_00_batchnrm_Ndense_softmax(nfeatures, nclasses, denselayers,
     return model
 
 
-def model_00_Ndense_softmax(nfeatures, nclasses, denselayers, dropouts):
+def model_Ndense_softmax(nfeatures, nclasses, denselayers, dropouts):
     model = Sequential()
     model.add(kl.InputLayer(input_shape=(nfeatures, )))
 
@@ -112,19 +112,20 @@ def model_00_Ndense_softmax(nfeatures, nclasses, denselayers, dropouts):
 
 
 def gertv_compile_train_eval(model,
+                             dataset,
                              optimizer,
-                             callbacks,
                              batchsize,
                              nepochs,
-                             class_weights=1,
-                             normalize=False,
+                             class_weights=None,
+                             sample_weight=None,
+                             callbacks=[],
+                             prenormalize=False,
                              verbose=2):
 
-    dataset = get_gertv_data()
     trn_X = dataset['train_X']
     val_X = dataset['validation_X']
 
-    if normalize:
+    if prenormalize:
         trnxm = np.mean(trn_X, axis=0)
         trnxs = np.std(trn_X, axis=0)
 
@@ -149,26 +150,11 @@ def gertv_compile_train_eval(model,
                   optimizer=optimizer,
                   metrics=['categorical_accuracy'])
 
-
-    if isinstance(class_weights, int) or (isinstance(class_weights, bool) and
-                                          not class_weights):
-        class_weights = dict.fromkeys(range(dataset['nclasses']))
-        for k in class_weights:
-            class_weights[k] = 1
-
-    elif isinstance(class_weights, bool) and class_weights:
-        clscounts = dataset['class_counts']
-        clsws = sum(clscounts) / clscounts
-
-        class_weights = dict.fromkeys(range(len(clsws)))
-        for k in class_weights:
-            class_weights[k] = clsws[k]
-
-    
     model.fit(trn_X,
               trn_Y,
               validation_data=(val_X, val_Y),
               class_weight=class_weights,
+              sample_weight=sample_weight,
               shuffle=True,
               batch_size=batchsize,
               nb_epoch=nepochs,
