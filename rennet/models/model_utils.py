@@ -18,7 +18,8 @@ from keras.models import Sequential
 
 def get_gertv_data(prenormalize=False):
     workingdir = os.path.join(rennetroot, 'data', 'working')
-    picklesdir = os.path.join(workingdir, 'gertv1000-utt', 'AudioMining', 'train', 'pickles')
+    picklesdir = os.path.join(workingdir, 'gertv1000-utt', 'AudioMining',
+                              'train', 'pickles')
 
     data_fps = glob.glob(os.path.join(picklesdir, '20161019*.hdf5'))
     print()
@@ -121,15 +122,15 @@ def model_Ndense_softmax(nfeatures, nclasses, denselayers, dropouts):
     return model
 
 
-def gertv_compile_train_eval(model,
-                             dataset,
-                             optimizer,
-                             batchsize,
-                             nepochs,
-                             class_weights=None,
-                             sample_weight=None,
-                             callbacks=[],
-                             verbose=2):
+def compile_train_eval(model,
+                       dataset,
+                       optimizer,
+                       batchsize,
+                       nepochs,
+                       class_weights=None,
+                       sample_weight=None,
+                       callbacks=[],
+                       verbose=2):
 
     trn_X = dataset['train_X']
     val_X = dataset['validation_X']
