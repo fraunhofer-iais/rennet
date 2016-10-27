@@ -13,16 +13,12 @@ from keras.utils.np_utils import to_categorical
 from sklearn.metrics import confusion_matrix
 
 import keras.layers as kl
-import keras.optimizers as ko
 from keras.models import Sequential
-import keras.callbacks as kc
 
 
-def get_gertv_data():
+def get_gertv_data(prenormalize=False):
     workingdir = os.path.join(rennetroot, 'data', 'working')
-    proj = 'gertv1000-utt'
-    dataset = 'AudioMining'
-    picklesdir = os.path.join(workingdir, proj, dataset, 'train', 'pickles')
+    picklesdir = os.path.join(workingdir, 'gertv1000-utt', 'AudioMining', 'train', 'pickles')
 
     data_fps = glob.glob(os.path.join(picklesdir, '20161019*.hdf5'))
     print()
@@ -49,12 +45,24 @@ def get_gertv_data():
 
     nclasses = 2
     nfeatures = trn_X.shape[1]
+
     trn_Y = to_categorical(trn_y, nb_classes=nclasses)
     val_Y = to_categorical(val_y, nb_classes=nclasses)
     del trn_y
 
     print('Training: {}, {}'.format(trn_X.shape, trn_Y.shape))
     print('Validation: {}, {}'.format(val_X.shape, val_Y.shape))
+
+    trnxm = np.mean(trn_X, axis=0)
+    trnxs = np.std(trn_X, axis=0)
+    if prenormalize:
+        trn_X = (trn_X - trnxm[:, np.newaxis]) / trnxs[:, np.newaxis]
+        val_X = (val_X - trnxm[:, np.newaxis]) / trnxs[:np.newaxis]
+
+        print("PRE NORMALIZATION")
+        print("Mean:\n{}".format(trnxm))
+        print("Stdv:\n{}".format(trnxs))
+        print()
 
     return {
         'train_X': trn_X,
@@ -64,7 +72,9 @@ def get_gertv_data():
         'validation_y': val_y,
         'nclasses': nclasses,
         'nfeatures': nfeatures,
-        'class_counts': trn_Y.sum(axis=0)
+        'class_counts': trn_Y.sum(axis=0),
+        'trn_X_mean': trnxm,
+        'trn_X_std': trnxs
     }
 
 
@@ -78,8 +88,7 @@ def print_confusion(y_true, y_pred):
     print()
 
 
-def model_batchnrm_Ndense_softmax(nfeatures, nclasses, denselayers,
-                                     dropouts):
+def model_batchnrm_Ndense_softmax(nfeatures, nclasses, denselayers, dropouts):
     model = Sequential()
     model.add(kl.InputLayer(input_shape=(nfeatures, )))
     model.add(kl.BatchNormalization())
@@ -119,24 +128,10 @@ def gertv_compile_train_eval(model,
                              class_weights=None,
                              sample_weight=None,
                              callbacks=[],
-                             prenormalize=False,
                              verbose=2):
 
     trn_X = dataset['train_X']
     val_X = dataset['validation_X']
-
-    if prenormalize:
-        trnxm = np.mean(trn_X, axis=0)
-        trnxs = np.std(trn_X, axis=0)
-
-        trn_X = (trn_X - trnxm[:, np.newaxis]) / trnxs[:, np.newaxis]
-        val_X = (val_X - trnxm[:, np.newaxis]) / trnxs[:np.newaxis]
-
-        if verbose > 0:
-            print()
-            print("Mean:\n{}".format(trnxm))
-            print("Stdv:\n{}".format(trnxs))
-            print()
 
     trn_Y = dataset['train_Y']
     val_Y = dataset['validation_Y']
