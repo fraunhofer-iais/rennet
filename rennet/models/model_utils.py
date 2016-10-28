@@ -14,6 +14,7 @@ from sklearn.metrics import confusion_matrix
 
 import keras.layers as kl
 from keras.models import Sequential
+import keras.callbacks as kc
 
 
 def get_gertv_data(prenormalize=False):
@@ -122,11 +123,12 @@ def model_Ndense_softmax(nfeatures, nclasses, denselayers, dropouts):
     return model
 
 
+# pylint: disable=dangerous-default-value
 def compile_train_eval(model,
                        dataset,
                        optimizer,
-                       batchsize,
-                       nepochs,
+                       batchsize=4096,
+                       nepochs=1000,
                        class_weights=None,
                        sample_weight=None,
                        callbacks=[],
@@ -161,3 +163,16 @@ def compile_train_eval(model,
     if verbose > 0:
         preds = model.predict_classes(val_X, verbose=1)
         print_confusion(dataset['validation_y'], preds)
+# pylint: enable=dangerous-default-value
+
+
+def get_callbacks(verbose=1):
+    c = []
+    c.append(kc.ReduceLROnPlateau(monitor='val_loss',
+                                  factor=0.1,
+                                  patience=10,
+                                  verbose=verbose))
+    c.append(kc.EarlyStopping(monitor='val_loss',
+                              patience=20,
+                              verbose=verbose))
+    return c
