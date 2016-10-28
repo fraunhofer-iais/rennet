@@ -25,6 +25,7 @@ import keras.layers as kl
 import keras.optimizers as ko
 from keras.models import Sequential
 from keras.utils import np_utils
+import keras.callbacks as kc
 
 np.random.seed(3429342)
 
@@ -103,6 +104,9 @@ ger_splw = np.ones_like(ger_y_trn)
 for c, w in ger_clsw.items():
     ger_splw[ger_y_trn == c] = w
 
+print("Class Weights")
+print(ger_clsw)
+
 # # TRAINING
 
 # ## Model 1
@@ -114,14 +118,14 @@ model = Sequential()
 model.add(kl.InputLayer(input_shape=(nfeatures, )))
 model.add(kl.BatchNormalization())
 
-model.add(kl.Dense(512, activation="relu"))
+model.add(kl.Dense(512, activation="sigmoid"))
 model.add(kl.Dropout(0.3))  # Fraction to drop
 
-model.add(kl.Dense(128, activation="relu"))
+model.add(kl.Dense(512, activation="sigmoid"))
 model.add(kl.Dropout(0.3))  # Fraction to drop
 
-model.add(kl.Dense(64, activation="relu"))
-model.add(kl.Dropout(0.3))  # Fraction to drop
+model.add(kl.Dense(512, activation="sigmoid"))
+model.add(kl.Dropout(0.2))  # Fraction to drop
 
 model.add(kl.Dense(nclasses, activation="softmax"))
 
@@ -135,43 +139,40 @@ print(model.summary())
 # In[36]:
 
 batchsize = 4096 * 4
-nepochs = 15
+nepochs = 500
 
-true_epoch = 0
-true_time = time.time()
-for i in range(10):
-    print("//{:/<70}".format(" TRAIN "))
-
-    model.fit(ger_X_trn, ger_Y_trn,
-            batch_size=batchsize, nb_epoch=nepochs,
-            validation_data=(ger_X_val, ger_Y_val),
-            class_weight=ger_clsw, sample_weight=ger_splw,
-            verbose=1,
-            shuffle=True
-            )
+c = []
+c.append(kc.EarlyStopping(patience=40, ))
 
 
-    # In[37]:
+print("//{:/<70}".format(" TRAIN "))
 
-    true_epoch += 15
-    preds = model.predict_classes(ger_X_val, verbose=0, batch_size=batchsize)
-    conx = confusion_matrix(ger_y_val, preds)
-    conx = conx.astype(np.float) / conx.sum(axis=1)[:, np.newaxis]
-    print()
-    s = " After {} epochs ".format(true_epoch)
-    print("__{:_<70}".format(s))
-    print()
-    print(conx)
+model.fit(ger_X_trn, ger_Y_trn,
+        batch_size=batchsize, nb_epoch=nepochs,
+        validation_data=(ger_X_val, ger_Y_val),
+        class_weight=ger_clsw,
+        verbose=1,
+        shuffle=True,
+        callbacks=c
+        )
 
-    print()
-    print(model.evaluate(ger_X_val, ger_Y_val, verbose=0, batch_size=batchsize))
 
-    print()
-    fpreds = medfilt(preds, kernel_size=9)
-    fconx = confusion_matrix(ger_y_val, fpreds)
-    fconx = fconx.astype(np.float) / fconx.sum(axis=1)[:, np.newaxis]
-    print(fconx)
-    print()
-    print("TIME: {}".format(time.time() - true_time))
-    true_time = time.time()
+# In[37]:
+
+preds = model.predict_classes(ger_X_val, verbose=0, batch_size=batchsize)
+conx = confusion_matrix(ger_y_val, preds)
+conx = conx.astype(np.float) / conx.sum(axis=1)[:, np.newaxis]
+print()
+print(conx)
+
+print()
+print(model.evaluate(ger_X_val, ger_Y_val, verbose=0, batch_size=batchsize))
+
+print()
+fpreds = medfilt(preds, kernel_size=9)
+fconx = confusion_matrix(ger_y_val, fpreds)
+fconx = fconx.astype(np.float) / fconx.sum(axis=1)[:, np.newaxis]
+print(fconx)
+print()
+print("TIME: {}".format(time.time() - true_time))
 
