@@ -123,6 +123,18 @@ def model_Ndense_softmax(nfeatures, nclasses, denselayers, dropouts):
     return model
 
 
+def get_callbacks(verbose=1):
+    c = []
+    c.append(kc.ReduceLROnPlateau(monitor='val_loss',
+                                  factor=0.1,
+                                  patience=10,
+                                  verbose=verbose))
+    c.append(kc.EarlyStopping(monitor='val_loss',
+                              patience=20,
+                              verbose=verbose))
+    return c
+
+
 # pylint: disable=dangerous-default-value
 def compile_train_eval(model,
                        dataset,
@@ -131,7 +143,7 @@ def compile_train_eval(model,
                        nepochs=1000,
                        class_weights=None,
                        sample_weight=None,
-                       callbacks=[],
+                       callbacks=get_callbacks(),
                        verbose=2):
 
     trn_X = dataset['train_X']
@@ -164,15 +176,3 @@ def compile_train_eval(model,
         preds = model.predict_classes(val_X, verbose=1)
         print_confusion(dataset['validation_y'], preds)
 # pylint: enable=dangerous-default-value
-
-
-def get_callbacks(verbose=1):
-    c = []
-    c.append(kc.ReduceLROnPlateau(monitor='val_loss',
-                                  factor=0.1,
-                                  patience=10,
-                                  verbose=verbose))
-    c.append(kc.EarlyStopping(monitor='val_loss',
-                              patience=20,
-                              verbose=verbose))
-    return c
