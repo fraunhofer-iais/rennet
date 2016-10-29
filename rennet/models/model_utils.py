@@ -138,7 +138,7 @@ def get_callbacks(verbose=1):
 # pylint: disable=dangerous-default-value
 def compile_train_eval(model,
                        dataset,
-                       optimizer,
+                       optimizer='adam',
                        batchsize=4096,
                        nepochs=1000,
                        class_weights=None,
@@ -176,3 +176,40 @@ def compile_train_eval(model,
         preds = model.predict_classes(val_X, verbose=1)
         print_confusion(dataset['validation_y'], preds)
 # pylint: enable=dangerous-default-value
+
+
+def samewidth(pre=0,
+              nhidden=1,
+              od=2048,
+              act='relu',
+              dp=0.2,
+              verbose=2,
+              opt='adam'):
+    # check for batchn [True, False]
+    # check for clsw [True, False]
+    if pre > 0:
+        dataset = get_gertv_data(prenormalize=True)
+    if pre > 0:
+        dataset = get_gertv_data(prenormalize=False)
+
+    denselayers = []
+    dropouts = []
+    for _ in nhidden:
+        denselayers.append((od, act))
+        dropouts.append(dp)
+
+    nfeatures = dataset['nfeatures']
+    nclasses = dataset['nclasses']
+    model_batchn = model_batchnrm_Ndense_softmax(nfeatures, nclasses,
+                                                 denselayers, dropouts)
+    model_dense = model_Ndense_softmax(nfeatures, nclasses, denselayers,
+                                       dropouts)
+
+    callbacks = get_callbacks()
+
+    for model in [model_batchn, model_dense]:
+        compile_train_eval(model,
+                           dataset,
+                           callbacks=callbacks,
+                           verbose=verbose,
+                           optimizer=opt)
