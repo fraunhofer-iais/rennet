@@ -81,14 +81,17 @@ def get_gertv_data(prenormalize=False):
     }
 
 
-def print_confusion(y_true, y_pred):
+def get_confusion(y_true, y_pred, verbose=1):
     conx = confusion_matrix(y_true, y_pred)
     conx = conx.astype(np.float) / conx.sum(axis=1)[:, np.newaxis]
 
-    print()
-    print("{:/>90}//".format(' CONFUSION MATRIX '))
-    print(conx)
-    print()
+    if verbose > 0:
+        print()
+        print("{:/>90}//".format(' CONFUSION MATRIX '))
+        print(conx)
+        print()
+
+    return conx
 
 
 def model_batchnrm_Ndense_softmax(nfeatures, nclasses, denselayers, dropouts):
@@ -125,10 +128,10 @@ def model_Ndense_softmax(nfeatures, nclasses, denselayers, dropouts):
 
 def get_callbacks(verbose=1):
     c = []
-    c.append(kc.ReduceLROnPlateau(monitor='val_loss',
-                                  factor=0.1,
-                                  patience=10,
-                                  verbose=verbose))
+    # c.append(kc.ReduceLROnPlateau(monitor='val_loss',
+    #                               factor=0.1,
+    #                               patience=10,
+    #                               verbose=verbose))
     c.append(kc.EarlyStopping(monitor='val_loss',
                               patience=20,
                               verbose=verbose))
@@ -174,7 +177,7 @@ def compile_train_eval(model,
 
     if verbose > 0:
         preds = model.predict_classes(val_X, verbose=1)
-        print_confusion(dataset['validation_y'], preds)
+        get_confusion(dataset['validation_y'], preds)
 # pylint: enable=dangerous-default-value
 
 
