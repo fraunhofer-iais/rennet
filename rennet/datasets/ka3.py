@@ -239,7 +239,7 @@ class Annotations(lu.SequenceLabels):
 class ActiveSpeakers(Annotations):
     def __init__(self, filepath, speakers, *args, **kwargs):
         super().__init__(filepath, speakers, *args, **kwargs)
-        self.labels = np.array(self.labels)  # parent makes it into a list
+        self.labels = np.array(self.labels)  # SequenceLabels makes it into a list
 
     @classmethod
     def from_annotations(cls, ann, samplerate=100):  # default 100 for ka3
@@ -275,8 +275,9 @@ class ActiveSpeakers(Annotations):
 
     @classmethod
     def from_file(cls, filepath, use_tags="mpeg7"):
-        return cls.from_annotations(super().from_file(filepath, use_tags),
-                                    samplerate=100)
+        # HACK: I don't know why super() does not work here
+        ann = Annotations.from_file(filepath, use_tags)
+        return cls.from_annotations(ann, samplerate=100)
 
     def labels_at(self, ends, samplerate=None):
         """ NOTE: here because he segments are contiguous
