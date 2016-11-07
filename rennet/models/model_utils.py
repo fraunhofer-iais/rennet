@@ -126,14 +126,14 @@ def model_Ndense_softmax(nfeatures, nclasses, denselayers, dropouts):
     return model
 
 
-def get_callbacks(verbose=1):
+def get_callbacks(verbose=1, es_patience=20):
     c = []
     # c.append(kc.ReduceLROnPlateau(monitor='val_loss',
     #                               factor=0.1,
     #                               patience=10,
     #                               verbose=verbose))
     c.append(kc.EarlyStopping(monitor='val_loss',
-                              patience=20,
+                              patience=es_patience,
                               verbose=verbose))
     return c
 
