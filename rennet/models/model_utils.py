@@ -82,13 +82,15 @@ def get_gertv_data(prenormalize=False):
 
 
 def get_confusion(y_true, y_pred, verbose=1):
-    conx = confusion_matrix(y_true, y_pred)
-    conx = conx.astype(np.float) / conx.sum(axis=1)[:, np.newaxis]
+    conx = confusion_matrix(y_true, y_pred).astype(np.float)
+    conx[conx == 0] = 1e-16
+
+    conx = conx / conx.sum(axis=1)[:, np.newaxis]
 
     if verbose > 0:
         print()
         print("{:/>90}//".format(' CONFUSION MATRIX '))
-        print(conx)
+        print(np.round(conx*100, decimals=2))
         print()
 
     return conx
