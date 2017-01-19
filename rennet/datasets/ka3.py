@@ -162,8 +162,8 @@ def parse_mpeg7(filepath, use_tags="mpeg7"):
 
         if startend[1] <= startend[0]:  # (end - start) <= 0
             warnings.warn(
-                "(end - start) <= 0 ignored for annotation at {} with values {} in file {}".format(
-                    i, startend, filepath))
+                "(end - start) <= 0 ignored for annotation at {} with values {} in file {}".
+                format(i, startend, filepath))
             continue
 
         starts_ends.append(startend)
@@ -181,13 +181,14 @@ def parse_mpeg7(filepath, use_tags="mpeg7"):
 
     return (starts_ends, speakerids, genders, givennames, confidences,
             transcriptions)
+
+
 # pylint: enable=too-many-locals
 
 Speaker = namedtuple('Speaker', ['speakerid', 'gender', 'givenname'])
 
-Transcription = namedtuple('Transcription', [
-    'speakerid', 'confidence', 'content'
-])
+Transcription = namedtuple('Transcription',
+                           ['speakerid', 'confidence', 'content'])
 
 
 class Annotations(lu.SequenceLabels):
@@ -212,14 +213,15 @@ class Annotations(lu.SequenceLabels):
         transcriptions = []
         for i, (s, e) in enumerate(se):
             starts_ends.append((s, e))
-            transcriptions.append(Transcription(sids[i], float(conf[i]), trn[
-                i]))
+            transcriptions.append(
+                Transcription(sids[i], float(conf[i]), trn[i]))
 
         return cls(filepath,
                    speakers,
                    starts_ends,
                    transcriptions,
                    samplerate=1)
+
     # pylint: enable=too-many-locals
 
     def idx_for_speaker(self, speaker):
@@ -239,7 +241,8 @@ class Annotations(lu.SequenceLabels):
 class ActiveSpeakers(Annotations):
     def __init__(self, filepath, speakers, *args, **kwargs):
         super().__init__(filepath, speakers, *args, **kwargs)
-        self.labels = np.array(self.labels)  # SequenceLabels makes it into a list
+        self.labels = np.array(
+            self.labels)  # SequenceLabels makes it into a list
 
     @classmethod
     def from_annotations(cls, ann, samplerate=100):  # default 100 for ka3
@@ -247,18 +250,18 @@ class ActiveSpeakers(Annotations):
             se_ = ann.starts_ends
             se = np.round(se_).astype(np.int)
 
-            # TODO: [A] better error statement
+            # TODO: [A] better error handling
             try:
                 np.testing.assert_almost_equal(se, se_)
             except AssertionError:
-                print(
-                    "The provided sample rate does not evenly divide the starts and ends")
-                raise
+                warnings.warn(
+                    "Sample rate {} does not evenly divide all the starts and ends in the annotations from file at {}".
+                    format(samplerate, ann.sourcefile))
 
         n_speakers = len(ann.speakers)
         total_duration = se[:, 1].max()
-        active_speakers = np.zeros(shape=(total_duration, n_speakers),
-                                   dtype=np.int)
+        active_speakers = np.zeros(
+            shape=(total_duration, n_speakers), dtype=np.int)
 
         for s, speaker in enumerate(ann.speakers):
             for i in ann.idx_for_speaker(speaker):
