@@ -266,7 +266,15 @@ class ActiveSpeakers(Annotations):
         for s, speaker in enumerate(ann.speakers):
             for i in ann.idx_for_speaker(speaker):
                 start, end = se[i]
+                # NOTE: not setting to 1 straighaway to catch duplicates for speaker
                 active_speakers[start:end, s] += 1
+
+        # HACK: Some annotations (FISHER) have duplicates for the same speaker
+        if active_speakers.max() > 1:
+            warnings.warn(
+                "Some speakers may have duplicate annotations for file {}.\nDUPLICATES IGNORED".
+                format(ann.sourcefile))
+            active_speakers[active_speakers > 1] = 1
 
         starts_ends, active_speakers = group_by_values(active_speakers)
 
