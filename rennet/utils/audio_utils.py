@@ -135,6 +135,60 @@ def read_wavefile_metadata(filepath):
                          nsamples=n_samples // channels  # for one channel
                          )
 
+def read_sph_metadata(filepath):
+    """
+    TODO: [ ] Add documentation
+    NOTE: Tested and developed specifically for the Fisher Dataset
+    """
+    filepath = os.path.abspath(filepath)
+    fid = open(filepath, 'rb')
+
+    try:
+        # HACK: Going to read the header that is supposed to stop at 'end_header'
+        # If it is not found, I stop at 100 readlines anyway
+
+        # First line gives the header type
+        fid.seek(0)
+        assert fid.readline().startswith(b'NIST'), "Unrecognized Sphere Header type"
+
+        # The second line tells the header size
+        _header_size = int(fid.readline().strip())
+
+        # read the header lines based on the _header_size
+        fid.seek(0)
+        # Each info is on different lines (per dox)
+        readlines = fid.read(_header_size).split(b'\n')
+
+        # Start reading relevant metadata
+        nsamples = None
+        nchannels = None
+        samplerate = None
+
+        for line in readlines:
+            splitline = line.split(b' ')
+            info, data = splitline[0], splitline[-1]
+
+            if info == b'sample_count':
+                nsamples = int(data)
+            elif info == b'channel_count':
+                nchannels = int(data)
+            elif info == b'sample_rate':
+                samplerate = int(data)
+            else:
+                continue
+    finally:
+        fid.close()
+
+    if any(x is None for x in [nsamples, nchannels, samplerate]):
+        raise RuntimeError("The Sphere header was read, but some information was missing")
+    else:
+        return AudioMetadata(filepath=filepath,
+                            format='wav',
+                            samplerate=samplerate,
+                            nchannels=nchannels,
+                            seconds=(nsamples // nchannels) / samplerate,
+                            nsamples=nsamples // nchannels  # for one channel
+                            )
 
 def read_audio_metadata_codec(filepath):
     """
