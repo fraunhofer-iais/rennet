@@ -323,8 +323,13 @@ def get_audio_metadata(filepath):
         samplerate: in Hz
     """
 
-    try:  # if it is a WAV file (most likely)
-        return read_wavefile_metadata(filepath)
+    # TODO: [ ] Do better reading of audiometadata
+    try:
+        # possibly a sphere file
+        if filepath.endswith('sph'):
+            return read_sph_metadata(filepath)
+        else: # if it is a WAV file (most likely)
+            return read_wavefile_metadata(filepath)
     except ValueError:
         # Was not a wavefile
         if get_codec():
