@@ -335,7 +335,7 @@ def get_audio_metadata(filepath):
     # TODO: [ ] Do better reading of audiometadata
     try:
         # possibly a sphere file
-        if filepath.endswith('sph'):
+        if filepath.lower().endswith('sph'):
             return read_sph_metadata(filepath)
         else:  # if it is a WAV file (most likely)
             return read_wavefile_metadata(filepath)
@@ -366,16 +366,19 @@ class AudioIO(AudioSegment):
                 # "$RENNET_ROOT/rennet/utils/sph2pipe/sph2pipe",
                 "sph2pipe",
                 "-p",  # force into PCM linear
-                "-f", "riff",  # export with header for WAV
+                "-f",
+                "riff",  # export with header for WAV
                 meta.filepath,  # input abspath
                 output.name  # output filepath
             ]
 
             p = sp.Popen(conversion_command, stdout=sp.PIPE, stderr=sp.PIPE)
-            p_out, p_err = p.communicate()
+            _, p_err = p.communicate()
 
             if p.returncode != 0:
-                raise RuntimeError("Converting sph to wav failed with:\n{}\n{}".format(p.returncode, p_err))
+                raise RuntimeError(
+                    "Converting sph to wav failed with:\n{}\n{}".format(
+                        p.returncode, p_err))
 
             obj = cls._from_safe_wav(output)
 
@@ -385,6 +388,10 @@ class AudioIO(AudioSegment):
             return obj
         else:
             return super().from_file(file, format, **kwargs)
+
+    @classmethod
+    def from_sph(cls, file):
+        return cls.from_file(file, format='sph')
 
     @classmethod
     def from_audiometadata(cls, audiometadata):
