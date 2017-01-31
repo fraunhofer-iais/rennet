@@ -204,7 +204,6 @@ def read_audio_metadata_codec(filepath):
     TODO: [A] Add documentation
     """
     import re
-    import subprocess as sp
 
     def _read_codec_error_output(filepath):
         command = [CODEC_EXEC, "-i", filepath]
@@ -353,7 +352,7 @@ class AudioIO(AudioSegment):
     """ A extension of the pydub.AudioSegment class with some added methods"""
 
     @classmethod
-    def from_file(cls, file, format=None, **kwargs):
+    def from_file(cls, file, format=None, **kwargs):  # pylint: disable=redefined-builtin
         meta = get_audio_metadata(file)
 
         if meta.format == 'sph' or format == 'sph':
