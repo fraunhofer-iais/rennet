@@ -9,6 +9,9 @@ import os
 import warnings
 from collections import namedtuple
 
+from tempfile import NamedTemporaryFile
+import subprocess as sp
+
 from pydub import AudioSegment  # external dependency
 
 from rennet.utils.py_utils import cvsecs
@@ -92,7 +95,8 @@ def read_wavefile_metadata(filepath):
 
     """
     import struct
-    from scipy.io.wavfile import _read_riff_chunk, _read_fmt_chunk, _skip_unknown_chunk
+    from scipy.io.wavfile import _read_riff_chunk, _read_fmt_chunk
+    from scipy.io.wavfile import _skip_unknown_chunk
 
     fid = open(filepath, 'rb')
 
@@ -127,13 +131,15 @@ def read_wavefile_metadata(filepath):
     finally:  # always close
         fid.close()
 
-    return AudioMetadata(filepath=filepath,
-                         format='wav',
-                         samplerate=samplerate,
-                         nchannels=channels,
-                         seconds=(n_samples // channels) / samplerate,
-                         nsamples=n_samples // channels  # for one channel
-                         )
+    return AudioMetadata(
+        filepath=filepath,
+        format='wav',
+        samplerate=samplerate,
+        nchannels=channels,
+        seconds=(n_samples // channels) / samplerate,
+        nsamples=n_samples // channels  # for one channel
+    )
+
 
 def read_sph_metadata(filepath):
     """
@@ -144,12 +150,13 @@ def read_sph_metadata(filepath):
     fid = open(filepath, 'rb')
 
     try:
-        # HACK: Going to read the header that is supposed to stop at 'end_header'
-        # If it is not found, I stop at 100 readlines anyway
+        # HACK: Going to read the header that is supposed to stop at
+        # 'end_header'. If it is not found, I stop at 100 readlines anyway
 
         # First line gives the header type
         fid.seek(0)
-        assert fid.readline().startswith(b'NIST'), "Unrecognized Sphere Header type"
+        assert fid.readline().startswith(
+            b'NIST'), "Unrecognized Sphere Header type"
 
         # The second line tells the header size
         _header_size = int(fid.readline().strip())
@@ -180,15 +187,17 @@ def read_sph_metadata(filepath):
         fid.close()
 
     if any(x is None for x in [nsamples, nchannels, samplerate]):
-        raise RuntimeError("The Sphere header was read, but some information was missing")
+        raise RuntimeError(
+            "The Sphere header was read, but some information was missing")
     else:
-        return AudioMetadata(filepath=filepath,
-                            format='sph',
-                            samplerate=samplerate,
-                            nchannels=nchannels,
-                            seconds=nsamples / samplerate,
-                            nsamples=nsamples
-                            )
+        return AudioMetadata(
+            filepath=filepath,
+            format='sph',
+            samplerate=samplerate,
+            nchannels=nchannels,
+            seconds=nsamples / samplerate,
+            nsamples=nsamples)
+
 
 def read_audio_metadata_codec(filepath):
     """
@@ -328,7 +337,7 @@ def get_audio_metadata(filepath):
         # possibly a sphere file
         if filepath.endswith('sph'):
             return read_sph_metadata(filepath)
-        else: # if it is a WAV file (most likely)
+        else:  # if it is a WAV file (most likely)
             return read_wavefile_metadata(filepath)
     except ValueError:
         # Was not a wavefile
@@ -342,6 +351,40 @@ def get_audio_metadata(filepath):
 
 class AudioIO(AudioSegment):
     """ A extension of the pydub.AudioSegment class with some added methods"""
+
+    @classmethod
+    def from_file(cls, file, format=None, **kwargs):
+        meta = get_audio_metadata(file)
+
+        if meta.format == 'sph' or format == 'sph':
+            output = NamedTemporaryFile(mode='rb', delete=False)
+
+            # TODO: move the sph2pipe files to the utils folder
+            # TODO: automatically compile the sph2pipe
+            # TODO: does the executable have to be marked as so using chmod?
+            conversion_command = [
+                # "$RENNET_ROOT/rennet/utils/sph2pipe/sph2pipe",
+                "sph2pipe",
+                "-p",  # force into PCM linear
+                "-f", "riff",  # export with header for WAV
+                meta.filepath,  # input abspath
+                output.name  # output filepath
+            ]
+
+            p = sp.Popen(conversion_command, stdout=sp.PIPE, stderr=sp.PIPE)
+            p_out, p_err = p.communicate()
+
+            if p.returncode != 0:
+                raise RuntimeError("Converting sph to wav failed with:\n{}\n{}".format(p.returncode, p_err))
+
+            obj = cls._from_safe_wav(output)
+
+            output.close()
+            os.unlink(output.name)
+
+            return obj
+        else:
+            super().from_file(file, format, **kwargs)
 
     @classmethod
     def from_audiometadata(cls, audiometadata):
@@ -370,12 +413,13 @@ class AudioIO(AudioSegment):
                 "Frame Count is calculated as float = {} by pydub".format(
                     nframes), RuntimeWarning)
 
-        updated_metadata = AudioMetadata(filepath=audiometadata.filepath,
-                                         format=audiometadata.format,
-                                         samplerate=obj.frame_rate,
-                                         nchannels=obj.channels,
-                                         seconds=obj.duration_seconds,
-                                         nsamples=int(nframes))
+        updated_metadata = AudioMetadata(
+            filepath=audiometadata.filepath,
+            format=audiometadata.format,
+            samplerate=obj.frame_rate,
+            nchannels=obj.channels,
+            seconds=obj.duration_seconds,
+            nsamples=int(nframes))
 
         return obj, updated_metadata
 
@@ -412,10 +456,8 @@ def convert_to_standard(filepath,
     tofilename = os.path.splitext(os.path.basename(filepath))[0] + "." + tofmt
     tofilepath = os.path.join(todir, tofilename)
     s = AudioIO.from_file(filepath)
-    f = s.export_standard(tofilepath,
-                          samplerate=samplerate,
-                          channels=channels,
-                          fmt=tofmt)
+    f = s.export_standard(
+        tofilepath, samplerate=samplerate, channels=channels, fmt=tofmt)
     f.close()
     return [tofilename, ]
 
