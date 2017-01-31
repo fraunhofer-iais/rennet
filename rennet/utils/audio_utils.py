@@ -384,7 +384,7 @@ class AudioIO(AudioSegment):
 
             return obj
         else:
-            super().from_file(file, format, **kwargs)
+            return super().from_file(file, format, **kwargs)
 
     @classmethod
     def from_audiometadata(cls, audiometadata):
