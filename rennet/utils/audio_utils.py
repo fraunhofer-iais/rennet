@@ -183,11 +183,11 @@ def read_sph_metadata(filepath):
         raise RuntimeError("The Sphere header was read, but some information was missing")
     else:
         return AudioMetadata(filepath=filepath,
-                            format='wav',
+                            format='sph',
                             samplerate=samplerate,
                             nchannels=nchannels,
-                            seconds=(nsamples // nchannels) / samplerate,
-                            nsamples=nsamples // nchannels  # for one channel
+                            seconds=nsamples / samplerate,
+                            nsamples=nsamples
                             )
 
 def read_audio_metadata_codec(filepath):
