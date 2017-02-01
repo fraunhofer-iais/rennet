@@ -9,6 +9,9 @@ import os
 import warnings
 from collections import namedtuple
 
+from tempfile import NamedTemporaryFile
+import subprocess as sp
+
 from pydub import AudioSegment  # external dependency
 
 from rennet.utils.py_utils import cvsecs
@@ -73,6 +76,18 @@ def get_codec():
             return ffmpeg
 
 
+def get_sph2pipe():
+    """ Get the sph2pipe executable's path if available
+
+    # Retruns
+        False, or executable: bool or str : path to sph2pipe
+    """
+    if os.name == "nt":
+        return which("sph2pipe.exe")
+    else:
+        return which("sph2pipe")
+
+
 CODEC_EXEC = get_codec()  # NOTE: Available codec; False when none available
 
 
@@ -92,7 +107,8 @@ def read_wavefile_metadata(filepath):
 
     """
     import struct
-    from scipy.io.wavfile import _read_riff_chunk, _read_fmt_chunk, _skip_unknown_chunk
+    from scipy.io.wavfile import _read_riff_chunk, _read_fmt_chunk
+    from scipy.io.wavfile import _skip_unknown_chunk
 
     fid = open(filepath, 'rb')
 
@@ -127,13 +143,72 @@ def read_wavefile_metadata(filepath):
     finally:  # always close
         fid.close()
 
-    return AudioMetadata(filepath=filepath,
-                         format='wav',
-                         samplerate=samplerate,
-                         nchannels=channels,
-                         seconds=(n_samples // channels) / samplerate,
-                         nsamples=n_samples // channels  # for one channel
-                         )
+    return AudioMetadata(
+        filepath=filepath,
+        format='wav',
+        samplerate=samplerate,
+        nchannels=channels,
+        seconds=(n_samples // channels) / samplerate,
+        nsamples=n_samples // channels  # for one channel
+    )
+
+
+def read_sph_metadata(filepath):
+    """
+    TODO: [ ] Add documentation
+    NOTE: Tested and developed specifically for the Fisher Dataset
+    """
+    filepath = os.path.abspath(filepath)
+    fid = open(filepath, 'rb')
+
+    try:
+        # HACK: Going to read the header that is supposed to stop at
+        # 'end_header'. If it is not found, I stop at 100 readlines anyway
+
+        # First line gives the header type
+        fid.seek(0)
+        assert fid.readline().startswith(
+            b'NIST'), "Unrecognized Sphere Header type"
+
+        # The second line tells the header size
+        _header_size = int(fid.readline().strip())
+
+        # read the header lines based on the _header_size
+        fid.seek(0)
+        # Each info is on different lines (per dox)
+        readlines = fid.read(_header_size).split(b'\n')
+
+        # Start reading relevant metadata
+        nsamples = None
+        nchannels = None
+        samplerate = None
+
+        for line in readlines:
+            splitline = line.split(b' ')
+            info, data = splitline[0], splitline[-1]
+
+            if info == b'sample_count':
+                nsamples = int(data)
+            elif info == b'channel_count':
+                nchannels = int(data)
+            elif info == b'sample_rate':
+                samplerate = int(data)
+            else:
+                continue
+    finally:
+        fid.close()
+
+    if any(x is None for x in [nsamples, nchannels, samplerate]):
+        raise RuntimeError(
+            "The Sphere header was read, but some information was missing")
+    else:
+        return AudioMetadata(
+            filepath=filepath,
+            format='sph',
+            samplerate=samplerate,
+            nchannels=nchannels,
+            seconds=nsamples / samplerate,
+            nsamples=nsamples)
 
 
 def read_audio_metadata_codec(filepath):
@@ -141,7 +216,6 @@ def read_audio_metadata_codec(filepath):
     TODO: [A] Add documentation
     """
     import re
-    import subprocess as sp
 
     def _read_codec_error_output(filepath):
         command = [CODEC_EXEC, "-i", filepath]
@@ -269,8 +343,13 @@ def get_audio_metadata(filepath):
         samplerate: in Hz
     """
 
-    try:  # if it is a WAV file (most likely)
-        return read_wavefile_metadata(filepath)
+    # TODO: [ ] Do better reading of audiometadata
+    try:
+        # possibly a sphere file
+        if filepath.lower().endswith('sph'):
+            return read_sph_metadata(filepath)
+        else:  # if it is a WAV file (most likely)
+            return read_wavefile_metadata(filepath)
     except ValueError:
         # Was not a wavefile
         if get_codec():
@@ -283,6 +362,56 @@ def get_audio_metadata(filepath):
 
 class AudioIO(AudioSegment):
     """ A extension of the pydub.AudioSegment class with some added methods"""
+
+    @classmethod
+    def from_file(cls, file, format=None, **kwargs):  # pylint: disable=redefined-builtin
+        meta = get_audio_metadata(file)
+
+        if meta.format == 'sph' or format == 'sph':
+            output = NamedTemporaryFile(mode='rb', delete=False)
+
+            # check if sph2pipe is provided or else, is it available on path
+            converterpath = kwargs.get("sph2pipe_path", get_sph2pipe())
+
+            if not converterpath:
+                _e = (
+                    "sph2pipe was not found on PATH."
+                    "\n\nPlease follow the readme in the `rennet/utils/sph2pipe_v2.5/` folder in repo to install"
+                    "\nOr check https://www.ldc.upenn.edu/language-resources/tools/sphere-conversion-tools"
+                    "\n\nPlease make sure it is available on PATH after installation"
+                    "\nOR, provide fullpath as `AudioIO.from_file(file, format='sph', sph2pipe_path=SPH2PIPE)``"
+                )
+                raise RuntimeError(_e)
+
+            conversion_command = [
+                converterpath,
+                "-p",  # force into PCM linear
+                "-f",
+                "riff",  # export with header for WAV
+                meta.filepath,  # input abspath
+                output.name  # output filepath
+            ]
+
+            p = sp.Popen(conversion_command, stdout=sp.PIPE, stderr=sp.PIPE)
+            _, p_err = p.communicate()
+
+            if p.returncode != 0:
+                raise RuntimeError(
+                    "Converting sph to wav failed with:\n{}\n{}".format(
+                        p.returncode, p_err))
+
+            obj = cls._from_safe_wav(output)
+
+            output.close()
+            os.unlink(output.name)
+
+            return obj
+        else:
+            return super().from_file(file, format, **kwargs)
+
+    @classmethod
+    def from_sph(cls, file):
+        return cls.from_file(file, format='sph')
 
     @classmethod
     def from_audiometadata(cls, audiometadata):
@@ -311,12 +440,13 @@ class AudioIO(AudioSegment):
                 "Frame Count is calculated as float = {} by pydub".format(
                     nframes), RuntimeWarning)
 
-        updated_metadata = AudioMetadata(filepath=audiometadata.filepath,
-                                         format=audiometadata.format,
-                                         samplerate=obj.frame_rate,
-                                         nchannels=obj.channels,
-                                         seconds=obj.duration_seconds,
-                                         nsamples=int(nframes))
+        updated_metadata = AudioMetadata(
+            filepath=audiometadata.filepath,
+            format=audiometadata.format,
+            samplerate=obj.frame_rate,
+            nchannels=obj.channels,
+            seconds=obj.duration_seconds,
+            nsamples=int(nframes))
 
         return obj, updated_metadata
 
@@ -353,10 +483,8 @@ def convert_to_standard(filepath,
     tofilename = os.path.splitext(os.path.basename(filepath))[0] + "." + tofmt
     tofilepath = os.path.join(todir, tofilename)
     s = AudioIO.from_file(filepath)
-    f = s.export_standard(tofilepath,
-                          samplerate=samplerate,
-                          channels=channels,
-                          fmt=tofmt)
+    f = s.export_standard(
+        tofilepath, samplerate=samplerate, channels=channels, fmt=tofmt)
     f.close()
     return [tofilename, ]
 
