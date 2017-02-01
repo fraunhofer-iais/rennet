@@ -140,11 +140,11 @@ class FisherActiveSpeakers(lu.SequenceLabels):
                    samplerate=samplerate)
 
     @classmethod
-    def from_file(cls, filepath, warn=True):
+    def from_file(cls, filepath, samplerate=100, warn=True):
         ann = FisherAnnotations.from_file(filepath)
 
         # min time resolution 1ms, mostly
-        return cls.from_annotations(ann, samplerate=100, warn=warn)
+        return cls.from_annotations(ann, samplerate=samplerate, warn=warn)
 
     def labels_at(self, ends, samplerate=None):
         """
