@@ -75,6 +75,7 @@ def get_codec():
         else:
             return ffmpeg
 
+
 def get_sph2pipe():
     """ Get the sph2pipe executable's path if available
 
@@ -85,6 +86,7 @@ def get_sph2pipe():
         return which("sph2pipe.exe")
     else:
         return which("sph2pipe")
+
 
 CODEC_EXEC = get_codec()  # NOTE: Available codec; False when none available
 
@@ -372,11 +374,13 @@ class AudioIO(AudioSegment):
             converterpath = kwargs.get("sph2pipe_path", get_sph2pipe())
 
             if not converterpath:
-                _e = ("sph2pipe was not found on PATH."
-                     "\n\nPlease follow the readme in the `rennet/utils/sph2pipe_v2.5/` folder in repo to install"
-                     "\nOr check https://www.ldc.upenn.edu/language-resources/tools/sphere-conversion-tools"
-                     "\n\nPlease make sure it is available on PATH after installation"
-                     "\nOR, provide fullpath as `AudioIO.from_file(file, format='sph', sph2pipe_path=SPH2PIPE)``")
+                _e = (
+                    "sph2pipe was not found on PATH."
+                    "\n\nPlease follow the readme in the `rennet/utils/sph2pipe_v2.5/` folder in repo to install"
+                    "\nOr check https://www.ldc.upenn.edu/language-resources/tools/sphere-conversion-tools"
+                    "\n\nPlease make sure it is available on PATH after installation"
+                    "\nOR, provide fullpath as `AudioIO.from_file(file, format='sph', sph2pipe_path=SPH2PIPE)``"
+                )
                 raise RuntimeError(_e)
 
             conversion_command = [
