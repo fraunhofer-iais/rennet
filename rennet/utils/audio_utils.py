@@ -75,6 +75,16 @@ def get_codec():
         else:
             return ffmpeg
 
+def get_sph2pipe():
+    """ Get the sph2pipe executable's path if available
+
+    # Retruns
+        False, or executable: bool or str : path to sph2pipe
+    """
+    if os.name == "nt":
+        return which("sph2pipe.exe")
+    else:
+        return which("sph2pipe")
 
 CODEC_EXEC = get_codec()  # NOTE: Available codec; False when none available
 
@@ -358,12 +368,19 @@ class AudioIO(AudioSegment):
         if meta.format == 'sph' or format == 'sph':
             output = NamedTemporaryFile(mode='rb', delete=False)
 
-            # TODO: move the sph2pipe files to the utils folder
-            # TODO: automatically compile the sph2pipe
-            # TODO: does the executable have to be marked as so using chmod?
+            # check if sph2pipe is provided or else, is it available on path
+            converterpath = kwargs.get("sph2pipe_path", get_sph2pipe())
+
+            if not converterpath:
+                _e = ("sph2pipe was not found on PATH."
+                     "\n\nPlease follow the readme in the `rennet/utils/sph2pipe_v2.5/` folder in repo to install"
+                     "\nOr check https://www.ldc.upenn.edu/language-resources/tools/sphere-conversion-tools"
+                     "\n\nPlease make sure it is available on PATH after installation"
+                     "\nOR, provide fullpath as `AudioIO.from_file(file, format='sph', sph2pipe_path=SPH2PIPE)``")
+                raise RuntimeError(_e)
+
             conversion_command = [
-                # "$RENNET_ROOT/rennet/utils/sph2pipe/sph2pipe",
-                "sph2pipe",
+                converterpath,
                 "-p",  # force into PCM linear
                 "-f",
                 "riff",  # export with header for WAV
