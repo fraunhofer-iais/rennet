@@ -81,11 +81,15 @@ class FisherAnnotations(lu.SequenceLabels):
         return s
 
 
-class FisherActiveSpeakers(FisherAnnotations):
+class FisherActiveSpeakers(lu.SequenceLabels):
     def __init__(self, filepath, speakers, *args, **kwargs):
-        super().__init__(filepath, speakers, *args, **kwargs)
-        self.labels = np.array(
-            self.labels)  # SequenceLabels makes it into a list
+        self.sourcefile = filepath
+        self.speakers = sorted(speakers, key=lambda s: s.speakerid)
+
+        super().__init__(*args, **kwargs)
+
+        # SequenceLabels makes labels into a list
+        self.labels = np.array(self.labels)
 
     @classmethod
     def from_annotations(cls, ann, samplerate=100,
@@ -104,7 +108,7 @@ class FisherActiveSpeakers(FisherAnnotations):
             try:
                 np.testing.assert_almost_equal(se, _se)
             except AssertionError:
-                _w = "Sample rate {} does not evenly divide all the starts and ends for file {}".format(
+                _w = "Sample rate {} does not evenly divide all the starts and ends for file:\n{}".format(
                     samplerate, ann.sourcefile)
                 warnings.warn(_w)
 
@@ -121,7 +125,7 @@ class FisherActiveSpeakers(FisherAnnotations):
 
         if active_speakers.max() > 1:
             if warn:
-                _w = "Some speakers may have duplicate annotations for file {}.\n!!! IGNORED !!!".format(
+                _w = "Some speakers may have duplicate annotations for file:\n{}.\n!!! IGNORED !!!".format(
                     ann.sourcefile)
                 warnings.warn(_w)
 
@@ -136,10 +140,11 @@ class FisherActiveSpeakers(FisherAnnotations):
                    samplerate=samplerate)
 
     @classmethod
-    def from_file(cls, filepath):
-        ann = super().from_file(filepath)
-        return cls.from_annotations(
-            ann, samplerate=100)  # min time resolution 1ms, mostly
+    def from_file(cls, filepath, warn=True):
+        ann = FisherAnnotations.from_file(filepath)
+
+        # min time resolution 1ms, mostly
+        return cls.from_annotations(ann, samplerate=100, warn=warn)
 
     def labels_at(self, ends, samplerate=None):
         """
@@ -188,3 +193,10 @@ class FisherActiveSpeakers(FisherAnnotations):
         labels[endswithin] = self.labels[label_idx]
 
         return labels
+
+    def __str__(self):
+        s = "Source filepath: {}".format(self.sourcefile)
+        s += "\nSpeakers: {}\n".format(len(self.speakers))
+        s += "\n".join(str(s) for s in self.speakers)
+        s += "\n" + super().__str__()
+        return s
