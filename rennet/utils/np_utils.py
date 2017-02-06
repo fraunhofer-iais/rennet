@@ -23,3 +23,27 @@ def group_by_values(values):
     labels = values[starts]
 
     return np.vstack([starts, ends]).T, labels
+
+
+def to_categorical(y, nclasses=None):
+    """ Convert class vectors to one-hot class matrix
+
+    # Parameters
+        y: 1D numpy class vector to be converted.
+        nclasses: optional total number of classes
+
+    # Returns
+        A one-hot encodede class matrix
+
+    # Raises
+        RuntimeError: when any y is greater than nclasses
+    """
+    ymax = np.max(y)
+    if nclasses is None:
+        nclasses = ymax
+    elif nclasses < ymax:
+        raise RuntimeError(
+            "Some class labels are greater than provided nclasses: {} > {}".
+            format(ymax, nclasses))
+
+    return (np.arange(nclasses) == y[:, None]).astype(np.float)
