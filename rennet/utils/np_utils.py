@@ -53,6 +53,9 @@ def strided(x, nperseg, noverlap):
     """ Create strided view of array without copying
 
     NOTE: Striding happens in the last dimension of multidimensional input
+
+    TODO: [ ] Add proper tests for multidimensional striding
+    TODO: [ ] Check allowing choice of striding dimension
     """
     step = nperseg - noverlap
     shape = x.shape[:-1] + ((x.shape[-1] - noverlap) // step, nperseg)
