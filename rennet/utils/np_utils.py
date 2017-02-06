@@ -47,3 +47,15 @@ def to_categorical(y, nclasses=None):
             format(ymax, nclasses))
 
     return (np.arange(nclasses) == y[:, None]).astype(np.float)
+
+
+def strided(x, nperseg, noverlap):
+    """ Create strided view of array without copying
+
+    NOTE: Striding happens in the last dimension of multidimensional input
+    """
+    step = nperseg - noverlap
+    shape = x.shape[:-1] + ((x.shape[-1] - noverlap) // step, nperseg)
+    strides = x.strides[:-1] + (step * x.strides[-1], x.strides[-1])
+
+    return np.lib.stride_tricks.as_strided(x, shape=shape, strides=strides)
