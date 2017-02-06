@@ -38,7 +38,7 @@ def to_categorical(y, nclasses=None):
     # Raises
         RuntimeError: when any y is greater than nclasses
     """
-    ymax = np.max(y)
+    ymax = np.max(y) + 1  # zero is a class
     if nclasses is None:
         nclasses = ymax
     elif nclasses < ymax:
