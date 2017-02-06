@@ -28,6 +28,8 @@ def group_by_values(values):
 def to_categorical(y, nclasses=None):
     """ Convert class vectors to one-hot class matrix
 
+    TODO: [ ] test for multi-sequence labels
+    
     # Parameters
         y: 1D numpy class vector to be converted.
         nclasses: optional total number of classes
