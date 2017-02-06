@@ -29,7 +29,7 @@ def to_categorical(y, nclasses=None):
     """ Convert class vectors to one-hot class matrix
 
     TODO: [ ] test for multi-sequence labels
-    
+
     # Parameters
         y: 1D numpy class vector to be converted.
         nclasses: optional total number of classes
@@ -64,3 +64,34 @@ def strided(x, nperseg, noverlap):
     strides = x.strides[:-1] + (step * x.strides[-1], x.strides[-1])
 
     return np.lib.stride_tricks.as_strided(x, shape=shape, strides=strides)
+
+
+def categorical_confusion_matrix(Ytrue, Ypred):
+    assert Ytrue.shape == Ypred.shape, "Shape mismatch: True {} != {} Predictions".format(
+        Ytrue.shape, Ypred.shape)
+    assert len(Ytrue.shape) == 2, "Only supports vectors of categorical labels"
+
+    nclasses = Ytrue.shape[-1]
+
+    conf = np.zeros(shape=(nclasses, nclasses), dtype=np.int)
+
+    for i in range(nclasses):
+        _Ypred_i = Ypred[Ytrue[:, i].astype(
+            np.bool), :]  # Preds for known class i
+        for j in range(nclasses):
+            conf[i, j] = np.sum(_Ypred_i[:, j])
+
+    return conf
+
+
+def confusion_matrix(ytrue, ypred, nclasses=None):
+    assert ytrue.shape == ypred.shape, "Shape mismatch: True {} != {} Predictions".format(
+        ytrue.shape, ypred.shape)
+    assert len(ytrue.shape) == 1, "Only supports vectors of class labels"
+
+    Ytrue = to_categorical(ytrue, nclasses=nclasses)
+
+    # Ytrue tells the correct nclasses now
+    Ypred = to_categorical(ypred, nclasses=Ytrue.shape[-1])
+
+    return categorical_confusion_matrix(Ytrue, Ypred)
