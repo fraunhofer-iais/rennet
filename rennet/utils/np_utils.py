@@ -108,8 +108,12 @@ def normalize_confusion_matrix(conf_matrix):
 
 
 def normalize_confusion_matrices(confusion_matrices):
-    conf_sum1 = confusion_matrices.sum(axis=1)
-    confprec = confusion_matrices / conf_sum1[np.newaxis, :]
-    confrecall = confprec
+    conf_sum = confusion_matrices.sum(axis=1)
+    confprec = confusion_matrices / conf_sum[np.newaxis, :]
 
-    return confprec, confrecall
+    conf_sum = confusion_matrices.sum(axis=2)
+    confrec = np.transpose(confusion_matrices, [0, 2, 1]) \
+              / conf_sum[np.newaxis, :]
+    confrec = np.transpose(confrec, [0, 2, 1])
+
+    return confprec, confrec

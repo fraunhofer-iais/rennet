@@ -121,4 +121,4 @@ def test_individual_preds_conf_prec_rec(normal_preds_conf_prec_rec):
 
     confprec, confrecall = nu.normalize_confusion_matrix(confusion)
     assert_almost_equal(true_confprec, confprec, decimal=2)
-    # assert_almost_equal(true_confrecall, confrecall)
+    assert_almost_equal(true_confrecall, confrecall, decimal=2)
