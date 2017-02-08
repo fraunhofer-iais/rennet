@@ -4,6 +4,7 @@ Created: 28-09-2016
 
 Numpy utilities
 """
+from __future__ import division
 import numpy as np
 
 
