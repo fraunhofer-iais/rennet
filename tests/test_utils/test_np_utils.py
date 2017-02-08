@@ -105,10 +105,7 @@ def test_missing_label_warns(extra_class_preds_confusion):
 ## CONF-PRECISION AND -RECALL TESTS ###########################################
 
 
-@pytest.fixture(scope='module', params=[
-    0, 1,
-    2,
-    5,])
+@pytest.fixture(scope='module', params=[0, 1, 2, 5])
 def normal_preds_conf_prec_rec(request):
     return {
         "confusion": confusion[request.param, ...],
