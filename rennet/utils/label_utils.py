@@ -4,6 +4,7 @@ Created: 26-08-2016
 
 Utilities for working with labels
 """
+from __future__ import division, print_function
 import numpy as np
 from collections import Iterable
 from contextlib import contextmanager
