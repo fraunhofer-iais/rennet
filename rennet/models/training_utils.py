@@ -24,12 +24,13 @@ def print_normalized_confusion(confmat, title='CONFUSION MATRIX'):
     print(np.round(confmat * 100, decimals=2))
 
 
-def plot_speclike(orderedlist,  # pylint: disable=too-many-arguments
-                  figsize=(20, 4),
-                  show_time=False,
-                  sr=8000,
-                  hop_sec=0.05,
-                  cmap=plt.cm.viridis):
+def plot_speclike(  # pylint: disable=too-many-arguments
+        orderedlist,
+        figsize=(20, 4),
+        show_time=False,
+        sr=8000,
+        hop_sec=0.05,
+        cmap=plt.cm.viridis):
     assert all(
         o.shape[0] == orderedlist[0].shape[0]
         for o in orderedlist), "All list items should be of the same length"
@@ -61,13 +62,14 @@ class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attrib
     It also provides helpers for plotting some of them.
     """
 
-    def __init__(self,  # pylint: disable=too-many-arguments
-                 true_data,
-                 true_categorical_labels,
-                 print_on_end=True,
-                 plot_on_end=False,
-                 sr=8000,
-                 hop_sec=0.05):
+    def __init__(  # pylint: disable=too-many-arguments
+            self,
+            true_data,
+            true_categorical_labels,
+            print_on_end=True,
+            plot_on_end=False,
+            sr=8000,
+            hop_sec=0.05):
         self.true_data = true_data
         self.true_label = true_categorical_labels
         self.plot_on_end = plot_on_end
