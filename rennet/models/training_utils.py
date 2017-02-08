@@ -14,8 +14,10 @@ to_categorical = npu.to_categorical
 
 confusion_matrix = npu.confusion_matrix
 
+normalize_confusion_matrix = npu.normalize_confusion_matrix
 
-class ConfusionHistory(kc.Callback):
+
+class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attributes
     """ Callback class to store the confusion matrices per epoch
 
     Although the callbacks are essentially associated with a training session,
@@ -29,14 +31,34 @@ class ConfusionHistory(kc.Callback):
     It also provides helpers for plotting some of them.
     """
 
-    def __init__(self, true_data, true_categorical_labels):
+    def __init__(self,
+                 true_data,
+                 true_categorical_labels,
+                 plot_on_end=False,
+                 print_on_end=True):
         self.true_data = true_data
         self.true_label = true_categorical_labels
         self.nclasses = true_categorical_labels.shape[-1]
+        self.plot_on_end = plot_on_end
+        self.print_on_end = print_on_end
         self.confusions = []
+        self.confprec = None
+        self.confrec = None
         self.last_preds = None  # last predictions from model
 
         super(ConfusionHistory, self).__init__()
+
+    def on_epoch_end(self, e, l=None):  # pylint: disable=unused-argument
+        self.last_preds = self.model.predict(self.true_data, verbose=0)
+        self._update_confusions()
+
+    def on_train_end(self, l=None):  # pylint: disable=unused-argument
+        self._set_conf_prec_rec()
+        raise NotImplementedError()
+
+    def _set_conf_prec_rec(self):
+        self.confprec, self.confrec = npu.normalize_confusion_matrices(
+            np.array(self.confusions))
 
     @property
     def last_pred_classes(self):
@@ -50,3 +72,15 @@ class ConfusionHistory(kc.Callback):
         self.confusions.append(
             npu.categorical_confusion_matrix(self.true_label,
                                              self.last_pred_categorical))
+
+    def plot_confusions_history(self):
+        if self.confusions is None:
+            raise RuntimeError(
+                "Confusion Matrices absent."
+                "\nWas the callback added to the training function?")
+
+        if self.confprec is None:  # if by chance on_train_end was never called
+            # Expect confrec to be none as well
+            self._set_conf_prec_rec()
+
+        raise NotImplementedError()
