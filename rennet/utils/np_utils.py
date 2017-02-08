@@ -98,3 +98,17 @@ def confusion_matrix(ytrue, ypred, nclasses=None, warn=False):
     Ypred = to_categorical(ypred, nclasses=Ytrue.shape[-1], warn=warn)
 
     return categorical_confusion_matrix(Ytrue, Ypred)
+
+
+def normalize_confusion_matrix(confusion_matrix):
+    confprec, confrecall =  normalize_confusion_matrices(confusion_matrix[np.newaxis, ...])
+
+    return confprec[0, ...], confrecall[0, ...]
+
+def normalize_confusion_matrices(confusion_matrices):
+    conf_sum1 = confusion_matrices.sum(axis=1)
+    confprec = confusion_matrices / conf_sum1[np.newaxis, :]
+
+    confrecall = confprec
+
+    return confprec, confrecall
