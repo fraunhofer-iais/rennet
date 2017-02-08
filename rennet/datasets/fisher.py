@@ -37,7 +37,7 @@ class FisherAnnotations(lu.SequenceLabels):
     def __init__(self, filepath, speakers, *args, **kwargs):
         self.sourcefile = filepath
         self.speakers = sorted(speakers, key=lambda s: s.speakerid)
-        super().__init__(*args, **kwargs)
+        super(FisherAnnotations, self).__init__(*args, **kwargs)
 
     @classmethod
     def from_file(cls, filepath):
@@ -77,7 +77,7 @@ class FisherAnnotations(lu.SequenceLabels):
         s = "Source filepath: {}".format(self.sourcefile)
         s += "\nSpeakers: {}\n".format(len(self.speakers))
         s += "\n".join(str(s) for s in self.speakers)
-        s += "\n" + super().__str__()
+        s += "\n" + super(FisherAnnotations, self).__str__()
         return s
 
 
@@ -86,7 +86,7 @@ class FisherActiveSpeakers(lu.SequenceLabels):
         self.sourcefile = filepath
         self.speakers = sorted(speakers, key=lambda s: s.speakerid)
 
-        super().__init__(*args, **kwargs)
+        super(FisherActiveSpeakers, self).__init__(*args, **kwargs)
 
         # SequenceLabels makes labels into a list
         self.labels = np.array(self.labels)
@@ -198,5 +198,5 @@ class FisherActiveSpeakers(lu.SequenceLabels):
         s = "Source filepath: {}".format(self.sourcefile)
         s += "\nSpeakers: {}\n".format(len(self.speakers))
         s += "\n".join(str(s) for s in self.speakers)
-        s += "\n" + super().__str__()
+        s += "\n" + super(FisherActiveSpeakers, self).__str__()
         return s
