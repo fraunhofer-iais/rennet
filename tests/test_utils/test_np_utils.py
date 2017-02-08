@@ -50,7 +50,7 @@ confprec = np.array([
     [[0.50, 0.00, 0.50], [0.00, 1.00, 0.00], [0.50, 0.00, 0.50]],
     [[0.20, 0.33, np.nan], [0.40, 0.44, np.nan], [0.40, 0.22, np.nan]],
     [[np.nan, 0.27, 0.33], [np.nan, 0.36, 0.67], [np.nan, 0.36, 0.00]],
-    [[0.00, 0.50, 0.25], [0.67, 0.00, 0.75], [0.33, 0.50, 0.00]],
+    [[0.00, 0.50, 0.20], [0.67, 0.00, 0.80], [0.33, 0.50, 0.00]],
 ])
 
 ## CONFUSION MATRIX TESTS #####################################################
@@ -105,7 +105,10 @@ def test_missing_label_warns(extra_class_preds_confusion):
 ## CONF-PRECISION AND -RECALL TESTS ###########################################
 
 
-@pytest.fixture(scope='module', params=[0, 1,])# 2, 5])
+@pytest.fixture(scope='module', params=[
+    # 0, 1,
+    # 2,
+    5,])
 def normal_preds_conf_prec_rec(request):
     return {
         "confusion": confusion[request.param, ...],
