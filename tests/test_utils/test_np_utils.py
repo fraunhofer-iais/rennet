@@ -22,7 +22,7 @@ predictions = np.array([
     [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],  # No 2
     [1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1],  # No 0
     [1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 0, 0, 0],  # None correct
-    [4, 4, 3, 2, 2, 2, 2, 1, 1, 1, 1, 1, 0, 0]   # Extra class
+    [4, 4, 3, 2, 2, 2, 2, 1, 1, 1, 1, 1, 0, 0]  # Extra class
 ])
 
 confusion = np.array([
@@ -53,9 +53,7 @@ confprec = np.array([
 ])
 
 
-@pytest.fixture(
-    scope='module',
-    params=[0, 5])
+@pytest.fixture(scope='module', params=[0, 5])
 def normal_preds_confusion(request):
     return {
         "labels": labels,
@@ -70,3 +68,20 @@ def test_normal_confusion_matrix(normal_preds_confusion):
     true_confusion = normal_preds_confusion['confusion']
 
     assert_almost_equal(true_confusion, nu.confusion_matrix(labels, preds))
+
+
+@pytest.fixture(scope='module', params=[6, ])
+def extra_predicted_class(request):
+    return {
+        "labels": labels,
+        "predictions": predictions[request.param, ...],
+    }
+
+
+def test_extra_pred_label_raises(extra_predicted_class):
+    labels = extra_predicted_class['labels']
+    preds = extra_predicted_class['predictions']
+
+    # NOTE: The Exception is raised while converting the preds to categorical
+    with pytest.raises(RuntimeError):
+        nu.confusion_matrix(labels, preds)
