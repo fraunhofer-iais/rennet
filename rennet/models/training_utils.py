@@ -7,6 +7,8 @@ Utilities for training with Keras
 from __future__ import print_function, division
 import numpy as np
 import keras.callbacks as kc
+import matplotlib.pyplot as plt
+from librosa.display import specshow
 
 import rennet.utils.np_utils as npu
 
@@ -15,6 +17,34 @@ to_categorical = npu.to_categorical
 confusion_matrix = npu.confusion_matrix
 
 normalize_confusion_matrix = npu.normalize_confusion_matrix
+
+
+def print_normalized_confusion(confmat, title='CONFUSION MATRIX'):
+    print("\n{:/>90}//".format(" {} ".format(title)))
+    print(np.round(confmat * 100, decimals=2))
+
+
+def plot_speclike(orderedlist,  # pylint: disable=too-many-arguments
+                  figsize=(20, 4),
+                  show_time=False,
+                  sr=8000,
+                  hop_sec=0.05,
+                  cmap=plt.cm.viridis):
+    assert all(
+        o.shape[0] == orderedlist[0].shape[0]
+        for o in orderedlist), "All list items should be of the same length"
+
+    x_axis = 'time' if show_time else None
+    hop_len = int(hop_sec * sr)
+
+    plt.figure(figsize=figsize)
+    specshow(
+        np.vstack(reversed(orderedlist)),
+        x_axis=x_axis,
+        sr=sr,
+        hop_length=hop_len,
+        cmap=cmap, )
+    plt.colorbar()
 
 
 class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attributes
@@ -31,21 +61,28 @@ class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attrib
     It also provides helpers for plotting some of them.
     """
 
-    def __init__(self,
+    def __init__(self,  # pylint: disable=too-many-arguments
                  true_data,
                  true_categorical_labels,
+                 print_on_end=True,
                  plot_on_end=False,
-                 print_on_end=True):
+                 sr=8000,
+                 hop_sec=0.05):
         self.true_data = true_data
         self.true_label = true_categorical_labels
-        self.nclasses = true_categorical_labels.shape[-1]
         self.plot_on_end = plot_on_end
         self.print_on_end = print_on_end
+        self.sr = sr
+        self.hop_sec = hop_sec
+
         self.confusions = []
         self.confprec = None
         self.confrec = None
         self.last_preds = None  # last predictions from model
 
+        self.nclasses = true_categorical_labels.shape[-1]
+        self.marker = None
+        self.color = None
         super(ConfusionHistory, self).__init__()
 
     def on_epoch_end(self, e, l=None):  # pylint: disable=unused-argument
@@ -54,7 +91,15 @@ class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attrib
 
     def on_train_end(self, l=None):  # pylint: disable=unused-argument
         self._set_conf_prec_rec()
-        raise NotImplementedError()
+        if self.print_on_end:
+            print_normalized_confusion(self.confrec, title='RECALL CONFUSION')
+            print_normalized_confusion(
+                self.confprec, title='PRECISION CONFUSION')
+
+        if self.plot_on_end:
+            self.plot_last_normalized_confusions()
+            self.plot_last_pred_classes()
+            self.plot_confusions_history()
 
     def _set_conf_prec_rec(self):
         self.confprec, self.confrec = npu.normalize_confusion_matrices(
@@ -72,6 +117,17 @@ class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attrib
         self.confusions.append(
             npu.categorical_confusion_matrix(self.true_label,
                                              self.last_pred_categorical))
+
+    def plot_last_normalized_confusions(self):
+        raise NotImplementedError
+
+    def plot_last_pred_classes(self):
+        # TODO: Check if there are any issues, or any extra params to be provided
+        plot_speclike(
+            [self.last_pred_classes, np.argmax(self.true_label)],
+            show_time=True,
+            sr=self.sr,
+            hop_sec=self.hop_sec)
 
     def plot_confusions_history(self):
         if self.confusions is None:
