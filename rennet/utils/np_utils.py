@@ -47,6 +47,9 @@ def to_categorical(y, nclasses=None):
         raise RuntimeError(
             "Some class labels are greater than provided nclasses: {} > {}".
             format(ymax, nclasses))
+    elif nclasses > ymax:
+        raise RuntimeWarning(
+            "Some class labels may be missing: {} > {}".format(nclasses, ymax))
 
     return (np.arange(nclasses) == y[:, None]).astype(np.float)
 
