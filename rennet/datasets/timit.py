@@ -15,7 +15,7 @@ from rennet.utils.np_utils import group_by_values
 class TIMITSequenceLabels(lu.SequenceLabels):
     def __init__(self, filepath, *args, **kwargs):
         self.sourcefile = filepath
-        super().__init__(*args, **kwargs)
+        super(TIMITSequenceLabels, self).__init__(*args, **kwargs)
 
     @classmethod
     def from_file(cls, filepath, delimiter=' ', samplerate=16000):
@@ -39,8 +39,8 @@ class TIMITSequenceLabels(lu.SequenceLabels):
         """
 
         assert isinstance(
-            other,
-            lu.SequenceLabels), "The other label should be a TIMIT single speaker label"
+            other, lu.SequenceLabels
+        ), "The other label should be a TIMIT single speaker label"
 
         if samplerate is None:
             samplerate = self.samplerate
@@ -69,7 +69,8 @@ class TIMITSequenceLabels(lu.SequenceLabels):
 
         starts_ends, active_speakers = group_by_values(active_speakers)
 
-        return self.__class__(self.sourcefile,
-                              starts_ends,
-                              active_speakers,
-                              samplerate=samplerate)
+        return self.__class__(
+            self.sourcefile,
+            starts_ends,
+            active_speakers,
+            samplerate=samplerate)
