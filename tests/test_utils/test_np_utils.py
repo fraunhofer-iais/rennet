@@ -53,7 +53,7 @@ confprec = np.array([
 ])
 
 
-@pytest.fixture(scope='module', params=[0, 5])
+@pytest.fixture(scope='module', params=list(range(6)))
 def normal_preds_confusion(request):
     return {
         "labels": labels,
@@ -85,6 +85,7 @@ def test_extra_pred_label_raises(extra_predicted_class):
     # NOTE: The Exception is raised while converting the preds to categorical
     with pytest.raises(RuntimeError):
         nu.confusion_matrix(labels, preds)
+
 
 def test_missing_label_warns(extra_predicted_class):
     preds = extra_predicted_class['labels']  # has extra class
