@@ -407,7 +407,7 @@ class AudioIO(AudioSegment):
 
             return obj
         else:
-            return super().from_file(file, format, **kwargs)
+            return super(AudioIO, cls).from_file(file, format, **kwargs)
 
     @classmethod
     def from_sph(cls, file):
