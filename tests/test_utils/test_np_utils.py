@@ -85,3 +85,14 @@ def test_extra_pred_label_raises(extra_predicted_class):
     # NOTE: The Exception is raised while converting the preds to categorical
     with pytest.raises(RuntimeError):
         nu.confusion_matrix(labels, preds)
+
+def test_missing_label_warns(extra_predicted_class):
+    preds = extra_predicted_class['labels']  # has extra class
+    labels = extra_predicted_class['predictions']
+
+    # NOTE: The Exception is raised while converting the preds to categorical
+    with pytest.raises(RuntimeWarning):
+        nu.confusion_matrix(labels, preds, warn=True)
+
+    # Should not raise warning
+    nu.confusion_matrix(labels, preds)

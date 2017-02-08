@@ -25,7 +25,7 @@ def group_by_values(values):
     return np.vstack([starts, ends]).T, labels
 
 
-def to_categorical(y, nclasses=None):
+def to_categorical(y, nclasses=None, warn=False):
     """ Convert class vectors to one-hot class matrix
 
     TODO: [ ] test for multi-sequence labels
@@ -47,7 +47,7 @@ def to_categorical(y, nclasses=None):
         raise RuntimeError(
             "Some class labels are greater than provided nclasses: {} > {}".
             format(ymax, nclasses))
-    elif nclasses > ymax:
+    elif nclasses > ymax and warn:
         raise RuntimeWarning(
             "Some class labels may be missing: {} > {}".format(nclasses, ymax))
 
@@ -87,14 +87,14 @@ def categorical_confusion_matrix(Ytrue, Ypred):
     return conf
 
 
-def confusion_matrix(ytrue, ypred, nclasses=None):
+def confusion_matrix(ytrue, ypred, nclasses=None, warn=False):
     assert ytrue.shape == ypred.shape, "Shape mismatch: True {} != {} Predictions".format(
         ytrue.shape, ypred.shape)
     assert len(ytrue.shape) == 1, "Only supports vectors of class labels"
 
-    Ytrue = to_categorical(ytrue, nclasses=nclasses)
+    Ytrue = to_categorical(ytrue, nclasses=nclasses, warn=warn)
 
     # Ytrue tells the correct nclasses now
-    Ypred = to_categorical(ypred, nclasses=Ytrue.shape[-1])
+    Ypred = to_categorical(ypred, nclasses=Ytrue.shape[-1], warn=warn)
 
     return categorical_confusion_matrix(Ytrue, Ypred)
