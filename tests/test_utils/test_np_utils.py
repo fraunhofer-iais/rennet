@@ -40,7 +40,7 @@ confrecall = np.array([
     [[0.50, 0.50, 0.00], [0.33, 0.33, 0.33], [0.00, 0.75, 0.25]],
     [[0.50, 0.00, 0.50], [0.00, 0.67, 0.33], [0.50, 0.00, 0.50]],
     [[0.25, 0.75, 0.00], [0.33, 0.67, 0.00], [0.50, 0.50, 0.00]],
-    [[0.00, 0.25, 0.75], [0.00, 0.67, 0.33], [0.00, 1.00, 0.00]],
+    [[0.00, 0.75, 0.25], [0.00, 0.67, 0.33], [0.00, 1.00, 0.00]],
     [[0.00, 0.75, 0.25], [0.33, 0.00, 0.67], [0.25, 0.75, 0.00]],
 ])
 
@@ -102,7 +102,7 @@ def test_missing_label_warns(extra_class_preds_confusion):
     nu.confusion_matrix(labels, preds)
 
 
-## CONF-PRECISION AND -RECALL TESTS ###########################################
+## CONF-PRECISION AND CONF-RECALL TESTS #######################################
 
 
 @pytest.fixture(scope='module', params=[0, 1, 2, 5])
@@ -114,10 +114,29 @@ def normal_preds_conf_prec_rec(request):
     }
 
 
-def test_individual_preds_conf_prec_rec(normal_preds_conf_prec_rec):
+def test_individual_normal_preds_conf_prec_rec(normal_preds_conf_prec_rec):
     confusion = normal_preds_conf_prec_rec['confusion']
     true_confprec = normal_preds_conf_prec_rec['confprec']
     true_confrecall = normal_preds_conf_prec_rec['confrecall']
+
+    confprec, confrecall = nu.normalize_confusion_matrix(confusion)
+    assert_almost_equal(true_confprec, confprec, decimal=2)
+    assert_almost_equal(true_confrecall, confrecall, decimal=2)
+
+
+@pytest.fixture(scope='module', params=[3, 4])
+def nan_preds_conf_prec_rec(request):
+    return {
+        "confusion": confusion[request.param, ...],
+        "confprec": confprec[request.param, ...],
+        "confrecall": confrecall[request.param, ...],
+    }
+
+
+def test_individual_nan_preds_conf_prec_rec(nan_preds_conf_prec_rec):
+    confusion = nan_preds_conf_prec_rec['confusion']
+    true_confprec = nan_preds_conf_prec_rec['confprec']
+    true_confrecall = nan_preds_conf_prec_rec['confrecall']
 
     confprec, confrecall = nu.normalize_confusion_matrix(confusion)
     assert_almost_equal(true_confprec, confprec, decimal=2)
