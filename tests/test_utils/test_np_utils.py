@@ -13,6 +13,7 @@ from rennet.utils import np_utils as nu
 # pylint: disable=redefined-outer-name
 
 ## TRUE LABELS OF 1D AND PREDICTIONS AND CONFUSIONS ###########################
+
 labels = np.array([0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1])
 
 predictions = np.array([
@@ -52,8 +53,10 @@ confprec = np.array([
     [[0.00, 0.50, 0.25], [0.66, 0.00, 0.75], [0.33, 0.50, 0.00]],
 ])
 
+## CONFUSION MATRIX TESTS #####################################################
 
-@pytest.fixture(scope='module', params=list(range(6)))
+
+@pytest.fixture(scope='module', params=list(range(len(confusion))))
 def normal_preds_confusion(request):
     return {
         "labels": labels,
@@ -97,3 +100,6 @@ def test_missing_label_warns(extra_predicted_class):
 
     # Should not raise warning
     nu.confusion_matrix(labels, preds)
+
+
+## CONF-PRECISION AND -RECALL TESTS ###########################################
