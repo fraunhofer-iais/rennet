@@ -21,6 +21,10 @@ print_normalized_confusion = npu.print_normalized_confusion
 
 plot_speclike = pu.plot_speclike
 
+plot_normalized_confusion_matrix = pu.plot_normalized_confusion_matrix
+
+plot_confusion_recall_precision = pu.plot_confusion_recall_precision
+
 
 class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attributes
     """ Callback class to store the confusion matrices per epoch
@@ -94,8 +98,30 @@ class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attrib
             npu.categorical_confusion_matrix(self.true_label,
                                              self.last_pred_categorical))
 
-    def plot_last_normalized_confusions(self):
-        raise NotImplementedError
+    def plot_last_normalized_confusions(  # pylint: disable=too-many-arguments
+            self,
+            perfigsize=(4, 4),
+            cmap=pu.plt.cm.Blues,
+            fontcolor='red',
+            fontsize=16,
+            figtitle='Last Confusion Matrix',
+            subplot_titles=('Recall', 'Precision'),
+            show=True,
+            *args,
+            **kwargs):
+        plot_confusion_recall_precision(
+            self.confrec,
+            self.confprec,
+            perfigsize=perfigsize,
+            fig_title=figtitle,
+            subplot_titles=subplot_titles,
+            show=show,
+            # add these at end as part of kwargs
+            conf_fontsize=fontsize,
+            conf_fontcolor=fontcolor,
+            cmap=cmap,
+            *args,
+            **kwargs)
 
     def plot_last_pred_classes(  # pylint: disable=too-many-arguments
             self,
