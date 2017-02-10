@@ -158,20 +158,20 @@ def plot_normalized_confusion_matrix(  # pylint: disable=too-many-arguments
         **kwargs)
 
 
-def plot_confusion_recall_precision(  # pylint: disable=too-many-arguments
-        conf_recall,
+def plot_confusion_precision_recall(  # pylint: disable=too-many-arguments
         conf_precision,
+        conf_recall,
         perfigsize=(4, 4),
         cmap=plt.cm.Blues,
         fontcolor='red',
         fontsize=16,
         figtitle='Confusion Matrix',
-        subplot_titles=('Recall', 'Precision'),
+        subplot_titles=('Precision', 'Recall'),
         show=True,
         *args,
         **kwargs):
     plot_multi(
-        [conf_recall, conf_precision],
+        [conf_precision, conf_recall],
         func="confusion",
         rows=1,
         cols=2,

@@ -23,7 +23,7 @@ plot_speclike = pu.plot_speclike
 
 plot_normalized_confusion_matrix = pu.plot_normalized_confusion_matrix
 
-plot_confusion_recall_precision = pu.plot_confusion_recall_precision
+plot_confusion_precision_recall = pu.plot_confusion_precision_recall
 
 
 class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attributes
@@ -109,7 +109,7 @@ class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attrib
             show=True,
             *args,
             **kwargs):
-        plot_confusion_recall_precision(
+        plot_confusion_precision_recall(
             self.confrec,
             self.confprec,
             perfigsize=perfigsize,
