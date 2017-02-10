@@ -4,14 +4,14 @@ Created: 08-10-2016
 
 Utilities for plotting
 """
-from __future__ import division
+from __future__ import division, print_function
 import matplotlib.pyplot as plt
 from math import ceil
 import numpy as np
 from librosa.display import specshow
 
 
-def plot_multi(  # pylint: disable=too-many-arguments, too-many-locals
+def plot_multi(  # pylint: disable=too-many-arguments, too-many-locals, too-many-branches
         x_list,
         func="plot",
         rows=None,
@@ -41,20 +41,52 @@ def plot_multi(  # pylint: disable=too-many-arguments, too-many-locals
     if subplot_titles is None:
         subplot_titles = list(range(len(x_list)))
 
-    for i, sx in enumerate(x_list):
-        if func == "plot":
+    if func == "plot":
+        for i, sx in enumerate(x_list):
             ax[at(i)].plot(sx, label=labels[i], *args, **kwargs)
-        elif func == "pie":
+    elif func == "pie":
+        for i, sx in enumerate(x_list):
             ax[at(i)].pie(sx, labels=labels[i], *args, **kwargs)
             ax[at(i)].axis("equal")
-        elif func == "hist":
+    elif func == "hist":
+        for i, sx in enumerate(x_list):
             ax[at(i)].hist(sx, *args, **kwargs)
-        elif func == "imshow":
+    elif func == "imshow":
+        for i, sx in enumerate(x_list):
             ax[at(i)].imshow(sx, *args, **kwargs)
-        else:
-            raise ValueError("Unsupported plotting function {}".format(func))
+    elif func == "confusion":
+        for i, sx in enumerate(x_list):
+            # Find confusion specific kwargs, and pop them before forwarding
 
-        # set title for subplot
+            # REF: http://stackoverflow.com/questions/11277432/how-to-remove-a-key-from-a-python-dictionary
+            fontcolor = kwargs.pop('conf_fontcolor', None)
+            fontcolor = 'red' if fontcolor is None else fontcolor
+
+            fontsize = kwargs.pop('conf_fontsize', None)
+            fontsize = 16 if fontsize is None else fontsize
+
+            # plotting the colors
+            ax[at(i)].imshow(sx, interpolation='none', *args, **kwargs)
+            ax[at(i)].set_aspect(1)
+            ax[at(i)].get_xaxis().set_visible(False)
+            ax[at(i)].get_yaxis().set_visible(False)
+
+            # adding text for values
+            w, h = sx.shape
+            for x in range(w):
+                for y in range(h):
+                    ax[at(i)].annotate(
+                        "{:.2f}%".format(sx[x][y] * 100),
+                        xy=(y, x),
+                        horizontalalignment='center',
+                        verticalalignment='center',
+                        color=fontcolor,
+                        fontsize=fontsize)
+    else:
+        raise ValueError("Unsupported plotting function {}".format(func))
+
+    # set title for subplot
+    for i, sx in range(len(x_list)):
         ax[at(i)].set_title(subplot_titles[i])
 
     if show:
@@ -87,3 +119,28 @@ def plot_speclike(  # pylint: disable=too-many-arguments
 
     if show:
         plt.show()
+
+
+def plot_normalized_confusion_matrix(  # pylint: disable=too-many-arguments
+        confusion_matrix,
+        figsize=(4, 4),
+        cmap=plt.cm.Blues,
+        fontcolor='red',
+        fontsize=16,
+        title='Confusion Matrix',
+        show=True,
+        *args,
+        **kwargs):
+    plot_multi(
+        [confusion_matrix],
+        func="confusion",
+        cols=1,
+        perfigsize=figsize,
+        fig_title=title,
+        show=show,
+        # add these at end as part of kwargs
+        conf_fontsize=fontsize,
+        conf_fontcolor=fontcolor,
+        cmap=cmap,
+        *args,
+        **kwargs)
