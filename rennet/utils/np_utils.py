@@ -52,7 +52,8 @@ def to_categorical(y, nclasses=None, warn=False):
         raise RuntimeWarning(
             "Some class labels may be missing: {} > {}".format(nclasses, ymax))
 
-    return (np.arange(nclasses)[np.newaxis, :] == y[..., None]).astype(np.float)
+    return (
+        np.arange(nclasses)[np.newaxis, :] == y[..., None]).astype(np.float)
 
 
 def strided(x, nperseg, noverlap):
@@ -97,7 +98,8 @@ def confusion_matrix(ytrue, ypred, nclasses=None, warn=False):
 
     assert ytrue.shape == ypred.shape, "Shape mismatch: True {} != {} Predictions".format(
         ytrue.shape, ypred.shape)
-    assert len(ytrue.shape) == 1, ("Only supports vectors of class labels. "
+    assert len(ytrue.shape) == 1, (
+        "Only supports vectors of class labels. "
         "If your labels are one-hot, please use categorical_confusion_matrix")
 
     Ytrue = to_categorical(ytrue, nclasses=nclasses, warn=warn)
@@ -107,9 +109,11 @@ def confusion_matrix(ytrue, ypred, nclasses=None, warn=False):
 
     return categorical_confusion_matrix(Ytrue, Ypred)
 
+
 def categorical_confusion_matrices(Ytrue, Ypreds):
-    assert Ytrue.shape == Ypreds.shape[1:], "Shape mismatch: True {} != {} Predictions".format(
-        Ytrue.shape, Ypreds.shape)
+    assert Ytrue.shape == Ypreds.shape[
+        1:], "Shape mismatch: True {} != {} Predictions".format(Ytrue.shape,
+                                                                Ypreds.shape)
     assert len(Ytrue.shape) == 2, "Only supports vectors of categorical labels"
 
     nclasses = Ytrue.shape[-1]
@@ -124,6 +128,7 @@ def categorical_confusion_matrices(Ytrue, Ypreds):
 
     return conf
 
+
 def confusion_matrices(ytrue, ypreds, nclasses=None, warn=False):
     """ Calculating confusion matrices for multiple predictions.
 
@@ -136,8 +141,9 @@ def confusion_matrices(ytrue, ypreds, nclasses=None, warn=False):
     if not isinstance(ypreds, np.ndarray):
         ypreds = np.array(ypreds)
 
-    assert ytrue.shape == ypreds.shape[1:], "Shape mismatch: True {} != {} Predictions".format(
-        ytrue.shape, ypreds.shape)
+    assert ytrue.shape == ypreds.shape[
+        1:], "Shape mismatch: True {} != {} Predictions".format(ytrue.shape,
+                                                                ypreds.shape)
 
     assert len(ytrue.shape) == 1, "Only supports vectors of class labels"
 

@@ -72,6 +72,7 @@ def test_normal_confusion_matrix(normal_preds_confusion):
 
     assert_almost_equal(true_confusion, nu.confusion_matrix(labels, preds))
 
+
 @pytest.fixture(scope='module', params=[np.arange(len(confusion))])
 def normal_multi_preds_confusion(request):
     return {
@@ -87,6 +88,7 @@ def test_normal_multi_confusion_matrix(normal_multi_preds_confusion):
     true_confusion = normal_multi_preds_confusion['confusion']
 
     assert_almost_equal(true_confusion, nu.confusion_matrices(labels, preds))
+
 
 @pytest.fixture(scope='module', params=[6, ])
 def extra_class_preds_confusion(request):
