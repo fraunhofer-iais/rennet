@@ -58,16 +58,15 @@ def plot_multi(  # pylint: disable=too-many-arguments, too-many-locals, too-many
         for i, sx in enumerate(x_list):
             ax[at(i)].imshow(sx, *args, **kwargs)
     elif func == "confusion":
+        # Find confusion specific kwargs, and pop them before forwarding
+
+        # REF: http://stackoverflow.com/questions/11277432/how-to-remove-a-key-from-a-python-dictionary
+        fontcolor = kwargs.pop('conf_fontcolor', None)
+        fontcolor = 'red' if fontcolor is None else fontcolor
+
+        fontsize = kwargs.pop('conf_fontsize', None)
+        fontsize = 16 if fontsize is None else fontsize
         for i, sx in enumerate(x_list):
-            # Find confusion specific kwargs, and pop them before forwarding
-
-            # REF: http://stackoverflow.com/questions/11277432/how-to-remove-a-key-from-a-python-dictionary
-            fontcolor = kwargs.pop('conf_fontcolor', None)
-            fontcolor = 'red' if fontcolor is None else fontcolor
-
-            fontsize = kwargs.pop('conf_fontsize', None)
-            fontsize = 16 if fontsize is None else fontsize
-
             # plotting the colors
             ax[at(i)].imshow(sx, interpolation='none', *args, **kwargs)
             ax[at(i)].set_aspect(1)
