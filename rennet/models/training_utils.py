@@ -114,15 +114,14 @@ class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attrib
             *args,
             **kwargs):
         plot_confusion_precision_recall(
-            self.confrec,
-            self.confprec,
+            self.confrec[-1, ...],
+            self.confprec[-1, ...],
             perfigsize=perfigsize,
-            fig_title=figtitle,
+            figtitle=figtitle,
             subplot_titles=subplot_titles,
             show=show,
-            # add these at end as part of kwargs
-            conf_fontsize=fontsize,
-            conf_fontcolor=fontcolor,
+            fontsize=fontsize,
+            fontcolor=fontcolor,
             cmap=cmap,
             *args,
             **kwargs)
