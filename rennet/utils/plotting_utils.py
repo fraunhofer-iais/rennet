@@ -29,6 +29,9 @@ def plot_multi(  # pylint: disable=too-many-arguments, too-many-locals, too-many
     fgsz = (perfigsize[0] * cols, perfigsize[1] * rows)
     fig, ax = plt.subplots(rows, cols, figsize=fgsz)
 
+    if len(x_list) == 1:
+        ax = [ax]
+
     fig.suptitle(fig_title)
 
     at = lambda i: divmod(i, cols)
@@ -68,8 +71,14 @@ def plot_multi(  # pylint: disable=too-many-arguments, too-many-locals, too-many
             # plotting the colors
             ax[at(i)].imshow(sx, interpolation='none', *args, **kwargs)
             ax[at(i)].set_aspect(1)
-            ax[at(i)].get_xaxis().set_visible(False)
-            ax[at(i)].get_yaxis().set_visible(False)
+
+            # REF: http://stackoverflow.com/questions/20416609/remove-the-x-axis-ticks-while-keeping-the-grids-matplotlib
+            ax[at(i)].set_xticklabels([])
+            ax[at(i)].set_yticklabels([])
+
+            ax[at(i)].set_xticks([0.5 + 1 * i for i in range(len(sx))])
+            ax[at(i)].set_yticks([0.5 + 1 * i for i in range(len(sx))])
+            ax[at(i)].grid(True, linestyle=':')
 
             # adding text for values
             w, h = sx.shape
@@ -86,8 +95,8 @@ def plot_multi(  # pylint: disable=too-many-arguments, too-many-locals, too-many
         raise ValueError("Unsupported plotting function {}".format(func))
 
     # set title for subplot
-    for i, sx in range(len(x_list)):
-        ax[at(i)].set_title(subplot_titles[i])
+    for i, st in enumerate(subplot_titles):
+        ax[at(i)].set_title(st)
 
     if show:
         plt.show()
@@ -127,16 +136,19 @@ def plot_normalized_confusion_matrix(  # pylint: disable=too-many-arguments
         cmap=plt.cm.Blues,
         fontcolor='red',
         fontsize=16,
-        title='Confusion Matrix',
+        figtitle='Confusion Matrix',
+        subplot_title="",
         show=True,
         *args,
         **kwargs):
     plot_multi(
         [confusion_matrix],
         func="confusion",
+        rows=1,
         cols=1,
         perfigsize=figsize,
-        fig_title=title,
+        fig_title=figtitle,
+        subplot_titles=[subplot_title],
         show=show,
         # add these at end as part of kwargs
         conf_fontsize=fontsize,
