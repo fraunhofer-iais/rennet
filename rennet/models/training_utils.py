@@ -61,8 +61,11 @@ class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attrib
         self.last_preds = None  # last predictions from model
 
         self.nclasses = true_categorical_labels.shape[-1]
-        self.marker = None
-        self.color = None
+        self.colorcycle_for_true = ['grey', 'yellowgreen',
+                                    'lightcoral']  #, 'lightskyblue']
+        self.linecycle_for_TP_pred = ['-']
+        self.linecycle_for_FP_pred = [':', '--', '.-']
+        self.marker = '|'
         super(ConfusionHistory, self).__init__()
 
     def on_epoch_end(self, e, l=None):  # pylint: disable=unused-argument
@@ -72,9 +75,10 @@ class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attrib
     def on_train_end(self, l=None):  # pylint: disable=unused-argument
         self._set_conf_prec_rec()
         if self.print_on_end:
-            print_normalized_confusion(self.confrec, title='RECALL CONFUSION')
             print_normalized_confusion(
-                self.confprec, title='PRECISION CONFUSION')
+                self.confrec[-1, ...], title='RECALL CONFUSION')
+            print_normalized_confusion(
+                self.confprec[-1, ...], title='PRECISION CONFUSION')
 
         if self.plot_on_end:
             self.plot_last_normalized_confusions()
@@ -145,7 +149,20 @@ class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attrib
             hop_sec=hop_sec,
             show=show)
 
-    def plot_confusions_history(self):
+    def linestyle_for_true_pred(self, true, pred):
+        if true == pred:
+            return self.linecycle_for_TP_pred[true %
+                                              len(self.linecycle_for_TP_pred)]
+        else:
+            return self.linecycle_for_FP_pred[pred %
+                                              len(self.linecycle_for_FP_pred)]
+
+    def color_for_true_pred(self, true):
+        return self.colorcycle_for_true[true % len(self.colorcycle_for_true)]
+
+    def plot_confusions_history(self,
+                                figsize=(20, 8),
+                                fig_title="Confusions History"):
         if self.confusions is None:
             raise RuntimeError(
                 "Confusion Matrices absent."
@@ -154,5 +171,28 @@ class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attrib
         if self.confprec is None:  # if by chance on_train_end was never called
             # Expect confrec to be none as well
             self._set_conf_prec_rec()
+
+        # NOTE: Doing the plotting here from scratch instead of pu.plot_multi
+        # because doing custom setting of color and linestyle
+        # There might be a way to pass a function to matplotlib, but...Lazy!
+        # Plus, it is easy!
+        fig, ax = pu.plt.subplots(2, 1, figsize=figsize)
+
+        fig.suptitle(fig_title)
+
+        _, trues, preds = self.confrec.shape
+        titles = ('Recall', 'Precision')
+        for i, con in enumerate([self.confrec, self.confprec]):
+            for t in range(trues):
+                for p in range(preds):
+                    ax[i].plot(
+                        con[:, t, p],
+                        color=self.color_for_true_pred(t),
+                        linestyle=self.linestyle_for_true_pred(t, p),
+                        label="{}_{}".format(t, p),
+                        marker=self.marker)
+                    ax[i].set_ylim([0, 1])
+            ax[i].legend()
+            ax[i].set_title(titles[i])
 
         raise NotImplementedError()
