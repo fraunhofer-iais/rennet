@@ -52,7 +52,7 @@ def to_categorical(y, nclasses=None, warn=False):
         raise RuntimeWarning(
             "Some class labels may be missing: {} > {}".format(nclasses, ymax))
 
-    return (np.arange(nclasses) == y[:, None]).astype(np.float)
+    return (np.arange(nclasses)[np.newaxis, :] == y[..., None]).astype(np.float)
 
 
 def strided(x, nperseg, noverlap):
@@ -80,8 +80,8 @@ def categorical_confusion_matrix(Ytrue, Ypred):
     conf = np.zeros(shape=(nclasses, nclasses), dtype=np.int)
 
     for i in range(nclasses):
-        _Ypred_i = Ypred[Ytrue[:, i].astype(
-            np.bool), :]  # Preds for known class i
+        # Preds for known class i
+        _Ypred_i = Ypred[Ytrue[:, i].astype(np.bool), :]
         for j in range(nclasses):
             conf[i, j] = np.sum(_Ypred_i[:, j])
 
@@ -89,9 +89,16 @@ def categorical_confusion_matrix(Ytrue, Ypred):
 
 
 def confusion_matrix(ytrue, ypred, nclasses=None, warn=False):
+    if not isinstance(ytrue, np.ndarray):
+        ytrue = np.array(ytrue)
+
+    if not isinstance(ypred, np.ndarray):
+        ypred = np.array(ypred)
+
     assert ytrue.shape == ypred.shape, "Shape mismatch: True {} != {} Predictions".format(
         ytrue.shape, ypred.shape)
-    assert len(ytrue.shape) == 1, "Only supports vectors of class labels"
+    assert len(ytrue.shape) == 1, ("Only supports vectors of class labels. "
+        "If your labels are one-hot, please use categorical_confusion_matrix")
 
     Ytrue = to_categorical(ytrue, nclasses=nclasses, warn=warn)
 
@@ -99,6 +106,47 @@ def confusion_matrix(ytrue, ypred, nclasses=None, warn=False):
     Ypred = to_categorical(ypred, nclasses=Ytrue.shape[-1], warn=warn)
 
     return categorical_confusion_matrix(Ytrue, Ypred)
+
+def categorical_confusion_matrices(Ytrue, Ypreds):
+    assert Ytrue.shape == Ypreds.shape[1:], "Shape mismatch: True {} != {} Predictions".format(
+        Ytrue.shape, Ypreds.shape)
+    assert len(Ytrue.shape) == 2, "Only supports vectors of categorical labels"
+
+    nclasses = Ytrue.shape[-1]
+
+    conf = np.zeros(shape=(Ypreds.shape[0], nclasses, nclasses), dtype=np.int)
+
+    for i in range(nclasses):
+        # Preds for known class i
+        _Ypred_i = Ypreds[:, Ytrue[:, i].astype(np.bool), :]
+        for j in range(nclasses):
+            conf[:, i, j] = np.sum(_Ypred_i[..., j], axis=-1)
+
+    return conf
+
+def confusion_matrices(ytrue, ypreds, nclasses=None, warn=False):
+    """ Calculating confusion matrices for multiple predictions.
+
+    One true label, in vector of class number format.
+    Multiple predictions of the same format.
+    """
+    if not isinstance(ytrue, np.ndarray):
+        ytrue = np.array(ytrue)
+
+    if not isinstance(ypreds, np.ndarray):
+        ypreds = np.array(ypreds)
+
+    assert ytrue.shape == ypreds.shape[1:], "Shape mismatch: True {} != {} Predictions".format(
+        ytrue.shape, ypreds.shape)
+
+    assert len(ytrue.shape) == 1, "Only supports vectors of class labels"
+
+    Ytrue = to_categorical(ytrue, nclasses=nclasses, warn=warn)
+
+    # Ytrue tells the correct nclasses now
+    Ypreds = to_categorical(ypreds, nclasses=Ytrue.shape[-1], warn=warn)
+
+    return categorical_confusion_matrices(Ytrue, Ypreds)
 
 
 def normalize_confusion_matrix(conf_matrix):
@@ -111,15 +159,15 @@ def normalize_confusion_matrix(conf_matrix):
     return prec[0, ...], recall[0, ...]
 
 
-def normalize_confusion_matrices(confusion_matrices):
-    if not isinstance(confusion_matrices, np.ndarray):
-        confusion_matrices = np.array(confusion_matrices)
+def normalize_confusion_matrices(conf_matrices):
+    if not isinstance(conf_matrices, np.ndarray):
+        conf_matrices = np.array(conf_matrices)
 
-    conf_sum = confusion_matrices.sum(axis=-2)
-    confprec = confusion_matrices / conf_sum[:, np.newaxis]
+    conf_sum = conf_matrices.sum(axis=-2)
+    confprec = conf_matrices / conf_sum[:, np.newaxis]
 
-    conf_sum = confusion_matrices.sum(axis=-1)
-    confrec = np.transpose(confusion_matrices, [0, 2, 1]) \
+    conf_sum = conf_matrices.sum(axis=-1)
+    confrec = np.transpose(conf_matrices, [0, 2, 1]) \
               / conf_sum[:, np.newaxis]
     confrec = np.transpose(confrec, [0, 2, 1])
 

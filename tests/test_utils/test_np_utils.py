@@ -72,6 +72,21 @@ def test_normal_confusion_matrix(normal_preds_confusion):
 
     assert_almost_equal(true_confusion, nu.confusion_matrix(labels, preds))
 
+@pytest.fixture(scope='module', params=[np.arange(len(confusion))])
+def normal_multi_preds_confusion(request):
+    return {
+        "labels": labels,
+        "predictions": predictions[request.param, ...],
+        "confusion": confusion[request.param, ...],
+    }
+
+
+def test_normal_multi_confusion_matrix(normal_multi_preds_confusion):
+    labels = normal_multi_preds_confusion['labels']
+    preds = normal_multi_preds_confusion['predictions']
+    true_confusion = normal_multi_preds_confusion['confusion']
+
+    assert_almost_equal(true_confusion, nu.confusion_matrices(labels, preds))
 
 @pytest.fixture(scope='module', params=[6, ])
 def extra_class_preds_confusion(request):
@@ -143,7 +158,6 @@ def test_individual_nan_preds_conf_prec_rec(nan_preds_conf_prec_rec):
     assert_almost_equal(true_confrecall, confrecall, decimal=2)
 
 
-# TODO: [ ] Add test for calculating multiple confusion matrices at the same time?
 @pytest.fixture(
     scope='module',
     params=[np.array([0, 1, 2, 5]), np.arange(len(confusion))])
