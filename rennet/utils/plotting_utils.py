@@ -7,20 +7,22 @@ Utilities for plotting
 from __future__ import division
 import matplotlib.pyplot as plt
 from math import ceil
+import numpy as np
+from librosa.display import specshow
 
 
-# pylint: disable=too-many-arguments, too-many-locals
-def plot_multi(x_list,
-               func="plot",
-               rows=None,
-               cols=4,
-               perfigsize=(4, 4),
-               subplot_titles=None,
-               labels=None,
-               fig_title=None,
-               show=True,
-               *args,
-               **kwargs):
+def plot_multi(  # pylint: disable=too-many-arguments, too-many-locals
+        x_list,
+        func="plot",
+        rows=None,
+        cols=4,
+        perfigsize=(4, 4),
+        subplot_titles=None,
+        labels=None,
+        fig_title=None,
+        show=True,
+        *args,
+        **kwargs):
     if rows is None:
         rows = ceil(len(x_list) / cols)
 
@@ -57,4 +59,31 @@ def plot_multi(x_list,
 
     if show:
         plt.show()
-# pylint: enable=too-many-arguments, too-many-locals
+
+
+def plot_speclike(  # pylint: disable=too-many-arguments
+        orderedlist,
+        figsize=(20, 4),
+        show_time=False,
+        sr=16000,
+        hop_sec=0.05,
+        cmap=plt.cm.viridis,
+        show=True):
+    assert all(
+        o.shape[0] == orderedlist[0].shape[0]
+        for o in orderedlist), "All list items should be of the same length"
+
+    x_axis = 'time' if show_time else None
+    hop_len = int(hop_sec * sr)
+
+    plt.figure(figsize=figsize)
+    specshow(
+        np.vstack(reversed(orderedlist)),
+        x_axis=x_axis,
+        sr=sr,
+        hop_length=hop_len,
+        cmap=cmap, )
+    plt.colorbar()
+
+    if show:
+        plt.show()

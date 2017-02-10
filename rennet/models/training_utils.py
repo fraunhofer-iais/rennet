@@ -7,10 +7,9 @@ Utilities for training with Keras
 from __future__ import print_function, division
 import numpy as np
 import keras.callbacks as kc
-import matplotlib.pyplot as plt
-from librosa.display import specshow
 
 import rennet.utils.np_utils as npu
+import rennet.utils.plotting_utils as pu
 
 to_categorical = npu.to_categorical
 
@@ -20,29 +19,7 @@ normalize_confusion_matrix = npu.normalize_confusion_matrix
 
 print_normalized_confusion = npu.print_normalized_confusion
 
-
-def plot_speclike(  # pylint: disable=too-many-arguments
-        orderedlist,
-        figsize=(20, 4),
-        show_time=False,
-        sr=8000,
-        hop_sec=0.05,
-        cmap=plt.cm.viridis):
-    assert all(
-        o.shape[0] == orderedlist[0].shape[0]
-        for o in orderedlist), "All list items should be of the same length"
-
-    x_axis = 'time' if show_time else None
-    hop_len = int(hop_sec * sr)
-
-    plt.figure(figsize=figsize)
-    specshow(
-        np.vstack(reversed(orderedlist)),
-        x_axis=x_axis,
-        sr=sr,
-        hop_length=hop_len,
-        cmap=cmap, )
-    plt.colorbar()
+plot_speclike = pu.plot_speclike
 
 
 class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attributes
@@ -120,13 +97,27 @@ class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attrib
     def plot_last_normalized_confusions(self):
         raise NotImplementedError
 
-    def plot_last_pred_classes(self):
-        # TODO: Check if there are any issues, or any extra params to be provided
+    def plot_last_pred_classes(  # pylint: disable=too-many-arguments
+            self,
+            figsize=(20, 4),
+            show_time=True,
+            sr=None,
+            hop_sec=None,
+            show=False):
+        # TODO: [ ] Test. Check if there are any issues
+        if sr is None:
+            sr = self.sr
+
+        if hop_sec is None:
+            hop_sec = self.hop_sec
+
         plot_speclike(
             [self.last_pred_classes, np.argmax(self.true_label)],
-            show_time=True,
-            sr=self.sr,
-            hop_sec=self.hop_sec)
+            figsize=figsize,
+            show_time=show_time,
+            sr=sr,
+            hop_sec=hop_sec,
+            show=show)
 
     def plot_confusions_history(self):
         if self.confusions is None:
