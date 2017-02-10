@@ -102,6 +102,9 @@ def confusion_matrix(ytrue, ypred, nclasses=None, warn=False):
 
 
 def normalize_confusion_matrix(conf_matrix):
+    if not isinstance(conf_matrix, np.ndarray):
+        conf_matrix = np.array(conf_matrix)
+
     confmat = conf_matrix[np.newaxis, ...]
     prec, recall = normalize_confusion_matrices(confmat)
 
@@ -109,17 +112,20 @@ def normalize_confusion_matrix(conf_matrix):
 
 
 def normalize_confusion_matrices(confusion_matrices):
-    conf_sum = confusion_matrices.sum(axis=1)
-    confprec = confusion_matrices / conf_sum[np.newaxis, :]
+    if not isinstance(confusion_matrices, np.ndarray):
+        confusion_matrices = np.array(confusion_matrices)
 
-    conf_sum = confusion_matrices.sum(axis=2)
+    conf_sum = confusion_matrices.sum(axis=-2)
+    confprec = confusion_matrices / conf_sum[:, np.newaxis]
+
+    conf_sum = confusion_matrices.sum(axis=-1)
     confrec = np.transpose(confusion_matrices, [0, 2, 1]) \
-              / conf_sum[np.newaxis, :]
+              / conf_sum[:, np.newaxis]
     confrec = np.transpose(confrec, [0, 2, 1])
 
     return confprec, confrec
 
 
 def print_normalized_confusion(confmat, title='CONFUSION MATRIX'):
-    print("\n{:/>90}//".format(" {} ".format(title)))
+    print("\n{:/>70}//".format(" {} ".format(title)))
     print(np.round(confmat * 100, decimals=2))
