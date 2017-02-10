@@ -142,8 +142,11 @@ def test_individual_nan_preds_conf_prec_rec(nan_preds_conf_prec_rec):
     assert_almost_equal(true_confprec, confprec, decimal=2)
     assert_almost_equal(true_confrecall, confrecall, decimal=2)
 
+
 # TODO: [ ] Add test for calculating multiple confusion matrices at the same time?
-@pytest.fixture(scope='module', params=[np.array([0, 1, 2, 5])])
+@pytest.fixture(
+    scope='module',
+    params=[np.array([0, 1, 2, 5]), np.arange(len(confusion))])
 def normal_multi_preds_conf_prec_rec(request):
     return {
         "confusion": confusion[request.param, ...],
