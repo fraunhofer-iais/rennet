@@ -174,7 +174,7 @@ def plot_confusion_recall_precision(  # pylint: disable=too-many-arguments
         [conf_recall, conf_precision],
         func="confusion",
         rows=1,
-        cols=1,
+        cols=2,
         perfigsize=perfigsize,
         fig_title=figtitle,
         subplot_titles=subplot_titles,
