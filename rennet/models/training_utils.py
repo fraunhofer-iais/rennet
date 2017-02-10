@@ -64,7 +64,7 @@ class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attrib
         self.colorcycle_for_true = ['grey', 'yellowgreen',
                                     'lightcoral']  #, 'lightskyblue']
         self.linecycle_for_TP_pred = ['-']
-        self.linecycle_for_FP_pred = [':', '--', '.-']
+        self.linecycle_for_FP_pred = [':', '--', '-.']
         self.marker = '|'
         super(ConfusionHistory, self).__init__()
 
@@ -91,7 +91,7 @@ class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attrib
 
     @property
     def last_pred_classes(self):
-        return np.argmax(self.last_preds)
+        return np.argmax(self.last_preds, axis=-1)
 
     @property
     def last_pred_categorical(self):
@@ -142,7 +142,7 @@ class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attrib
             hop_sec = self.hop_sec
 
         plot_speclike(
-            [self.last_pred_classes, np.argmax(self.true_label)],
+            [self.last_pred_classes, np.argmax(self.true_label, axis=-1)],
             figsize=figsize,
             show_time=show_time,
             sr=sr,
@@ -194,5 +194,4 @@ class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attrib
                     ax[i].set_ylim([0, 1])
             ax[i].legend()
             ax[i].set_title(titles[i])
-
-        raise NotImplementedError()
+            ax[i].grid()
