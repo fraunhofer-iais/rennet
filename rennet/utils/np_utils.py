@@ -118,3 +118,8 @@ def normalize_confusion_matrices(confusion_matrices):
     confrec = np.transpose(confrec, [0, 2, 1])
 
     return confprec, confrec
+
+
+def print_normalized_confusion(confmat, title='CONFUSION MATRIX'):
+    print("\n{:/>90}//".format(" {} ".format(title)))
+    print(np.round(confmat * 100, decimals=2))

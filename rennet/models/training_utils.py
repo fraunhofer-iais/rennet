@@ -18,10 +18,7 @@ confusion_matrix = npu.confusion_matrix
 
 normalize_confusion_matrix = npu.normalize_confusion_matrix
 
-
-def print_normalized_confusion(confmat, title='CONFUSION MATRIX'):
-    print("\n{:/>90}//".format(" {} ".format(title)))
-    print(np.round(confmat * 100, decimals=2))
+print_normalized_confusion = npu.print_normalized_confusion
 
 
 def plot_speclike(  # pylint: disable=too-many-arguments
