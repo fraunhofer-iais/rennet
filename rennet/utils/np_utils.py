@@ -122,7 +122,7 @@ def categorical_confusion_matrices(Ytrue, Ypreds):
 
     for i in range(nclasses):
         # Preds for known class i
-        _Ypred_i = Ypreds[:, Ytrue[:, i].astype(np.bool), :]
+        _Ypred_i = Ypreds[:, Ytrue[..., i].astype(np.bool), :]
         for j in range(nclasses):
             conf[:, i, j] = np.sum(_Ypred_i[..., j], axis=-1)
 
