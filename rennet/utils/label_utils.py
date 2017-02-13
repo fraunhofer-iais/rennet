@@ -99,3 +99,23 @@ class SequenceLabels(object):
                        for (s, e), l in zip(self.starts_ends, self.labels))
 
         return s
+
+
+class ContigiousSequenceLabels(SequenceLabels):
+    """ Special SequenceLabels with contigious labels
+
+    There is a label for each sample between min(starts) and max(ends)
+
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(ContigiousSequenceLabels, self).__init__(*args, **kwargs)
+        # the starts_ends were sorted in __init__ on starts
+        assert np.all(np.diff(self.starts) >
+                      0.), "There are multiple segments with the same starts"
+        assert np.all(
+            self.starts_ends[1:, 0] == self.starts_ends[:-1, 1]
+        ), "All ends should be the starts of the next segment, except the last"
+
+        # IDEA: store only the unique values? min_start and ends?
+        # May be pointless here in python

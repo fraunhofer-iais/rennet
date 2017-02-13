@@ -20,7 +20,7 @@ SeqLabelData = namedtuple('SeqLabelData', [
 
 
 @pytest.fixture(scope='module')
-def sample_seqlabel():
+def sample_contigious_seqlabel():
     starts_secs = np.array([0., 1., 3., 4.5])
     ends_secs = np.array([1., 3., 4.5, 6.])
     labels = [1, 0, 2, 1]
@@ -32,28 +32,55 @@ def sample_seqlabel():
                         starts_samples, ends_samples)
 
 
-def test_SequenceLabels_from_samples(sample_seqlabel):
-    sample_startsends = np.vstack([sample_seqlabel.starts_samples,
-                                   sample_seqlabel.ends_samples]).T
+def test_SequenceLabels_from_samples(sample_contigious_seqlabel):
+    sample_startsends = np.vstack([sample_contigious_seqlabel.starts_samples,
+                                   sample_contigious_seqlabel.ends_samples]).T
 
-    seqlabels = lu.SequenceLabels(sample_startsends, sample_seqlabel.labels,
-                                  sample_seqlabel.samplerate)
+    seqlabels = lu.SequenceLabels(sample_startsends, sample_contigious_seqlabel.labels,
+                                  sample_contigious_seqlabel.samplerate)
 
     print(seqlabels)
     with seqlabels.samplerate_as(1.0):
-        npt.assert_equal(seqlabels.starts, sample_seqlabel.starts_secs)
-        npt.assert_equal(seqlabels.ends, sample_seqlabel.ends_secs)
-        assert seqlabels.samplerate == sample_seqlabel.samplerate
+        npt.assert_equal(seqlabels.starts, sample_contigious_seqlabel.starts_secs)
+        npt.assert_equal(seqlabels.ends, sample_contigious_seqlabel.ends_secs)
+        assert seqlabels.samplerate == sample_contigious_seqlabel.samplerate
         print(seqlabels)
 
 
-def test_SequenceLabels_from_secs(sample_seqlabel):
-    sample_startsends = np.vstack([sample_seqlabel.starts_secs,
-                                   sample_seqlabel.ends_secs]).T
+def test_SequenceLabels_from_secs(sample_contigious_seqlabel):
+    sample_startsends = np.vstack([sample_contigious_seqlabel.starts_secs,
+                                   sample_contigious_seqlabel.ends_secs]).T
 
-    seqlabels = lu.SequenceLabels(sample_startsends, sample_seqlabel.labels, 1)
+    seqlabels = lu.SequenceLabels(sample_startsends, sample_contigious_seqlabel.labels, 1)
 
-    with seqlabels.samplerate_as(sample_seqlabel.samplerate):
-        npt.assert_equal(seqlabels.starts, sample_seqlabel.starts_samples)
-        npt.assert_equal(seqlabels.ends, sample_seqlabel.ends_samples)
+    with seqlabels.samplerate_as(sample_contigious_seqlabel.samplerate):
+        npt.assert_equal(seqlabels.starts, sample_contigious_seqlabel.starts_samples)
+        npt.assert_equal(seqlabels.ends, sample_contigious_seqlabel.ends_samples)
+        assert seqlabels.samplerate == 1
+
+
+def test_ContigiousSequenceLabels_from_samples(sample_contigious_seqlabel):
+    sample_startsends = np.vstack([sample_contigious_seqlabel.starts_samples,
+                                   sample_contigious_seqlabel.ends_samples]).T
+
+    seqlabels = lu.ContigiousSequenceLabels(sample_startsends, sample_contigious_seqlabel.labels,
+                                  sample_contigious_seqlabel.samplerate)
+
+    print(seqlabels)
+    with seqlabels.samplerate_as(1.0):
+        npt.assert_equal(seqlabels.starts, sample_contigious_seqlabel.starts_secs)
+        npt.assert_equal(seqlabels.ends, sample_contigious_seqlabel.ends_secs)
+        assert seqlabels.samplerate == sample_contigious_seqlabel.samplerate
+        print(seqlabels)
+
+
+def test_ContigiousSequenceLabels_from_secs(sample_contigious_seqlabel):
+    sample_startsends = np.vstack([sample_contigious_seqlabel.starts_secs,
+                                   sample_contigious_seqlabel.ends_secs]).T
+
+    seqlabels = lu.ContigiousSequenceLabels(sample_startsends, sample_contigious_seqlabel.labels, 1)
+
+    with seqlabels.samplerate_as(sample_contigious_seqlabel.samplerate):
+        npt.assert_equal(seqlabels.starts, sample_contigious_seqlabel.starts_samples)
+        npt.assert_equal(seqlabels.ends, sample_contigious_seqlabel.ends_samples)
         assert seqlabels.samplerate == 1
