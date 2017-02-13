@@ -16,6 +16,7 @@ from rennet.utils import label_utils as lu
 SeqLabelData = namedtuple('SeqLabelData', [
     'starts_secs', 'ends_secs', 'labels', 'samplerate', 'starts_samples',
     'ends_samples', 'labels_at_secs_conti', 'labels_at_secs_nonconti',
+    'labels_at_samples_conti', 'labels_at_samples_nonconti',
     'default_label_conti', 'default_label_nonconti',
     'default_default_label_conti', 'default_default_label_nonconti'
 ])
@@ -27,8 +28,8 @@ def sample_contigious_seqlabel():
     ends_secs = np.array([1., 3., 4.5, 6.])
     labels = [1, 0, 2, 1]
     samplerate = 16000
-    starts_samples = starts_secs * samplerate
-    ends_samples = ends_secs * samplerate
+    starts_samples = (starts_secs * samplerate).astype(np.int)
+    ends_samples = (ends_secs * samplerate).astype(np.int)
 
     labels_at_secs_conti = [
         (0.5, 1),
@@ -41,6 +42,9 @@ def sample_contigious_seqlabel():
     ]
     labels_at_secs_nonconti = [(t, [l]) for t, l in labels_at_secs_conti]
 
+    labels_at_samples_conti = [(t * samplerate, l) for t, l in labels_at_secs_conti]
+    labels_at_samples_nonconti = [(t * samplerate, l) for t, l in labels_at_secs_nonconti]
+
     default_label_conti = -1
     default_label_nonconti = [default_label_conti, ]
 
@@ -50,7 +54,9 @@ def sample_contigious_seqlabel():
 
     return SeqLabelData(starts_secs, ends_secs, labels, samplerate,
                         starts_samples, ends_samples, labels_at_secs_conti,
-                        labels_at_secs_nonconti, default_label_conti,
+                        labels_at_secs_nonconti,
+                        labels_at_samples_conti, labels_at_samples_nonconti,
+                        default_label_conti,
                         default_label_nonconti, default_default_label_conti,
                         default_default_label_nonconti)
 
@@ -133,8 +139,8 @@ def sample_noncontigious_seqlabel():
     ends_secs = np.array([1., 4.8, 5., 6.])
     labels = [1, 0, 2, 1]
     samplerate = 16000
-    starts_samples = starts_secs * samplerate
-    ends_samples = ends_secs * samplerate
+    starts_samples = (starts_secs * samplerate).astype(np.int)
+    ends_samples = (ends_secs * samplerate).astype(np.int)
 
     labels_at_secs_nonconti = [
         (0.5, [1,]),
@@ -146,6 +152,9 @@ def sample_noncontigious_seqlabel():
     ]
     labels_at_secs_conti = None
 
+    labels_at_samples_conti = None
+    labels_at_samples_nonconti = [(t * samplerate, l) for t, l in labels_at_secs_nonconti]
+
     default_label_conti = None
     default_label_nonconti = [-1, ]
 
@@ -155,7 +164,9 @@ def sample_noncontigious_seqlabel():
 
     return SeqLabelData(starts_secs, ends_secs, labels, samplerate,
                         starts_samples, ends_samples, labels_at_secs_conti,
-                        labels_at_secs_nonconti, default_label_conti,
+                        labels_at_secs_nonconti,
+                        labels_at_samples_conti, labels_at_samples_nonconti,
+                        default_label_conti,
                         default_label_nonconti, default_default_label_conti,
                         default_default_label_nonconti)
 
@@ -222,3 +233,16 @@ def test_ContigiousSequenceLabels_from_secs_fail_noncontigious(
     with pytest.raises(AssertionError):
         lu.ContigiousSequenceLabels(sample_startsends,
                                     sample_noncontigious_seqlabel.labels, 1)
+
+def test_labels_at_SeqLabels_from_secs_conti(sample_contigious_seqlabel):
+    assert False
+
+def test_labels_at_SeqLabels_from_samples_conti(sample_contigious_seqlabel):
+    assert False
+
+
+def test_labels_at_SeqLabels_from_secs_nonconti(sample_noncontigious_seqlabel):
+    assert False
+
+def test_labels_at_SeqLabels_from_samples_nonconti(sample_noncontigious_seqlabel):
+    assert False
