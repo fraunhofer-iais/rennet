@@ -15,7 +15,9 @@ from rennet.utils import label_utils as lu
 
 SeqLabelData = namedtuple('SeqLabelData', [
     'starts_secs', 'ends_secs', 'labels', 'samplerate', 'starts_samples',
-    'ends_samples'
+    'ends_samples', 'labels_at_secs_conti', 'labels_at_secs_nonconti',
+    'default_label_conti', 'default_label_nonconti',
+    'default_default_label_conti', 'default_default_label_nonconti'
 ])
 
 
@@ -28,8 +30,29 @@ def sample_contigious_seqlabel():
     starts_samples = starts_secs * samplerate
     ends_samples = ends_secs * samplerate
 
+    labels_at_secs_conti = [
+        (0.5, 1),
+        (1., 1),
+        (1.4, 0),
+        (3.8, 2),
+        (5.5, 1),
+        (5.9999375, 1),
+        (6, 1),
+    ]
+    labels_at_secs_nonconti = [(t, [l]) for t, l in labels_at_secs_conti]
+
+    default_label_conti = -1
+    default_label_nonconti = [default_label_conti, ]
+
+    # when default label is not passed
+    default_default_label_conti = None
+    default_default_label_nonconti = [default_default_label_conti, ]
+
     return SeqLabelData(starts_secs, ends_secs, labels, samplerate,
-                        starts_samples, ends_samples)
+                        starts_samples, ends_samples, labels_at_secs_conti,
+                        labels_at_secs_nonconti, default_label_conti,
+                        default_label_nonconti, default_default_label_conti,
+                        default_default_label_nonconti)
 
 
 def test_SequenceLabels_from_samples(sample_contigious_seqlabel):
@@ -107,14 +130,34 @@ def test_ContigiousSequenceLabels_from_secs(sample_contigious_seqlabel):
 @pytest.fixture(scope='module')
 def sample_noncontigious_seqlabel():
     starts_secs = np.array([0., 1., 3., 4.5])
-    ends_secs = np.array([1., 4., 4.5, 6.])
+    ends_secs = np.array([1., 4.8, 5., 6.])
     labels = [1, 0, 2, 1]
     samplerate = 16000
     starts_samples = starts_secs * samplerate
     ends_samples = ends_secs * samplerate
 
+    labels_at_secs_nonconti = [
+        (0.5, [1,]),
+        (1., [1,]),
+        (3.4, [0, 2,]),
+        (4.8, [0, 2, 1,]),
+        (5.5, [1,]),
+        (6, 1),
+    ]
+    labels_at_secs_conti = None
+
+    default_label_conti = None
+    default_label_nonconti = [-1, ]
+
+    # when default label is not passed
+    default_default_label_conti = None
+    default_default_label_nonconti = [None, ]
+
     return SeqLabelData(starts_secs, ends_secs, labels, samplerate,
-                        starts_samples, ends_samples)
+                        starts_samples, ends_samples, labels_at_secs_conti,
+                        labels_at_secs_nonconti, default_label_conti,
+                        default_label_nonconti, default_default_label_conti,
+                        default_default_label_nonconti)
 
 
 def test_SequenceLabels_from_samples_nofail_noncontigious(
