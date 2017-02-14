@@ -7,7 +7,7 @@ Test the label utilities module
 import pytest
 import numpy as np
 import numpy.testing as npt
-from collections import namedtuple
+# from collections import namedtuple
 
 from rennet.utils import label_utils as lu
 
@@ -78,7 +78,7 @@ def base_small_seqdata(request):
 @pytest.fixture(
     scope='module',
     params=[1, 101],  # samplerate
-    ids=lambda x: "SR-{}".format(x))
+    ids=lambda x: "SR-{}".format(x))  # pylint: disable=unnecessary-lambda
 def all_small_seqdata(request, base_small_seqdata):
     sr = request.param
     se = (base_small_seqdata['starts_ends'] *
@@ -97,8 +97,13 @@ def test_SequenceLabels_initializes(all_small_seqdata):
     se = all_small_seqdata['starts_ends']
     sr = all_small_seqdata['samplerate']
     l = all_small_seqdata['labels']
-    lu.SequenceLabels(se, l, samplerate=sr)
-    assert True
+
+    s = lu.SequenceLabels(se, l, samplerate=sr)
+
+    npt.assert_equal(s.starts_ends, se)
+    assert s.samplerate == sr
+    assert s.orig_samplerate == sr
+    assert all([e == r for e, r in zip(l, s.labels)]), list(zip(l, s.labels))
 
 
 def test_ContiguousSequenceLabels_init_conti_fail_nonconti(all_small_seqdata):
@@ -110,8 +115,12 @@ def test_ContiguousSequenceLabels_init_conti_fail_nonconti(all_small_seqdata):
     sr = all_small_seqdata['samplerate']
     l = all_small_seqdata['labels']
     if all_small_seqdata['isconti']:
-        lu.ContiguousSequenceLabels(se, l, samplerate=sr)
-        assert True
+        s = lu.ContiguousSequenceLabels(se, l, samplerate=sr)
+
+        npt.assert_equal(s.starts_ends, se)
+        assert s.samplerate == sr
+        assert s.orig_samplerate == sr
+        assert all([e == r for e, r in zip(l, s.labels)]), list(zip(l, s.labels))
     else:
         with pytest.raises(AssertionError):
             lu.ContiguousSequenceLabels(se, l, samplerate=sr)
