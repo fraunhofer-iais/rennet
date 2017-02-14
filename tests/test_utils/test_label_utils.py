@@ -314,6 +314,10 @@ def SequenceLabels_small_seqdata_labels_at_outside(request,
     sminstart = s.starts.min()
     smaxend = s.ends.max()
     la_ends = [sminstart - (1 / sr), sminstart, smaxend + (1 / sr)]
+    # Yes, there is no label for sminstart. So the default_label is expected
+    # Why? We are looking at the label for the segment between
+    # (x - (1/samplerate)) and (x) when finding labels_at
+
     la_labels = [request.param for _ in range(len(la_ends))]
 
     return {
