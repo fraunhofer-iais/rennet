@@ -77,12 +77,15 @@ def base_small_seqdata(request):
 
 @pytest.fixture(
     scope='module',
-    params=[1, 101],  # samplerate
-    ids=lambda x: "SR-{}".format(x))  # pylint: disable=unnecessary-lambda
-def all_small_seqdata(request, base_small_seqdata):
+    params=[1., 3., 3, 101],  # samplerate
+    ids=lambda x: "SR={}".format(x))  # pylint: disable=unnecessary-lambda
+def init_small_seqdata(request, base_small_seqdata):
     sr = request.param
     se = (base_small_seqdata['starts_ends'] *
           (sr / base_small_seqdata['samplerate']))
+
+    if isinstance(sr, int):
+        se = se.astype(np.int)
 
     return {
         'starts_ends': se,
@@ -92,11 +95,11 @@ def all_small_seqdata(request, base_small_seqdata):
     }
 
 
-def test_SequenceLabels_initializes(all_small_seqdata):
+def test_SequenceLabels_initializes(init_small_seqdata):
     """ Test SequenceLabels class initializes w/o errors """
-    se = all_small_seqdata['starts_ends']
-    sr = all_small_seqdata['samplerate']
-    l = all_small_seqdata['labels']
+    se = init_small_seqdata['starts_ends']
+    sr = init_small_seqdata['samplerate']
+    l = init_small_seqdata['labels']
 
     s = lu.SequenceLabels(se, l, samplerate=sr)
 
@@ -106,15 +109,15 @@ def test_SequenceLabels_initializes(all_small_seqdata):
     assert all([e == r for e, r in zip(l, s.labels)]), list(zip(l, s.labels))
 
 
-def test_ContiguousSequenceLabels_init_conti_fail_nonconti(all_small_seqdata):
+def test_ContiguousSequenceLabels_init_conti_fail_nonconti(init_small_seqdata):
     """ Test ContiguousSequenceLabels class initializes
         - w/o errors if labels are contiguous
         - raises AssertionError when non-contiguous
     """
-    se = all_small_seqdata['starts_ends']
-    sr = all_small_seqdata['samplerate']
-    l = all_small_seqdata['labels']
-    if all_small_seqdata['isconti']:
+    se = init_small_seqdata['starts_ends']
+    sr = init_small_seqdata['samplerate']
+    l = init_small_seqdata['labels']
+    if init_small_seqdata['isconti']:
         s = lu.ContiguousSequenceLabels(se, l, samplerate=sr)
 
         npt.assert_equal(s.starts_ends, se)
@@ -125,6 +128,68 @@ def test_ContiguousSequenceLabels_init_conti_fail_nonconti(all_small_seqdata):
     else:
         with pytest.raises(AssertionError):
             lu.ContiguousSequenceLabels(se, l, samplerate=sr)
+
+
+@pytest.fixture(
+    scope='module',
+    params=[lu.SequenceLabels, lu.ContiguousSequenceLabels],
+    ids=lambda x: x.__name__)
+def seqlabelinst_small_seqdata(request, init_small_seqdata):
+    se = init_small_seqdata['starts_ends']
+    sr = init_small_seqdata['samplerate']
+    l = init_small_seqdata['labels']
+
+    if (not init_small_seqdata['isconti'] and
+            request.param is lu.ContiguousSequenceLabels):
+        pytest.skip(
+            "Non-Contiguous Sequence data for ContiguousSequenceLabels "
+            "will fail to initialize")
+    else:
+        s = request.param(se, l, samplerate=sr)
+
+    return {
+        'seqlabelinst': s,
+        'orig_sr': sr,
+        'orig_se': se,
+    }
+
+
+@pytest.fixture(
+    scope='module',
+    params=[1., 3., 3, 101],  # to_samplerate
+    ids=lambda x: "toSR={}".format(x)  #pylint: disable=unnecessary-lambda
+)
+def se_to_sr_small_seqdata_SequenceLabels(request, seqlabelinst_small_seqdata):
+    """ Fixture to test starts_ends are calculated correctly in contextual sr """
+    s = seqlabelinst_small_seqdata['seqlabelinst']
+    sr = seqlabelinst_small_seqdata['orig_sr']
+    se = seqlabelinst_small_seqdata['orig_se']
+
+    to_sr = request.param
+    target_se = se * (to_sr / sr)
+
+    return {
+        'seqlabelinst': s,
+        'orig_sr': sr,
+        'target_sr': to_sr,
+        'target_se': target_se
+    }
+
+
+def test_se_to_sr_SeqLabels(se_to_sr_small_seqdata_SequenceLabels):
+    s, osr, tsr, tse = [
+        se_to_sr_small_seqdata_SequenceLabels[k]
+        for k in ['seqlabelinst', 'orig_sr', 'target_sr', 'target_se']
+    ]
+
+    with s.samplerate_as(tsr):
+        rse = s.starts_ends
+        rsr = s.samplerate
+        rosr = s.orig_samplerate
+
+    assert rosr == osr
+    assert rsr == tsr
+    npt.assert_equal(rse, tse)
 
 
 # SeqLabelData = namedtuple('SeqLabelData', [
