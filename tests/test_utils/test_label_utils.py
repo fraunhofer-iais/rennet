@@ -247,6 +247,11 @@ def test_threelevel_to_sr_cycle(threelevel_sr_as_SeqLabels):
 )
 def SequenceLabels_small_seqdata_labels_at_allwithin(request,
                                                      init_small_seqdata):
+    """ fixture with labels_at at different samplerates
+
+    And of course instance of SequenceLabels class that handles both
+    contiguous and non-contiguous seqdata
+    """
     se = init_small_seqdata['starts_ends']
     sr = init_small_seqdata['samplerate']
     l = init_small_seqdata['labels']
