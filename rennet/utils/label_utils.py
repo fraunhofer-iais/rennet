@@ -160,15 +160,15 @@ class SequenceLabels(object):
         return s
 
 
-class ContigiousSequenceLabels(SequenceLabels):
-    """ Special SequenceLabels with contigious labels
+class ContiguousSequenceLabels(SequenceLabels):
+    """ Special SequenceLabels with contiguous labels
 
     There is a label for each sample between min(starts) and max(ends)
 
     """
 
     def __init__(self, *args, **kwargs):
-        super(ContigiousSequenceLabels, self).__init__(*args, **kwargs)
+        super(ContiguousSequenceLabels, self).__init__(*args, **kwargs)
         # the starts_ends were sorted in __init__ on starts
         assert np.all(np.diff(self.starts) >
                       0.), "There are multiple segments with the same starts"
@@ -179,5 +179,5 @@ class ContigiousSequenceLabels(SequenceLabels):
         # IDEA: store only the unique values? min_start and ends?
         # May be pointless here in python
 
-    def labels_at(self,):
-        pass
+    # def labels_at(self,):
+    #     pass
