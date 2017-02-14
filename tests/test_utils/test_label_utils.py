@@ -414,9 +414,62 @@ def test_labels_at_SeqLabels_from_secs_nonconti(sample_noncontigious_seqlabel):
         assert all([e == r for e, r in zip(la_expected_labels, la_labels)])
 
 
-# def test_labels_at_SeqLabels_from_samples_nonconti(
-#         sample_noncontigious_seqlabel):
-#     assert True
+def test_labels_at_SeqLabels_from_samples_nonconti(
+        sample_noncontigious_seqlabel):
+    sample_startsends = np.vstack([
+        sample_noncontigious_seqlabel.starts_samples,
+        sample_noncontigious_seqlabel.ends_samples
+    ]).T
+
+    sr = sample_noncontigious_seqlabel.samplerate
+    seqlabels = lu.SequenceLabels(sample_startsends,
+                                  sample_noncontigious_seqlabel.labels, sr)
+
+    # test retrieving labels with seconds
+    la_t, la_expected_labels = [], []
+    for t, l in sample_noncontigious_seqlabel.labels_at_secs_nonconti:
+        la_t.append(t)
+        la_expected_labels.append(l)
+
+    la_labels = seqlabels.labels_at(la_t, samplerate=1.0)
+
+    # single end still returns a list
+    assert seqlabels.labels_at(la_t[-1]) == [la_expected_labels[-1]]
+
+    assert la_labels is not None
+    assert len(la_labels) == len(la_t)
+    assert all([e == r for e, r in zip(la_expected_labels, la_labels)]), list(
+        zip(la_expected_labels, la_labels))
+
+    # test for different samplerate
+    la_t_sr, la_expected_labels_sr = [], []
+    for t, l in sample_noncontigious_seqlabel.labels_at_samples_nonconti:
+        la_t_sr.append(t)
+        la_expected_labels_sr.append(l)
+
+    la_labels_sr = seqlabels.labels_at(la_t_sr)
+
+    assert la_labels_sr is not None
+    assert len(la_labels_sr) == len(la_t_sr)
+    assert all([e == r for e, r in zip(la_expected_labels_sr, la_labels_sr)])
+
+    # test for contextually different samplerate
+    with seqlabels.samplerate_as(1.0):
+        la_labels = seqlabels.labels_at(la_t)
+        assert la_labels is not None
+        assert len(la_labels) == len(la_t)
+        assert all([e == r for e, r in zip(la_expected_labels, la_labels)])
+
+        la_labels_sr = seqlabels.labels_at(la_t_sr, samplerate=sr)
+        assert la_labels_sr is not None
+        assert len(la_labels_sr) == len(la_t_sr)
+        assert all(
+            [e == r for e, r in zip(la_expected_labels_sr, la_labels_sr)])
+
+        la_labels = seqlabels.labels_at(la_t, samplerate=1.0)
+        assert la_labels is not None
+        assert len(la_labels) == len(la_t)
+        assert all([e == r for e, r in zip(la_expected_labels, la_labels)])
 
 # TODO: benchmark different labels_at approaches
 
