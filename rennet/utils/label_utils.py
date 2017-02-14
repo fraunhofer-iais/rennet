@@ -91,10 +91,10 @@ class SequenceLabels(object):
         try:
             yield
         finally:
-            # self._samplerate = self._orig_samplerate
             self._samplerate = old_sr
 
-    def _get_starts_ends_for_samplerate(self, samplerate):
+    def _starts_ends_for_samplerate(self, samplerate):
+        # Available to children classes and not expected to change in context
         if samplerate == self.samplerate:
             return self.starts_ends
         else:
@@ -111,14 +111,13 @@ class SequenceLabels(object):
 
         ends = np.array(ends)
 
-        # make sure we are working with the correct samplerate
-
+        # make sure we are working with the correct samplerate for starts_ends
         if samplerate is None:
             # Assume the user is expecting the current samplerate
             # self.samplerate always has the most up to date samplerate
             se = self.starts_ends
         else:
-            se = self._get_starts_ends_for_samplerate(samplerate)
+            se = self._starts_ends_for_samplerate(samplerate)
 
         l = []
         for end in ends:
