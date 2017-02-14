@@ -4,6 +4,7 @@ Created: 26-08-2016
 
 Test the label utilities module
 """
+from __future__ import print_function, division
 import pytest
 import numpy as np
 import numpy.testing as npt
@@ -65,33 +66,32 @@ def base_noncontiguous_small_seqdata():
     ],
     ids=['contiguous', 'non-contiguous'])
 def base_small_seqdata(request):
-    starts_secs, ends_secs, labels, samplerate, _, isconti = request.param
+    starts_secs, ends_secs, labels, samplerate, la, isconti = request.param
     se_secs = np.vstack([starts_secs, ends_secs]).T
     return {
         'starts_ends': se_secs,
         'samplerate': samplerate,
         'labels': labels,
-        'isconti': isconti
+        'isconti': isconti,
+        'labels_at': la,
     }
 
 
 @pytest.fixture(
     scope='module',
-    params=[1., 3., 3, 101],  # samplerate
+    params=[1., 3., 3, 101, 8000, 16000],  # samplerate
     ids=lambda x: "SR={}".format(x))  # pylint: disable=unnecessary-lambda
 def init_small_seqdata(request, base_small_seqdata):
     sr = request.param
     se = (base_small_seqdata['starts_ends'] *
           (sr / base_small_seqdata['samplerate']))
 
-    if isinstance(sr, int):
-        se = se.astype(np.int)
-
     return {
         'starts_ends': se,
         'samplerate': sr,
         'labels': base_small_seqdata['labels'],
-        'isconti': base_small_seqdata['isconti']
+        'isconti': base_small_seqdata['isconti'],
+        'labels_at': base_small_seqdata['labels_at'],
     }
 
 
@@ -156,7 +156,7 @@ def seqlabelinst_small_seqdata(request, init_small_seqdata):
 
 @pytest.fixture(
     scope='module',
-    params=[1., 3., 3, 101],  # to_samplerate
+    params=[1., 3., 3, 100, 101],  # to_samplerate
     ids=lambda x: "toSR={}".format(x)  #pylint: disable=unnecessary-lambda
 )
 def se_to_sr_small_seqdata_SequenceLabels(request, seqlabelinst_small_seqdata):
@@ -238,6 +238,55 @@ def test_threelevel_to_sr_cycle(threelevel_sr_as_SeqLabels):
     # sr is reset when pulled out of context 0
     assert s.orig_samplerate == orig_sr
     assert s.samplerate == orig_sr
+
+
+@pytest.fixture(
+    scope='module',
+    params=[1., 3., 3, 101, 1000, 8000, 16000],  # samplerate for labels_at
+    ids=lambda x: "laSR={}".format(x)  #pylint: disable=unnecessary-lambda
+)
+def SequenceLabels_small_seqdata_labels_at_allwithin(request,
+                                                     init_small_seqdata):
+    se = init_small_seqdata['starts_ends']
+    sr = init_small_seqdata['samplerate']
+    l = init_small_seqdata['labels']
+
+    s = lu.SequenceLabels(se, l, samplerate=sr)
+
+    la_ends, la_labels = [], []
+    if not init_small_seqdata['isconti']:
+        for e, l in init_small_seqdata['labels_at']:
+            la_ends.append(e)
+            la_labels.append(l)
+    else:
+        for e, l in init_small_seqdata['labels_at']:
+            la_ends.append(e)
+            la_labels.append([l])
+
+    la_sr = request.param
+    # ends are more than likely to be provided as np.ndarray
+    la_ends = np.array(la_ends) * la_sr
+
+    return {
+        'seqlabelinst': s,
+        'ends': la_ends,
+        'at_sr': la_sr,
+        'target_labels': la_labels,
+    }
+
+
+@pytest.mark.labels_at
+def test_SequenceLabels_labels_at_allwithin(
+        SequenceLabels_small_seqdata_labels_at_allwithin):
+    s, la_ends, lasr, target_labels = [
+        SequenceLabels_small_seqdata_labels_at_allwithin[k]
+        for k in ['seqlabelinst', 'ends', 'at_sr', 'target_labels']
+    ]
+
+    labels = s.labels_at(la_ends, samplerate=lasr)
+
+    assert all([e == r for e, r in zip(target_labels, labels)]), list(
+        zip(target_labels, labels))
 
 
 # TODO: benchmark different labels_at approaches

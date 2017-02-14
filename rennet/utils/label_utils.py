@@ -4,6 +4,7 @@ Created: 26-08-2016
 
 Utilities for working with labels
 """
+from __future__ import print_function, division
 import numpy as np
 from collections import Iterable
 from contextlib import contextmanager
@@ -118,6 +119,15 @@ class SequenceLabels(object):
             se = self.starts_ends
         else:
             se = self._starts_ends_for_samplerate(samplerate)
+
+        se = np.round(se, 10)  # To avoid issues with floating points
+        # Yes, it looks arbitrary
+        # There will be problems later in comparing floating point numbers
+        # esp when testing for equality to the ends
+        # the root of the cause is when the provided samplerate is higher than
+        # the orig_samplerate, esp when the ratio is irrational.
+        # A max disparity of 16000:1 gave correct results
+        # limited to the tests of course. Please look at the corresponding tests
 
         l = []
         for end in ends:
