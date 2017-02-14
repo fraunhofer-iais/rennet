@@ -44,12 +44,12 @@ class SequenceLabels(object):
         assert np.all(starts_ends[:, 1] - starts_ends[:, 0] >
                       0.), "(ends - starts) should be > 0 for all pairs"
 
-        sidx = np.argsort(starts_ends[:, 0])
-
-        self._starts_ends = starts_ends[sidx]  # save sorted by starts
+        sidx = np.argsort(starts_ends[:, 0])  # save sorted by starts
+        self._starts_ends = starts_ends[sidx]
         self.labels = [labels[i] for i in sidx]
+
         self._orig_samplerate = samplerate
-        self._samplerate = self.orig_samplerate
+        self._samplerate = samplerate
 
     @property
     def samplerate(self):
