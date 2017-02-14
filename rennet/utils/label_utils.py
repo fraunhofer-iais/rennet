@@ -104,7 +104,7 @@ class SequenceLabels(object):
             with self.samplerate_as(samplerate):
                 return self.starts_ends
 
-    def labels_at(self, ends, samplerate=None, default_label=[None, ]):
+    def labels_at(self, ends, samplerate=None, default_label=None):
         if not isinstance(ends, Iterable):
             ends = [ends]
 

@@ -52,7 +52,7 @@ def sample_contigious_seqlabel():
 
     # when default label is not passed
     default_default_label_conti = None
-    default_default_label_nonconti = [default_default_label_conti, ]
+    default_default_label_nonconti = default_default_label_conti
 
     return SeqLabelData(starts_secs, ends_secs, labels, samplerate,
                         starts_samples, ends_samples, labels_at_secs_conti,
@@ -166,7 +166,7 @@ def sample_noncontigious_seqlabel():
 
     # when default label is not passed
     default_default_label_conti = None
-    default_default_label_nonconti = [None, ]
+    default_default_label_nonconti = None
 
     return SeqLabelData(starts_secs, ends_secs, labels, samplerate,
                         starts_samples, ends_samples, labels_at_secs_conti,
@@ -258,11 +258,48 @@ def test_labels_at_SeqLabels_from_secs_conti(sample_contigious_seqlabel):
         la_expected_labels.append(l)
 
     la_labels = seqlabels.labels_at(la_t)
+
     assert la_labels is not None
     assert len(la_labels) == len(la_t)
     assert all([e == r for e, r in zip(la_expected_labels, la_labels)])
 
-    # TODO: test for different samplerate = 16000
+    # single end still returns a list
+    assert seqlabels.labels_at(la_t[-1]) == [la_expected_labels[-1]]
+
+    # test for different samplerate
+    sr = sample_contigious_seqlabel.samplerate
+    la_t_sr, la_expected_labels_sr = [], []
+    for t, l in sample_contigious_seqlabel.labels_at_samples_nonconti:
+        la_t_sr.append(t)
+        la_expected_labels_sr.append(l)
+
+    la_labels_sr = seqlabels.labels_at(la_t_sr, samplerate=sr)
+
+    assert la_labels_sr is not None
+    assert len(la_labels_sr) == len(la_t_sr)
+    assert all([e == r for e, r in zip(la_expected_labels_sr, la_labels_sr)])
+
+    # test for contextually different samplerate
+    with seqlabels.samplerate_as(sample_contigious_seqlabel.samplerate):
+        la_labels_sr = seqlabels.labels_at(la_t_sr)
+        assert la_labels_sr is not None
+        assert len(la_labels_sr) == len(la_t_sr)
+        assert all(
+            [e == r for e, r in zip(la_expected_labels_sr, la_labels_sr)])
+
+        la_labels_sr = seqlabels.labels_at(la_t_sr, samplerate=sr)
+        assert la_labels_sr is not None
+        assert len(la_labels_sr) == len(la_t_sr)
+        assert all(
+            [e == r for e, r in zip(la_expected_labels_sr, la_labels_sr)])
+
+        la_labels = seqlabels.labels_at(la_t, samplerate=1.0)
+        assert la_labels is not None
+        assert len(la_labels) == len(la_t)
+        assert all([e == r for e, r in zip(la_expected_labels, la_labels)])
+
+
+# TODO: benchmark different labels_at approaches
 
 # TODO: test for multi-level samplerate_as
 
