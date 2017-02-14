@@ -31,6 +31,7 @@ class SequenceLabels(object):
     Plus, there is nice printing.
 
     TODO: [A] Check if something can be done about plotting it nicely too!
+    TODO: [ ] Export to ELAN
     """
 
     def __init__(self, starts_ends, labels, samplerate=1):
@@ -132,7 +133,6 @@ class SequenceLabels(object):
             l.append(end_label)
 
         return l
-
 
     def __len__(self):
         return len(self.starts_ends)
