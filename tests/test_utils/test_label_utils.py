@@ -120,7 +120,8 @@ def test_ContiguousSequenceLabels_init_conti_fail_nonconti(all_small_seqdata):
         npt.assert_equal(s.starts_ends, se)
         assert s.samplerate == sr
         assert s.orig_samplerate == sr
-        assert all([e == r for e, r in zip(l, s.labels)]), list(zip(l, s.labels))
+        assert all(
+            [e == r for e, r in zip(l, s.labels)]), list(zip(l, s.labels))
     else:
         with pytest.raises(AssertionError):
             lu.ContiguousSequenceLabels(se, l, samplerate=sr)
