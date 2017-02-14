@@ -49,15 +49,24 @@ class SequenceLabels(object):
         self._starts_ends = starts_ends[sidx]  # save sorted by starts
         self.labels = [labels[i] for i in sidx]
         self._orig_samplerate = samplerate
-        self._samplerate = self._orig_samplerate
+        self._samplerate = self.orig_samplerate
 
     @property
     def samplerate(self):
-        return self._orig_samplerate  # always the original samplerate
+        # If you want to set a different samplerate, use samplerate_as
+        # If you have made a mistake, create a new instance
+        return self._samplerate  # always the current samplerate
+
+    @property
+    def orig_samplerate(self):
+        # Changing the original samplerate may lead to wrong results
+        # hence provided as a property to only read
+        # No one's stopping them. Hoping the user is an adult
+        return self._orig_samplerate
 
     @property
     def starts_ends(self):
-        return self._starts_ends * (self._samplerate / self._orig_samplerate)
+        return self._starts_ends * (self.samplerate / self.orig_samplerate)
 
     @property
     def starts(self):
@@ -69,11 +78,61 @@ class SequenceLabels(object):
 
     @contextmanager
     def samplerate_as(self, new_sr):
+        """ Temporarily change to a different samplerate to calculate values
+
+        To be used with a `with` clause.
+
+        The starts and ends will calculated on the contextually most up-to-date
+        samplerate.
+        """
+        old_sr = self.samplerate
         self._samplerate = new_sr
         try:
             yield
         finally:
-            self._samplerate = self._orig_samplerate
+            # self._samplerate = self._orig_samplerate
+            self._samplerate = old_sr
+
+    def _get_starts_ends_for_samplerate(self, samplerate):
+        if samplerate == self.samplerate:
+            return self.starts_ends
+        else:
+            # Change the context to the new samplerate
+            # even if the self.samplerate was set to a different contextual one
+            # the starts_ends will be calculated for given samplerate
+            # and the contextual samplerate will be returned
+            with self.samplerate_as(samplerate):
+                return self.starts_ends
+
+    def labels_at(self, ends, samplerate=None, default_label=[None, ]):
+        if not isinstance(ends, Iterable):
+            ends = [ends]
+
+        ends = np.array(ends)
+
+        # make sure we are working with the correct samplerate
+
+        if samplerate is None:
+            # Assume the user is expecting the current samplerate
+            # self.samplerate always has the most up to date samplerate
+            se = self.starts_ends
+        else:
+            se = self._get_starts_ends_for_samplerate(samplerate)
+
+        l = []
+        for end in ends:
+            end_label = []
+            for i, (s, e) in enumerate(se):
+                if s < end <= e:
+                    end_label.append(self.labels[i])
+
+            if len(end_label) == 0:
+                end_label = default_label
+
+            l.append(end_label)
+
+        return l
+
 
     def __len__(self):
         return len(self.starts_ends)
@@ -119,3 +178,6 @@ class ContigiousSequenceLabels(SequenceLabels):
 
         # IDEA: store only the unique values? min_start and ends?
         # May be pointless here in python
+
+    def labels_at(self,):
+        pass

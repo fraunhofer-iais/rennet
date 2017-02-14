@@ -42,8 +42,10 @@ def sample_contigious_seqlabel():
     ]
     labels_at_secs_nonconti = [(t, [l]) for t, l in labels_at_secs_conti]
 
-    labels_at_samples_conti = [(t * samplerate, l) for t, l in labels_at_secs_conti]
-    labels_at_samples_nonconti = [(t * samplerate, l) for t, l in labels_at_secs_nonconti]
+    labels_at_samples_conti = [(t * samplerate, l)
+                               for t, l in labels_at_secs_conti]
+    labels_at_samples_nonconti = [(t * samplerate, l)
+                                  for t, l in labels_at_secs_nonconti]
 
     default_label_conti = -1
     default_label_nonconti = [default_label_conti, ]
@@ -54,9 +56,8 @@ def sample_contigious_seqlabel():
 
     return SeqLabelData(starts_secs, ends_secs, labels, samplerate,
                         starts_samples, ends_samples, labels_at_secs_conti,
-                        labels_at_secs_nonconti,
-                        labels_at_samples_conti, labels_at_samples_nonconti,
-                        default_label_conti,
+                        labels_at_secs_nonconti, labels_at_samples_conti,
+                        labels_at_samples_nonconti, default_label_conti,
                         default_label_nonconti, default_default_label_conti,
                         default_default_label_nonconti)
 
@@ -76,7 +77,8 @@ def test_SequenceLabels_from_samples(sample_contigious_seqlabel):
         npt.assert_equal(seqlabels.starts,
                          sample_contigious_seqlabel.starts_secs)
         npt.assert_equal(seqlabels.ends, sample_contigious_seqlabel.ends_secs)
-        assert seqlabels.samplerate == sample_contigious_seqlabel.samplerate
+        assert seqlabels.orig_samplerate == sample_contigious_seqlabel.samplerate
+        assert seqlabels.samplerate == 1.0
         print(seqlabels)
 
 
@@ -94,7 +96,8 @@ def test_SequenceLabels_from_secs(sample_contigious_seqlabel):
                          sample_contigious_seqlabel.starts_samples)
         npt.assert_equal(seqlabels.ends,
                          sample_contigious_seqlabel.ends_samples)
-        assert seqlabels.samplerate == 1
+        assert seqlabels.samplerate == sample_contigious_seqlabel.samplerate
+        assert seqlabels.orig_samplerate == 1.0
 
 
 def test_ContigiousSequenceLabels_from_samples(sample_contigious_seqlabel):
@@ -112,7 +115,8 @@ def test_ContigiousSequenceLabels_from_samples(sample_contigious_seqlabel):
         npt.assert_equal(seqlabels.starts,
                          sample_contigious_seqlabel.starts_secs)
         npt.assert_equal(seqlabels.ends, sample_contigious_seqlabel.ends_secs)
-        assert seqlabels.samplerate == sample_contigious_seqlabel.samplerate
+        assert seqlabels.orig_samplerate == sample_contigious_seqlabel.samplerate
+        assert seqlabels.samplerate == 1.0
         print(seqlabels)
 
 
@@ -130,7 +134,8 @@ def test_ContigiousSequenceLabels_from_secs(sample_contigious_seqlabel):
                          sample_contigious_seqlabel.starts_samples)
         npt.assert_equal(seqlabels.ends,
                          sample_contigious_seqlabel.ends_samples)
-        assert seqlabels.samplerate == 1
+        assert seqlabels.orig_samplerate == 1.0
+        assert seqlabels.samplerate == sample_contigious_seqlabel.samplerate
 
 
 @pytest.fixture(scope='module')
@@ -143,17 +148,18 @@ def sample_noncontigious_seqlabel():
     ends_samples = (ends_secs * samplerate).astype(np.int)
 
     labels_at_secs_nonconti = [
-        (0.5, [1,]),
-        (1., [1,]),
-        (3.4, [0, 2,]),
-        (4.8, [0, 2, 1,]),
-        (5.5, [1,]),
+        (0.5, [1]),
+        (1., [1]),
+        (3.4, [0, 2]),
+        (4.8, [0, 2, 1]),
+        (5.5, [1]),
         (6, 1),
     ]
     labels_at_secs_conti = None
 
     labels_at_samples_conti = None
-    labels_at_samples_nonconti = [(t * samplerate, l) for t, l in labels_at_secs_nonconti]
+    labels_at_samples_nonconti = [(t * samplerate, l)
+                                  for t, l in labels_at_secs_nonconti]
 
     default_label_conti = None
     default_label_nonconti = [-1, ]
@@ -164,9 +170,8 @@ def sample_noncontigious_seqlabel():
 
     return SeqLabelData(starts_secs, ends_secs, labels, samplerate,
                         starts_samples, ends_samples, labels_at_secs_conti,
-                        labels_at_secs_nonconti,
-                        labels_at_samples_conti, labels_at_samples_nonconti,
-                        default_label_conti,
+                        labels_at_secs_nonconti, labels_at_samples_conti,
+                        labels_at_samples_nonconti, default_label_conti,
                         default_label_nonconti, default_default_label_conti,
                         default_default_label_nonconti)
 
@@ -188,7 +193,8 @@ def test_SequenceLabels_from_samples_nofail_noncontigious(
                          sample_noncontigious_seqlabel.starts_secs)
         npt.assert_equal(seqlabels.ends,
                          sample_noncontigious_seqlabel.ends_secs)
-        assert seqlabels.samplerate == sample_noncontigious_seqlabel.samplerate
+        assert seqlabels.orig_samplerate == sample_noncontigious_seqlabel.samplerate
+        assert seqlabels.samplerate == 1.0
         print(seqlabels)
 
 
@@ -207,7 +213,8 @@ def test_SequenceLabels_from_secs_nofail_noncontigious(
                          sample_noncontigious_seqlabel.starts_samples)
         npt.assert_equal(seqlabels.ends,
                          sample_noncontigious_seqlabel.ends_samples)
-        assert seqlabels.samplerate == 1
+        assert seqlabels.orig_samplerate == 1
+        assert seqlabels.samplerate == sample_noncontigious_seqlabel.samplerate
 
 
 def test_ContigiousSequenceLabels_from_samples_fail_noncontigious(
@@ -234,15 +241,41 @@ def test_ContigiousSequenceLabels_from_secs_fail_noncontigious(
         lu.ContigiousSequenceLabels(sample_startsends,
                                     sample_noncontigious_seqlabel.labels, 1)
 
+
 def test_labels_at_SeqLabels_from_secs_conti(sample_contigious_seqlabel):
-    assert False
+    sample_startsends = np.vstack([
+        sample_contigious_seqlabel.starts_secs,
+        sample_contigious_seqlabel.ends_secs
+    ]).T
 
-def test_labels_at_SeqLabels_from_samples_conti(sample_contigious_seqlabel):
-    assert False
+    seqlabels = lu.SequenceLabels(sample_startsends,
+                                  sample_contigious_seqlabel.labels, 1)
 
+    # test retrieving labels with seconds
+    la_t, la_expected_labels = [], []
+    for t, l in sample_contigious_seqlabel.labels_at_secs_nonconti:
+        la_t.append(t)
+        la_expected_labels.append(l)
 
-def test_labels_at_SeqLabels_from_secs_nonconti(sample_noncontigious_seqlabel):
-    assert False
+    la_labels = seqlabels.labels_at(la_t)
+    assert la_labels is not None
+    assert len(la_labels) == len(la_t)
+    assert all([e == r for e, r in zip(la_expected_labels, la_labels)])
 
-def test_labels_at_SeqLabels_from_samples_nonconti(sample_noncontigious_seqlabel):
-    assert False
+    # TODO: test for different samplerate = 16000
+
+# TODO: test for multi-level samplerate_as
+
+# TODO: test for default, and default_default
+
+# def test_labels_at_SeqLabels_from_samples_conti(sample_contigious_seqlabel):
+#     assert True
+#
+#
+# def test_labels_at_SeqLabels_from_secs_nonconti(sample_noncontigious_seqlabel):
+#     assert True
+#
+#
+# def test_labels_at_SeqLabels_from_samples_nonconti(
+#         sample_noncontigious_seqlabel):
+#     assert True
