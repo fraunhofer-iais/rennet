@@ -280,7 +280,6 @@ def SequenceLabels_small_seqdata_labels_at_allwithin(request,
     }
 
 
-@pytest.mark.labels_at
 def test_SequenceLabels_labels_at_allwithin(
         SequenceLabels_small_seqdata_labels_at_allwithin):
     s, la_ends, lasr, target_labels = [
@@ -292,6 +291,51 @@ def test_SequenceLabels_labels_at_allwithin(
 
     assert all([e == r for e, r in zip(target_labels, labels)]), list(
         zip(target_labels, labels))
+
+
+@pytest.fixture(
+    scope='module',
+    params=[None, [], -1, [-1]],  # expected default labels
+    ids=lambda x: "laSR={}".format(x)  #pylint: disable=unnecessary-lambda
+)
+def SequenceLabels_small_seqdata_labels_at_outside(request,
+                                                   init_small_seqdata):
+    """ fixture with labels_at at different samplerates
+
+    And of course instance of SequenceLabels class that handles both
+    contiguous and non-contiguous seqdata
+    """
+    se = init_small_seqdata['starts_ends']
+    sr = init_small_seqdata['samplerate']
+    l = init_small_seqdata['labels']
+
+    s = lu.SequenceLabels(se, l, samplerate=sr)
+
+    sminstart = s.starts.min()
+    smaxend = s.ends.max()
+    la_ends = [sminstart - (1 / sr), sminstart, smaxend + (1 / sr)]
+    la_labels = [request.param for _ in range(len(la_ends))]
+
+    return {
+        'seqlabelinst': s,
+        'ends': la_ends,
+        'target_labels': la_labels,
+        'default_label': request.param
+    }
+
+
+def test_SequenceLabels_labels_at_outside(
+        SequenceLabels_small_seqdata_labels_at_outside):
+    s, ends, tlabels, deflabel = [
+        SequenceLabels_small_seqdata_labels_at_outside[k]
+        for k in ['seqlabelinst', 'ends', 'target_labels', 'default_label']
+    ]
+
+    # not passing default label == passing None
+    labels = s.labels_at(ends, default_label=deflabel)
+
+    assert all([e == r for e, r in zip(tlabels, labels)]), list(
+        zip(tlabels, labels))
 
 
 # TODO: benchmark different labels_at approaches
