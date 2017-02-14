@@ -192,6 +192,54 @@ def test_se_to_sr_SeqLabels(se_to_sr_small_seqdata_SequenceLabels):
     npt.assert_equal(rse, tse)
 
 
+@pytest.fixture(
+    scope='module',
+    params=[[2, 3, 101]],  # to_samplerate cycles
+    ids=lambda x: "toSRcycle={}".format(x)  #pylint: disable=unnecessary-lambda
+)
+def threelevel_sr_as_SeqLabels(request, seqlabelinst_small_seqdata):
+    to_sr_cycle = request.param
+    return {
+        'seqlabelinst': seqlabelinst_small_seqdata['seqlabelinst'],
+        'orig_sr': seqlabelinst_small_seqdata['orig_sr'],
+        'to_sr_cycle': to_sr_cycle
+    }
+
+
+def test_threelevel_to_sr_cycle(threelevel_sr_as_SeqLabels):
+    s, orig_sr, to_sr_cycle = [
+        threelevel_sr_as_SeqLabels[k]
+        for k in ['seqlabelinst', 'orig_sr', 'to_sr_cycle']
+    ]
+
+    assert s.orig_samplerate == orig_sr
+    assert s.samplerate == orig_sr
+
+    with s.samplerate_as(to_sr_cycle[0]):
+        assert s.orig_samplerate == orig_sr
+        assert s.samplerate == to_sr_cycle[0]
+
+        with s.samplerate_as(to_sr_cycle[1]):
+            assert s.orig_samplerate == orig_sr
+            assert s.samplerate == to_sr_cycle[1]
+
+            with s.samplerate_as(to_sr_cycle[2]):
+                assert s.orig_samplerate == orig_sr
+                assert s.samplerate == to_sr_cycle[2]
+
+            # sr is reset when pulled out of context 2
+            assert s.orig_samplerate == orig_sr
+            assert s.samplerate == to_sr_cycle[1]
+
+        # sr is reset when pulled out of context 1
+        assert s.orig_samplerate == orig_sr
+        assert s.samplerate == to_sr_cycle[0]
+
+    # sr is reset when pulled out of context 0
+    assert s.orig_samplerate == orig_sr
+    assert s.samplerate == orig_sr
+
+
 # SeqLabelData = namedtuple('SeqLabelData', [
 #     'starts_secs', 'ends_secs', 'labels', 'samplerate', 'starts_samples',
 #     'ends_samples', 'labels_at_secs_conti', 'labels_at_secs_nonconti',
