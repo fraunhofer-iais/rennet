@@ -106,6 +106,22 @@ class SequenceLabels(object):
             with self.samplerate_as(samplerate):
                 return self.starts_ends
 
+    def _labels_at_ends(self, se, ends, default_label):
+        """ Implementation of the algorithm to find labels for ends """
+        l = []
+        for end in ends:
+            end_label = []
+            for i, (s, e) in enumerate(se):
+                if s < end <= e:
+                    end_label.append(self.labels[i])
+
+            if len(end_label) == 0:
+                end_label = default_label
+
+            l.append(end_label)
+
+        return l
+
     def labels_at(self, ends, samplerate=None, default_label=None):
         if not isinstance(ends, Iterable):
             ends = [ends]
@@ -133,19 +149,7 @@ class SequenceLabels(object):
         #       arbitrary self.orig_samplerate and samplerate
         #
 
-        l = []
-        for end in ends:
-            end_label = []
-            for i, (s, e) in enumerate(se):
-                if s < end <= e:
-                    end_label.append(self.labels[i])
-
-            if len(end_label) == 0:
-                end_label = default_label
-
-            l.append(end_label)
-
-        return l
+        return self._labels_at_ends(se, ends, default_label)
 
     def __len__(self):
         return len(self.starts_ends)
