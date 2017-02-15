@@ -494,8 +494,8 @@ def test_perf_SequenceLabels_labels_at_general_numpy_forlends_forlabel(
     se = np.round(s.starts_ends, 10)
 
     benchmark(
-        s.
-        _labels_at_ends_numpy_forlends_forlabel,  # pylint: disable=protected-access
+        s.  # pylint: disable=protected-access
+        _labels_at_ends_numpy_forlends_forlabel,
         se,
         la_ends,
         None, )
