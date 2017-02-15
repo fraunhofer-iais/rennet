@@ -466,8 +466,3 @@ def test_perf_SequenceLabels_labels_at_general_numpy_forlabel(
         se,
         la_ends,
         None, )
-
-
-# TODO: benchmark different labels_at approaches
-
-# TODO: test for default, and default_default
