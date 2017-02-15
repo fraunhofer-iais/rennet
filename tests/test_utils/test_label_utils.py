@@ -342,6 +342,76 @@ def test_SequenceLabels_labels_at_outside(
         zip(tlabels, labels))
 
 
+@pytest.fixture(
+    scope='module',
+    params=[1., 3., 3, 101, 1000, 8000, 16000],  # samplerate for labels_at
+    ids=lambda x: "laSR={}".format(x)  #pylint: disable=unnecessary-lambda
+)
+def SequenceLabels_small_seqdata_labels_at_general(request,
+                                                   init_small_seqdata):
+    """ fixture with labels_at at different samplerates for general case
+
+    General case where ends can be outside the starts_ends as well
+
+    And of course instance of SequenceLabels class that handles both
+    contiguous and non-contiguous seqdata
+    """
+    se = init_small_seqdata['starts_ends']
+    sr = init_small_seqdata['samplerate']
+    l = init_small_seqdata['labels']
+
+    s = lu.SequenceLabels(se, l, samplerate=sr)
+
+    la_sr = request.param
+    with s.samplerate_as(la_sr):
+        _se = s.starts_ends
+        mins = _se[:, 0].min()
+        maxe = _se[:, 1].max() + (1 / la_sr)
+
+    la_ends, la_labels = [], []
+    if not init_small_seqdata['isconti']:
+        for e, l in init_small_seqdata['labels_at']:
+            la_ends.append(e)
+            la_labels.append(l)
+
+        la_ends.extend([mins, maxe])
+        la_labels.extend([None, None])
+    else:
+        for e, l in init_small_seqdata['labels_at']:
+            la_ends.append(e)
+            la_labels.append([l])
+
+        la_ends.extend([mins, maxe])
+        la_labels.extend([None, None])
+
+    # ends are more than likely to be provided as np.ndarray
+    la_ends = np.array(la_ends) * la_sr
+
+    return {
+        'seqlabelinst': s,
+        'ends': la_ends,
+        'at_sr': la_sr,
+        'target_labels': la_labels,
+    }
+
+
+def test_SequenceLabels_labels_at_general_naivepy(
+        SequenceLabels_small_seqdata_labels_at_general):
+    s, la_ends, lasr, target_labels = [
+        SequenceLabels_small_seqdata_labels_at_general[k]
+        for k in ['seqlabelinst', 'ends', 'at_sr', 'target_labels']
+    ]
+
+    with s.samplerate_as(lasr):
+        se = np.round(s.starts_ends, 10)
+
+    labels = s._labels_at_ends_naivepy(  # pylint: disable=protected-access
+        se, la_ends, None)
+
+    assert all([e == r for e, r in zip(target_labels, labels)]), ", ".join(
+        "({} {})".format(e, t) for e, t in zip(target_labels, labels))
+
+
 # TODO: benchmark different labels_at approaches
 
 # TODO: test for default, and default_default
