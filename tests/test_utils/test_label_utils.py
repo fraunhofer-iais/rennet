@@ -412,7 +412,7 @@ def test_SequenceLabels_labels_at_general_naivepy(
         "({} {})".format(e, t) for e, t in zip(target_labels, labels))
 
 
-def test_SequenceLabels_labels_at_general_numpy_forlabel(
+def test_SequenceLabels_labels_at_general_numpy_forlends_forlabel(
         SequenceLabels_small_seqdata_labels_at_general):
     s, la_ends, lasr, target_labels = [
         SequenceLabels_small_seqdata_labels_at_general[k]
@@ -422,7 +422,7 @@ def test_SequenceLabels_labels_at_general_numpy_forlabel(
     with s.samplerate_as(lasr):
         se = np.round(s.starts_ends, 10)
 
-    labels = s._labels_at_ends_numpy_forlabel(  # pylint: disable=protected-access
+    labels = s._labels_at_ends_numpy_forlends_forlabel(  # pylint: disable=protected-access
         se, la_ends, None)
 
     assert all([e == r for e, r in zip(target_labels, labels)]), ", ".join(
@@ -484,7 +484,7 @@ def test_perf_SequenceLabels_labels_at_general_naivepy(
 
 @pytest.mark.long_running
 @pytest.mark.perf
-def test_perf_SequenceLabels_labels_at_general_numpy_forlabel(
+def test_perf_SequenceLabels_labels_at_general_numpy_forlends_forlabel(
         SequenceLabels_seqdata_for_labels_at_perf, benchmark):
     s, la_ends = [
         SequenceLabels_seqdata_for_labels_at_perf[k]
@@ -494,7 +494,12 @@ def test_perf_SequenceLabels_labels_at_general_numpy_forlabel(
     se = np.round(s.starts_ends, 10)
 
     benchmark(
-        s._labels_at_ends_numpy_forlabel,  # pylint: disable=protected-access
+        s.
+        _labels_at_ends_numpy_forlends_forlabel,  # pylint: disable=protected-access
         se,
         la_ends,
         None, )
+
+
+# TODO: Test for multi-dimensional labels
+# TODO: Test for non-numerical labels

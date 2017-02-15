@@ -48,7 +48,11 @@ class SequenceLabels(object):
 
         sidx = np.argsort(starts_ends[:, 0])  # save sorted by starts
         self._starts_ends = starts_ends[sidx]
-        self.labels = [labels[i] for i in sidx]
+
+        if isinstance(labels, np.ndarray):
+            self.labels = labels[sidx]
+        else:
+            self.labels = [labels[i] for i in sidx]
 
         self._orig_samplerate = samplerate
         self._samplerate = samplerate
@@ -122,7 +126,7 @@ class SequenceLabels(object):
 
         return l
 
-    def _labels_at_ends_numpy_forlabel(self, se, ends, default_label):
+    def _labels_at_ends_numpy_forlends_forlabel(self, se, ends, default_label):
         idx = (se[:, 0][np.newaxis, :] < ends[:, np.newaxis]) & (
             se[:, 1][np.newaxis, :] >= ends[:, np.newaxis])
 
@@ -164,7 +168,8 @@ class SequenceLabels(object):
         #
 
         # return self._labels_at_ends_naivepy(se, ends, default_label)   # slower
-        return self._labels_at_ends_numpy_forlabel(se, ends, default_label)
+        return self._labels_at_ends_numpy_forlends_forlabel(se, ends,
+                                                            default_label)
 
     def __len__(self):
         return len(self.starts_ends)
