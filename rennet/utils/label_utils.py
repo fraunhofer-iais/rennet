@@ -216,5 +216,51 @@ class ContiguousSequenceLabels(SequenceLabels):
         # IDEA: store only the unique values? min_start and ends?
         # May be pointless here in python
 
-    # def labels_at(self,):
-    #     pass
+    def _labels_at_ends_naivepy(self, se, ends, default_label):
+        raise NotImplementedError()
+
+    def _labels_at_ends_numpy_forlends_forlabel(self, se, ends, default_label):
+        raise NotImplementedError()
+
+    def labels_at(self, ends, samplerate=None, default_label=None):
+        if not isinstance(ends, Iterable):
+            ends = [ends]
+
+        ends = np.array(ends)
+
+        # make sure we are working with the correct samplerate for starts_ends
+        if samplerate is None:
+            # Assume the user is expecting the current samplerate
+            # self.samplerate always has the most up to date samplerate
+            se = self.starts_ends
+        else:
+            se = self._starts_ends_for_samplerate(samplerate)
+
+        se = np.round(se, 10)  # To avoid issues with floating points
+        # Yes, it looks arbitrary. Check SequenceLabels.labels_at(...)
+        #
+        # FIXME: It should not be the case anyway. All the trouble to support
+        #       arbitrary self.orig_samplerate and samplerate
+        #
+
+        # NOTE: if default_label provided is of the same type and shape
+        # as of elements of self.labels, then, the returned labels will be
+        # of the same type of self.labels
+        # ELSE, it will be a list with elements of type self.labels
+        # where ends are within, and default_label otherwise
+
+        if (isinstance(self.labels, np.ndarray) and
+                isinstance(default_label, type(self.labels[0]))):
+            if (isinstance(default_label, np.ndarray) and
+                    default_label.shape != self.labels[0].shape):
+                # np.concatenate will not work raise error
+                msg = """ default_label is not the same shape as any element of labels """
+                raise ValueError(msg)
+
+            # np.concatenate should work
+            # and so should using np.empty_like(self.labels, ...)
+            # or, they gonna raise errors
+            raise NotImplementedError()
+        else:
+            # return list with self.labels for ends_within, default_label otherwise
+            raise NotImplementedError()
