@@ -128,6 +128,10 @@ class SequenceLabels(object):
         # the orig_samplerate, esp when the ratio is irrational.
         # A max disparity of 16000:1 gave correct results
         # limited to the tests of course. Please look at the corresponding tests
+        #
+        # FIXME: It should not be the case anyway. All the trouble to support
+        #       arbitrary self.orig_samplerate and samplerate
+        #
 
         l = []
         for end in ends:
