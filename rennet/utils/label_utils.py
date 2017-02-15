@@ -106,7 +106,7 @@ class SequenceLabels(object):
             with self.samplerate_as(samplerate):
                 return self.starts_ends
 
-    def _labels_at_ends(self, se, ends, default_label):
+    def _labels_at_ends_naivepy(self, se, ends, default_label):
         """ Implementation of the algorithm to find labels for ends """
         l = []
         for end in ends:
@@ -149,7 +149,7 @@ class SequenceLabels(object):
         #       arbitrary self.orig_samplerate and samplerate
         #
 
-        return self._labels_at_ends(se, ends, default_label)
+        return self._labels_at_ends_naivepy(se, ends, default_label)
 
     def __len__(self):
         return len(self.starts_ends)
