@@ -163,7 +163,7 @@ class SequenceLabels(object):
         #       arbitrary self.orig_samplerate and samplerate
         #
 
-        # return self._labels_at_ends_naivepy(se, ends, default_label)   # 50% slower
+        # return self._labels_at_ends_naivepy(se, ends, default_label)   # slower
         return self._labels_at_ends_numpy_forlabel(se, ends, default_label)
 
     def __len__(self):
