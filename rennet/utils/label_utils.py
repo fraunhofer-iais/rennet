@@ -122,6 +122,20 @@ class SequenceLabels(object):
 
         return l
 
+    def _labels_at_ends_numpy_forlabel(self, se, ends, default_label):
+        idx = (se[:, 0][np.newaxis, :] < ends[:, np.newaxis]) & (
+            se[:, 1][np.newaxis, :] >= ends[:, np.newaxis])
+
+        l = []
+        for i in range(len(ends)):
+            l_idx = np.where(idx[i, :])[0]
+            if len(l_idx) == 0:
+                l.append(default_label)
+            else:
+                l.append([self.labels[li] for li in l_idx])
+
+        return l
+
     def labels_at(self, ends, samplerate=None, default_label=None):
         if not isinstance(ends, Iterable):
             ends = [ends]

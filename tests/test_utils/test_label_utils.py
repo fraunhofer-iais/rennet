@@ -412,6 +412,21 @@ def test_SequenceLabels_labels_at_general_naivepy(
         "({} {})".format(e, t) for e, t in zip(target_labels, labels))
 
 
+def test_SequenceLabels_labels_at_general_numpy_forlabel(
+        SequenceLabels_small_seqdata_labels_at_general):
+    s, la_ends, lasr, target_labels = [
+        SequenceLabels_small_seqdata_labels_at_general[k]
+        for k in ['seqlabelinst', 'ends', 'at_sr', 'target_labels']
+    ]
+
+    with s.samplerate_as(lasr):
+        se = np.round(s.starts_ends, 10)
+
+    labels = s._labels_at_ends_numpy_forlabel(  # pylint: disable=protected-access
+        se, la_ends, None)
+
+    assert all([e == r for e, r in zip(target_labels, labels)]), ", ".join(
+        "({} {})".format(e, t) for e, t in zip(target_labels, labels))
 # TODO: benchmark different labels_at approaches
 
 # TODO: test for default, and default_default
