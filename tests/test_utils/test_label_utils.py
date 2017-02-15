@@ -412,6 +412,26 @@ def test_SequenceLabels_labels_at_general_naivepy(
         "({} {})".format(e, t) for e, t in zip(target_labels, labels))
 
 
+# TODO: [ ] separate fixture for perf. very long running as it is
+@pytest.mark.long_running
+@pytest.mark.perf
+def test_perf_SequenceLabels_labels_at_general_naivepy(
+        SequenceLabels_small_seqdata_labels_at_general, benchmark):
+    s, la_ends, lasr = [
+        SequenceLabels_small_seqdata_labels_at_general[k]
+        for k in ['seqlabelinst', 'ends', 'at_sr']
+    ]
+
+    with s.samplerate_as(lasr):
+        se = np.round(s.starts_ends, 10)
+
+    benchmark(
+        s._labels_at_ends_naivepy,  # pylint: disable=protected-access
+        se,
+        la_ends,
+        None, )
+
+
 def test_SequenceLabels_labels_at_general_numpy_forlabel(
         SequenceLabels_small_seqdata_labels_at_general):
     s, la_ends, lasr, target_labels = [
@@ -427,6 +447,27 @@ def test_SequenceLabels_labels_at_general_numpy_forlabel(
 
     assert all([e == r for e, r in zip(target_labels, labels)]), ", ".join(
         "({} {})".format(e, t) for e, t in zip(target_labels, labels))
+
+
+@pytest.mark.long_running
+@pytest.mark.perf
+def test_perf_SequenceLabels_labels_at_general_numpy_forlabel(
+        SequenceLabels_small_seqdata_labels_at_general, benchmark):
+    s, la_ends, lasr = [
+        SequenceLabels_small_seqdata_labels_at_general[k]
+        for k in ['seqlabelinst', 'ends', 'at_sr']
+    ]
+
+    with s.samplerate_as(lasr):
+        se = np.round(s.starts_ends, 10)
+
+    benchmark(
+        s._labels_at_ends_numpy_forlabel,  # pylint: disable=protected-access
+        se,
+        la_ends,
+        None, )
+
+
 # TODO: benchmark different labels_at approaches
 
 # TODO: test for default, and default_default
