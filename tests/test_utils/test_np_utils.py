@@ -37,7 +37,7 @@ def base_labels_cls3():
 
 @pytest.fixture(
     scope='module',
-    params=[*list(range(len(base_labels_cls3())))],
+    params=list(range(len(base_labels_cls3()))),
     ids=lambda i: "TPU-(1, B, 1, 3)-{}".format(i)  #pylint: disable=unnecessary-lambda
 )
 def pred1_batB_seqL1_cls3_trues_preds_user_cat(request, base_labels_cls3):
@@ -74,7 +74,7 @@ def test_tocategorical_trues_preds_user(
 
 @pytest.fixture(
     scope='module',
-    params=[*list(range(len(base_labels_cls3())))],
+    params=list(range(len(base_labels_cls3()))),
     ids=lambda i: "TG-(B, 1, 3)-{}".format(i)  #pylint: disable=unnecessary-lambda
 )
 def batB_seqL1_cls3_trues_generic_cat(request, base_labels_cls3):
@@ -115,7 +115,7 @@ def test_tocategorical_trues_generic(batB_seqL1_cls3_trues_generic_cat):
 
 @pytest.fixture(
     scope='module',
-    params=[*list(range(len(base_labels_cls3())))],
+    params=list(range(len(base_labels_cls3()))),
     ids=lambda i: "PG-(B, 1, 3)-{}".format(i)  #pylint: disable=unnecessary-lambda
 )
 def pred1_batB_seqL1_cls3_generic_cat(request, base_labels_cls3):
