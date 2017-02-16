@@ -32,6 +32,9 @@ def base_labels_cls3():
     ])
 
 
+## FIXTURES AND TESTS FOR TO_CATEGORICAL ###########################################
+
+
 @pytest.fixture(
     scope='module',
     params=[*list(range(len(base_labels_cls3())))],
@@ -54,8 +57,8 @@ def pred1_batB_seqL1_cls3_trues_preds_user_cat(request, base_labels_cls3):
     }
 
 
-@pytest.mark.user
-def test_tocategorical_trues_user(pred1_batB_seqL1_cls3_trues_preds_user_cat):
+def test_tocategorical_trues_preds_user(
+        pred1_batB_seqL1_cls3_trues_preds_user_cat):
     y, Y, nc = [
         pred1_batB_seqL1_cls3_trues_preds_user_cat[k]
         for k in ['y', 'Y', 'nclasses']
@@ -76,6 +79,10 @@ def test_tocategorical_trues_user(pred1_batB_seqL1_cls3_trues_preds_user_cat):
 )
 def batB_seqL1_cls3_trues_generic_cat(request, base_labels_cls3):
     """ y and Y (categorical) in format expected by the generic function
+    The generic representation expects:
+    (Predictions, Batchsize, SequenceLength)
+
+    For Trues, there is no Predictions dimension
     """
     i = request.param
     y = base_labels_cls3[i]
@@ -93,7 +100,6 @@ def batB_seqL1_cls3_trues_generic_cat(request, base_labels_cls3):
     }
 
 
-@pytest.mark.generic
 def test_tocategorical_trues_generic(batB_seqL1_cls3_trues_generic_cat):
     y, Y, nc = [
         batB_seqL1_cls3_trues_generic_cat[k] for k in ['y', 'Y', 'nclasses']
@@ -114,6 +120,10 @@ def test_tocategorical_trues_generic(batB_seqL1_cls3_trues_generic_cat):
 )
 def pred1_batB_seqL1_cls3_generic_cat(request, base_labels_cls3):
     """ y and Y (categorical) in format expected by the generic function
+    The generic representation expects:
+    (Predictions, Batchsize, SequenceLength)
+
+    Here, there is only one prediction
     """
     i = request.param
     y = base_labels_cls3[i]
@@ -131,8 +141,7 @@ def pred1_batB_seqL1_cls3_generic_cat(request, base_labels_cls3):
     }
 
 
-@pytest.mark.generic
-def test_tocategorical_preds1_generic(pred1_batB_seqL1_cls3_generic_cat):
+def test_tocategorical_pred1_generic(pred1_batB_seqL1_cls3_generic_cat):
     y, Y, nc = [
         pred1_batB_seqL1_cls3_generic_cat[k] for k in ['y', 'Y', 'nclasses']
     ]
@@ -152,7 +161,6 @@ def test_tocategorical_preds1_generic(pred1_batB_seqL1_cls3_generic_cat):
 )
 def predP_batB_seqL1_cls3_user_cat(request, base_labels_cls3):
     """ y and Y (categorical) in user expected format
-    trues and preds look the same from the user's perspective when
     there are P predictions
     """
     i = request.param
@@ -167,8 +175,7 @@ def predP_batB_seqL1_cls3_user_cat(request, base_labels_cls3):
     }
 
 
-@pytest.mark.user
-def test_tocategorical_predsP_user(predP_batB_seqL1_cls3_user_cat):
+def test_tocategorical_predP_user(predP_batB_seqL1_cls3_user_cat):
     y, Y, nc = [
         predP_batB_seqL1_cls3_user_cat[k] for k in ['y', 'Y', 'nclasses']
     ]
@@ -205,7 +212,6 @@ def predP_batB_seqL1_cls3_generic_cat(request, base_labels_cls3):
     }
 
 
-@pytest.mark.generic
 def test_tocategorical_predsP_generic(predP_batB_seqL1_cls3_generic_cat):
     y, Y, nc = [
         predP_batB_seqL1_cls3_generic_cat[k] for k in ['y', 'Y', 'nclasses']
@@ -243,7 +249,6 @@ def pred1_batB_seqlQ_cls3_trues_preds_user_cat(request, base_labels_cls3):
     }
 
 
-@pytest.mark.user
 def test_tocategorical_batB_seqLQ_user(
         pred1_batB_seqlQ_cls3_trues_preds_user_cat):
     y, Y, nc = [
@@ -286,7 +291,6 @@ def batB_seqlQ_cls3_trues_generic_cat(request, base_labels_cls3):
     }
 
 
-@pytest.mark.generic
 def test_tocategorical_batB_seqlQ_trues_generic(
         batB_seqlQ_cls3_trues_generic_cat):
     y, Y, nc = [
@@ -309,9 +313,6 @@ def test_tocategorical_batB_seqlQ_trues_generic(
 )
 def pred1_batB_seqlQ_cls3_preds_generic_cat(request, base_labels_cls3):
     """ y and Y (categorical) in format the user expects
-    this is exactly like predP_batB_seqL1_cls3_user_cat
-    but these are trues
-    non-zero sequence length trues and preds look similar for single predictor
     """
     i = request.param
     y = [base_labels_cls3[ii] for ii in i]
@@ -329,7 +330,6 @@ def pred1_batB_seqlQ_cls3_preds_generic_cat(request, base_labels_cls3):
     }
 
 
-@pytest.mark.generic
 def test_tocategorical_pred1_batB_seqlQ_preds_generic(
         pred1_batB_seqlQ_cls3_preds_generic_cat):
     y, Y, nc = [
@@ -378,7 +378,6 @@ def predP_batB_seqlQ_cls3_preds_user_cat(request, base_labels_cls3):
     }
 
 
-@pytest.mark.user
 def test_tocategorical_predP_batB_seqLQ_user(
         predP_batB_seqlQ_cls3_preds_user_cat):
     y, Y, nc = [
@@ -431,7 +430,6 @@ def predP_batB_seqlQ_cls3_generic_cat(request, base_labels_cls3):
     }
 
 
-@pytest.mark.generic
 def test_tocategorical_predP_batB_seqLQ_generic(
         predP_batB_seqlQ_cls3_preds_user_cat):
     y, Y, nc = [
@@ -447,6 +445,8 @@ def test_tocategorical_predP_batB_seqLQ_generic(
 
     assert True
 
+
+## FIXTURES AND TESTS FOR CONFUSION MATRIX CALCULATIONS #######################
 
 # @pytest.mark.user
 # def test_tocategorical_user_preds(pred1_batszB_seql1_cls3_user):
