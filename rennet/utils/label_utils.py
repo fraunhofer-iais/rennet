@@ -217,7 +217,16 @@ class ContiguousSequenceLabels(SequenceLabels):
         # May be pointless here in python
 
     def _labels_at_ends_naivepy(self, se, ends, default_label):
-        raise NotImplementedError()
+        l = []
+        for end in ends:
+            for i, (s, e) in enumerate(se):
+                if s < end <= e:
+                    l.append(self.labels[i])
+                    break  # there is only one segment where end can be
+            else:  # if the for loop didn't break
+                l.append(default_label)
+
+        return l
 
     def _labels_at_ends_numpy_forlends_forlabel(self, se, ends, default_label):
         raise NotImplementedError()
@@ -243,12 +252,27 @@ class ContiguousSequenceLabels(SequenceLabels):
         #       arbitrary self.orig_samplerate and samplerate
         #
 
+        # all ends are within the segments
+        endings = se[:, 1]
+        maxend = endings.max()
+        minstart = endings.min()
+        endswithin = (ends > minstart) & (ends <= maxend)
+
+        if len(endswithin) == len(ends):
+            # all ends are within
+            # raise NotImplementedError()
+            return self._labels_at_ends_naivepy(se, ends, default_label)
+        # else:
+        #     endsleft = (ends <= minstart)
+        #     endsright = (ends > maxend)
+
+        # we need to behave appropriately for default_label
+
         # NOTE: if default_label provided is of the same type and shape
         # as of elements of self.labels, then, the returned labels will be
         # of the same type of self.labels
         # ELSE, it will be a list with elements of type self.labels
         # where ends are within, and default_label otherwise
-
         if (isinstance(self.labels, np.ndarray) and
                 isinstance(default_label, type(self.labels[0]))):
             if (isinstance(default_label, np.ndarray) and
@@ -260,7 +284,9 @@ class ContiguousSequenceLabels(SequenceLabels):
             # np.concatenate should work
             # and so should using np.empty_like(self.labels, ...)
             # or, they gonna raise errors
-            raise NotImplementedError()
+            # raise NotImplementedError()
+            return self._labels_at_ends_naivepy(se, ends, default_label)
         else:
             # return list with self.labels for ends_within, default_label otherwise
-            raise NotImplementedError()
+            # raise NotImplementedError()
+            return self._labels_at_ends_naivepy(se, ends, default_label)
