@@ -9,7 +9,6 @@ import numpy as np
 
 
 def group_by_values(values):
-    # TODO: [A] add to a generic util module
     # TODO: [A] make it work with 1 dimensional arrays
     # Ref: http://stackoverflow.com/questions/4651683/numpy-grouping-using-itertools-groupby-performance
 
@@ -29,10 +28,13 @@ def group_by_values(values):
 def to_categorical(y, nclasses=None, warn=False):
     """ Convert class vectors to one-hot class matrix
 
-    TODO: [ ] test for multi-sequence labels
-
+    TODO: [ ] check if works for n-dim sequences
     # Parameters
-        y: 1D numpy class vector to be converted.
+        y: numpy class vector to be converted.
+            expected shape: (Epoch, Batch, Sequence), BUT
+            as long as the last dimension has the class label, it should work
+            please report weird behavior.
+            NOTE: multi-dim Sequence not tested
         nclasses: optional total number of classes
 
     # Returns
@@ -41,6 +43,9 @@ def to_categorical(y, nclasses=None, warn=False):
     # Raises
         RuntimeError: when any y is greater than nclasses
     """
+    if not isinstance(y, np.ndarray):
+        y = np.array(y)
+
     ymax = np.max(y) + 1  # zero is a class
     if nclasses is None:
         nclasses = ymax
@@ -52,8 +57,10 @@ def to_categorical(y, nclasses=None, warn=False):
         raise RuntimeWarning(
             "Some class labels may be missing: {} > {}".format(nclasses, ymax))
 
-    return (
-        np.arange(nclasses)[np.newaxis, :] == y[..., None]).astype(np.float)
+    res = np.arange(nclasses)[np.newaxis, :] == y[..., np.newaxis]
+    res = res.astype(np.float)  # cuz it is a probability dist
+
+    return res
 
 
 def strided(x, nperseg, noverlap):
