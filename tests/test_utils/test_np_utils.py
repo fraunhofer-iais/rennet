@@ -448,262 +448,66 @@ def test_tocategorical_predP_batB_seqLQ_generic(
 
 ## FIXTURES AND TESTS FOR CONFUSION MATRIX CALCULATIONS #######################
 
-# @pytest.mark.user
-# def test_tocategorical_user_preds(pred1_batszB_seql1_cls3_user):
-#     y, Y, nc = [
-#         pred1_batszB_seql1_cls3_user[k]
-#         for k in ['ypred', 'Ypred', 'nclasses']
-#     ]
-#
-#     if Y is None:
-#         pytest.skip('Erroneous result expected')
-#
-#     assert_almost_equal(nu.to_categorical(y, nclasses=nc), Y)
-#     if Y.shape[-1] != nc:
-#         assert_almost_equal(nu.to_categorical(y), Y)
-#
-#     assert True
-#
-#
-# @pytest.mark.generic
-# def test_tocategorical_generic_trues(pred1_batszB_seql1_cls3_generic):
-#     y, Y, nc = [
-#         pred1_batszB_seql1_cls3_generic[k]
-#         for k in ['ytrue', 'Ytrue', 'nclasses']
-#     ]
-#
-#     if Y is None:
-#         pytest.skip('Erroneous result expected')
-#
-#     assert_almost_equal(nu.to_categorical(y, nclasses=nc), Y)
-#     if Y.shape[-1] != nc:
-#         assert_almost_equal(nu.to_categorical(y), Y)
-#
-#     assert True
-#
-#
-# @pytest.mark.generic
-# def test_tocategorical_generic_preds(pred1_batszB_seql1_cls3_generic):
-#     y, Y, nc = [
-#         pred1_batszB_seql1_cls3_generic[k]
-#         for k in ['ypred', 'Ypred', 'nclasses']
-#     ]
-#
-#     if Y is None:
-#         pytest.skip('Erroneous result expected')
-#
-#     assert_almost_equal(nu.to_categorical(y, nclasses=nc), Y)
-#     if Y.shape[-1] != nc:
-#         assert_almost_equal(nu.to_categorical(y), Y)
-#
-#     assert True
 
-# @pytest.fixture(
-#     scope='module',
-#     params=[(t, p)
-#             for t in range(len(base_labels_cls3()))
-#             for p in range(len(base_labels_cls3()))],
-#     ids=lambda tp: "T={}-P={}".format(*tp))
-# def pred1_batszB_seql1_cls3_user(request, base_labels_cls3):
-#     """ inputs and outputs in format expected from / by user """
-#     t, p = request.param
-#     ytrue = base_labels_cls3[t]
-#     ypred = base_labels_cls3[p]
-#
-#     nclasses = max(y) + 1  # Change here accordingly based on base_labels_cls3
-#
-#     if any(i == len(base_labels_cls3) - 1
-#            for i in (t, p)):  # Change here if you know of failures
-#         Ytrue = None
-#         Ypred = None
-#         confusion = None
-#         confrecall = None
-#         confprecision = None
-#     else:
-#         Ytrue = ext_tocategorical(ytrue, nb_classes=nclasses)
-#         Ypred = ext_tocategorical(ypred, nb_classes=nclasses)
-#
-#         confusion = ext_confusionmatrix(
-#             ytrue, ypred, labels=np.arange(nclasses))
-#         confrecall = confusion / (confusion.sum(axis=1))[:, np.newaxis]
-#         confprecision = (confusion.T / confusion.sum(axis=0)[:, np.newaxis]).T
-#
-#     return {
-#         "ytrue": ytrue,
-#         "ypred": ypred,
-#         "nclasses": nclasses,
-#         "Ytrue": Ytrue,
-#         "Ypred": Ypred,
-#         "confusion": confusion,
-#         "confrecall": confrecall,
-#         "confprecision": confprecision
-#     }
+@pytest.fixture(
+    scope='module',
+    params=list(range(5)),
+    ids=lambda i: "T={}".format(i),  #pylint: disable=unnecessary-lambda
+)
+def batB_seql1_cls3_trues_confmat(request, base_labels_cls3):
+    i = request.param
 
-# @pytest.fixture(scope='module')
-# def pred1_batszB_seql1_cls3_generic(pred1_batszB_seql1_cls3_user):
-#     """ i/o expected formatted based on what the generic functions expect
-#     Generic Shape:
-#     (Predictor, Batchsize, SequenceLength, ClassLabel)
-#     """
-#     d = pred1_batszB_seql1_cls3_user
-#     return {
-#         # Batchsize=B, SequenceLength=1, ClassLabel=1(implicit)
-#         "ytrue": d['ytrue'][:, np.newaxis],  # np.newaxis],
-#
-#         # Predictor=1, Batchsize=B, SequenceLength=1, ClassLabel=1(implicit)
-#         "ypred": d['ypred'][np.newaxis, :, np.newaxis],  #np.newaxis],
-#
-#         # nclasses is integer
-#         "nclasses": d['nclasses'],
-#
-#         # Batchsize=B, SequenceLength=1, ClassLabel=nclasses(categorical)
-#         "Ytrue": None
-#         if d['Ytrue'] is None else d['Ytrue'][np.newaxis, :, np.newaxis, :],
-#
-#         # Predictor=1, Batchsize=B, SequenceLength=1, ClassLabel=nclasses(categorical)
-#         "Ypred": None if d['Ypred'] is None else
-#         d['Ypred'][np.newaxis, np.newaxis, :, np.newaxis, :],
-#
-#         # Predictor=1, Batchsize=1(sumaxis), SequenceLength=1, ClassLabel=(nclasses, nclasses)
-#         "confusion": None if d['confusion'] is None else
-#         d['confusion'][np.newaxis, np.newaxis, np.newaxis, ...],
-#
-#         # summary axis : Batchsize
-#         "sumaxis": 1,
-#
-#         # Predictor=1, Batchsize=1(sumaxis), SequenceLength=1, ClassLabel=(nclasses, nclasses)
-#         "confrecall": None if d['confrecall'] is None else
-#         d['confrecall'][np.newaxis, np.newaxis, np.newaxis, ...],
-#
-#         # Predictor=1, Batchsize=1(sumaxis), SequenceLength=1, ClassLabel=(nclasses, nclasses)
-#         "confprecision": None if d['confprecision'] is None else
-#         d['confprecision'][np.newaxis, np.newaxis, np.newaxis, ...]
-#     }
+    y = base_labels_cls3[i]
+    nclasses = 3
+    Y = nu.to_categorical(y, nclasses)
 
-## TO CATEGORICAL TESTS #######################################################
+    return {'yt': y, 'Yt': Y, 'nclasses': nclasses}
 
-## CONFUSION MATRIX TESTS #####################################################
 
-# @pytest.fixture(scope='module', params=list(range(len(confusion))))
-# def normal_preds_confusion(request):
-#     return {
-#         "labels": labels,
-#         "predictions": predictions[request.param, ...],
-#         "confusion": confusion[request.param, ...],
-#     }
-#
-#
-# def test_normal_confusion_matrix(normal_preds_confusion):
-#     labels = normal_preds_confusion['labels']
-#     preds = normal_preds_confusion['predictions']
-#     true_confusion = normal_preds_confusion['confusion']
-#
-#     assert_almost_equal(true_confusion, nu.confusion_matrix(labels, preds))
-#
-#
-# @pytest.fixture(scope='module', params=[np.arange(len(confusion))])
-# def normal_multi_preds_confusion(request):
-#     return {
-#         "labels": labels,
-#         "predictions": predictions[request.param, ...],
-#         "confusion": confusion[request.param, ...],
-#     }
-#
-#
-# def test_normal_multi_confusion_matrix(normal_multi_preds_confusion):
-#     labels = normal_multi_preds_confusion['labels']
-#     preds = normal_multi_preds_confusion['predictions']
-#     true_confusion = normal_multi_preds_confusion['confusion']
-#
-#     assert_almost_equal(true_confusion, nu.confusion_matrices(labels, preds))
-#
-#
-# @pytest.fixture(scope='module', params=[6, ])
-# def extra_class_preds_confusion(request):
-#     return {
-#         "labels": labels,
-#         "predictions": predictions[request.param, ...],
-#     }
-#
-#
-# def test_extra_pred_label_raises(extra_class_preds_confusion):
-#     labels = extra_class_preds_confusion['labels']
-#     preds = extra_class_preds_confusion['predictions']
-#
-#     # NOTE: The Exception is raised while converting the preds to categorical
-#     with pytest.raises(RuntimeError):
-#         nu.confusion_matrix(labels, preds)
-#
-#
-# def test_missing_label_warns(extra_class_preds_confusion):
-#     preds = extra_class_preds_confusion['labels']  # has extra class
-#     labels = extra_class_preds_confusion['predictions']
-#
-#     # NOTE: The Exception is raised while converting the preds to categorical
-#     with pytest.raises(RuntimeWarning):
-#         nu.confusion_matrix(labels, preds, warn=True)
-#
-#     # Should not raise warning
-#     nu.confusion_matrix(labels, preds)
-#
-#
-# ## CONF-PRECISION AND CONF-RECALL TESTS #######################################
-#
-#
-# @pytest.fixture(scope='module', params=[0, 1, 2, 5])
-# def normal_preds_conf_prec_rec(request):
-#     return {
-#         "confusion": confusion[request.param, ...],
-#         "confprec": confprec[request.param, ...],
-#         "confrecall": confrecall[request.param, ...],
-#     }
-#
-#
-# def test_individual_normal_preds_conf_prec_rec(normal_preds_conf_prec_rec):
-#     confusion = normal_preds_conf_prec_rec['confusion']
-#     true_confprec = normal_preds_conf_prec_rec['confprec']
-#     true_confrecall = normal_preds_conf_prec_rec['confrecall']
-#
-#     confprec, confrecall = nu.normalize_confusion_matrix(confusion)
-#     assert_almost_equal(true_confprec, confprec, decimal=2)
-#     assert_almost_equal(true_confrecall, confrecall, decimal=2)
-#
-#
-# @pytest.fixture(scope='module', params=[3, 4])
-# def nan_preds_conf_prec_rec(request):
-#     return {
-#         "confusion": confusion[request.param, ...],
-#         "confprec": confprec[request.param, ...],
-#         "confrecall": confrecall[request.param, ...],
-#     }
-#
-#
-# def test_individual_nan_preds_conf_prec_rec(nan_preds_conf_prec_rec):
-#     confusion = nan_preds_conf_prec_rec['confusion']
-#     true_confprec = nan_preds_conf_prec_rec['confprec']
-#     true_confrecall = nan_preds_conf_prec_rec['confrecall']
-#
-#     confprec, confrecall = nu.normalize_confusion_matrix(confusion)
-#     assert_almost_equal(true_confprec, confprec, decimal=2)
-#     assert_almost_equal(true_confrecall, confrecall, decimal=2)
-#
-#
-# @pytest.fixture(
-#     scope='module',
-#     params=[np.array([0, 1, 2, 5]), np.arange(len(confusion))])
-# def normal_multi_preds_conf_prec_rec(request):
-#     return {
-#         "confusion": confusion[request.param, ...],
-#         "confprec": confprec[request.param, ...],
-#         "confrecall": confrecall[request.param, ...],
-#     }
-#
-#
-# def test_multi_normal_preds_conf_prec_rec(normal_multi_preds_conf_prec_rec):
-#     confusion = normal_multi_preds_conf_prec_rec['confusion']
-#     true_confprec = normal_multi_preds_conf_prec_rec['confprec']
-#     true_confrecall = normal_multi_preds_conf_prec_rec['confrecall']
-#
-#     confprec, confrecall = nu.normalize_confusion_matrices(confusion)
-#     assert_almost_equal(true_confprec, confprec, decimal=2)
-#     assert_almost_equal(true_confrecall, confrecall, decimal=2)
+@pytest.fixture(
+    scope='module',
+    params=list(range(5)),
+    ids=lambda i: "P={}".format(i),  #pylint: disable=unnecessary-lambda
+)
+def pred1_batB_seql1_cls3_preds_confmat(request, base_labels_cls3,
+                                        batB_seql1_cls3_trues_confmat):
+    i = request.param
+
+    yp = base_labels_cls3[i]
+
+    nclasses = batB_seql1_cls3_trues_confmat['nclasses']
+    Yp = nu.to_categorical(yp, nclasses)
+
+    yt = batB_seql1_cls3_trues_confmat['yt']
+    Yt = batB_seql1_cls3_trues_confmat['Yt']
+    confmat = ext_confusionmatrix(yt, yp, labels=np.arange(nclasses))
+
+    confrecall = confmat / (confmat.sum(axis=1))[:, np.newaxis]
+    confprecision = (confmat.T / (confmat.sum(axis=0))[:, np.newaxis]).T
+
+    return {
+        'yt': yt,
+        'Yt': Yt,
+        'yp': yp,
+        'Yp': Yp,
+        'confmat': confmat,
+        'confrecall': confrecall,
+        'confprecision': confprecision,
+    }
+
+
+@pytest.mark.confmat
+def test_pred1_batB_seql1_confmat(pred1_batB_seql1_cls3_preds_confmat):
+    Yt, Yp, confmat = [
+        pred1_batB_seql1_cls3_preds_confmat[k]
+        for k in ['Yt', 'Yp', 'confmat']
+    ]
+    print(Yt.shape, Yp.shape)
+    assert_almost_equal(nu.confusion_matrix_forcategorical(Yt, Yp), confmat)
+
+    yt, yp = [pred1_batB_seql1_cls3_preds_confmat[k] for k in ['yt', 'yp']]
+    nclasses = Yt.shape[-1]
+    print(yt.shape, yp.shape)
+    assert_almost_equal(nu.confusion_matrix(yt, yp, nclasses), confmat)
+
+    assert True
