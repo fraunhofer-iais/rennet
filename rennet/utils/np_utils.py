@@ -78,7 +78,14 @@ def strided(x, nperseg, noverlap):
     return np.lib.stride_tricks.as_strided(x, shape=shape, strides=strides)
 
 
-def confusion_matrix_forcategorical(Ytrue, Ypred, axis=None, keepdims=False):
+def _generic_confusion_matrix_forcat(Ytrue,
+                                     predicate_true,
+                                     Ypred,
+                                     predicate_pred,
+                                     predicate_match,
+                                     reduce_function,
+                                     reduce_axis=None,
+                                     reduce_keepdims=False):
     if not isinstance(Ytrue, np.ndarray):
         Ytrue = np.array(Ytrue)
 
@@ -94,23 +101,42 @@ def confusion_matrix_forcategorical(Ytrue, Ypred, axis=None, keepdims=False):
     _valid_axes = [
         i for i in range(len(Ypred.shape) - 1) if Ypred.shape[i] > 1
     ]
-    if axis is None:
+    if reduce_axis is None:
         # choose the last axis > 1, excluding the ClassLabel axis
         # will raise error if none qualify, since then max is looking into empty
-        axis = max(_valid_axes)
+        reduce_axis = max(_valid_axes)
     else:
-        if axis not in _valid_axes:
+        if reduce_axis not in _valid_axes:
             msg = """The axis argument cannot be:
             - The last axis (axis of class label) {}
             - An axis of size <= 1 {}""".format(
-                "TRUE" if axis == len(Ypred.shape) - 1 else "", "TRUE"
-                if Ypred.shape[axis] <= 1 else "")
+                "TRUE" if reduce_axis == len(Ypred.shape) - 1 else "", "TRUE"
+                if Ypred.shape[reduce_axis] <= 1 else "")
             raise ValueError(msg)
 
-    conf = ((Ytrue[..., np.newaxis] == 1) &
-            (Ypred[..., np.newaxis, :] == 1)).sum(axis=axis, keepdims=keepdims)
+    conf = reduce_function(
+        predicate_match(
+            predicate_true(Ytrue[..., np.newaxis]),
+            predicate_pred(Ypred[..., np.newaxis, :])),
+        axis=reduce_axis,
+        keepdims=reduce_keepdims)
 
     return conf
+
+
+def confusion_matrix_forcategorical(Ytrue, Ypred, axis=None, keepdims=False):
+    predicate_npequal_1 = lambda x: np.equal(x, 1)
+    predicate_match = np.logical_and
+    reduce_function = np.sum
+    return _generic_confusion_matrix_forcat(
+        Ytrue,
+        predicate_npequal_1,
+        Ypred,
+        predicate_npequal_1,
+        predicate_match,
+        reduce_function,
+        reduce_axis=axis,
+        reduce_keepdims=keepdims)
 
 
 def confusion_matrix(ytrue,
