@@ -78,94 +78,70 @@ def strided(x, nperseg, noverlap):
     return np.lib.stride_tricks.as_strided(x, shape=shape, strides=strides)
 
 
-def confusion_matrix_forcategorical(Ytrue, Ypred):
+def confusion_matrix_forcategorical(Ytrue, Ypred, axis=None, keepdims=False):
     if not isinstance(Ytrue, np.ndarray):
         Ytrue = np.array(Ytrue)
 
     if not isinstance(Ypred, np.ndarray):
         Ypred = np.array(Ypred)
 
-    assert Ytrue.shape == Ypred.shape, "Shape mismatch: "\
-        "True {} != {} Predictions".format(Ytrue.shape, Ypred.shape)
+    # TODO: [ ] Add proper assertions to avoid obvious mistakes
 
-    nclasses = Ytrue.shape[-1]
+    # assert Ytrue.shape == Ypred.shape, "Shape mismatch: "\
+    #     "True {} != {} Predictions".format(Ytrue.shape, Ypred.shape)
+    # NOTE: Can't use this, cuz case of multi-pred
 
-    conf = np.zeros(shape=(nclasses, nclasses), dtype=np.int)
+    _valid_axes = [
+        i for i in range(len(Ypred.shape) - 1) if Ypred.shape[i] > 1
+    ]
+    if axis is None:
+        # choose the last axis > 1, excluding the ClassLabel axis
+        # will raise error if none qualify, since then max is looking into empty
+        axis = max(_valid_axes)
+    else:
+        if axis not in _valid_axes:
+            msg = """The axis argument cannot be:
+            - The last axis (axis of class label) {}
+            - An axis of size <= 1 {}""".format(
+                "TRUE" if axis == len(Ypred.shape) - 1 else "", "TRUE"
+                if Ypred.shape[axis] <= 1 else "")
+            raise ValueError(msg)
 
-    for i in range(nclasses):
-        # Preds for known class i
-        _Ypred_i = Ypred[Ytrue[:, i].astype(np.bool), :]
-        for j in range(nclasses):
-            conf[i, j] = np.sum(_Ypred_i[:, j])
+    conf = ((Ytrue[..., np.newaxis] == 1) &
+            (Ypred[..., np.newaxis, :] == 1)).sum(axis=axis, keepdims=keepdims)
 
     return conf
 
 
-def confusion_matrix(ytrue, ypred, nclasses=None, warn=False):
+def confusion_matrix(ytrue,
+                     ypred,
+                     nclasses=None,
+                     axis=None,
+                     keepdims=False,
+                     warn=False):
     if not isinstance(ytrue, np.ndarray):
         ytrue = np.array(ytrue)
 
     if not isinstance(ypred, np.ndarray):
         ypred = np.array(ypred)
 
-    assert ytrue.shape == ypred.shape, "Shape mismatch: True {} != {} Predictions".format(
-        ytrue.shape, ypred.shape)
-    assert len(ytrue.shape) == 1, (
-        "Only supports vectors of class labels. "
-        "If your labels are one-hot, please use confusion_matrix_forcategorical"
-    )
+    # TODO: [ ] Add proper assertions to avoid obvious mistakes
+
+    # assert ytrue.shape == ypred.shape, "Shape mismatch: True {} != {} Predictions".format(
+    #     ytrue.shape, ypred.shape)
+    # assert len(ytrue.shape) == 1, (
+    #     "Only supports vectors of class labels. "
+    #     "If your labels are one-hot, please use confusion_matrix_forcategorical"
+    # )
+    # NOTE: Can't use this, cuz case of multi-pred
 
     Ytrue = to_categorical(ytrue, nclasses=nclasses, warn=warn)
 
     # Ytrue tells the correct nclasses now
     Ypred = to_categorical(ypred, nclasses=Ytrue.shape[-1], warn=warn)
 
-    return confusion_matrix_forcategorical(Ytrue, Ypred)
-
-
-# def categorical_confusion_matrices(Ytrue, Ypreds):
-#     assert Ytrue.shape == Ypreds.shape[
-#         1:], "Shape mismatch: True {} != {} Predictions".format(Ytrue.shape,
-#                                                                 Ypreds.shape)
-#     assert len(Ytrue.shape) == 2, "Only supports vectors of categorical labels"
-#
-#     nclasses = Ytrue.shape[-1]
-#
-#     conf = np.zeros(shape=(Ypreds.shape[0], nclasses, nclasses), dtype=np.int)
-#
-#     for i in range(nclasses):
-#         # Preds for known class i
-#         _Ypred_i = Ypreds[:, Ytrue[..., i].astype(np.bool), :]
-#         for j in range(nclasses):
-#             conf[:, i, j] = np.sum(_Ypred_i[..., j], axis=-1)
-#
-#     return conf
-#
-#
-# def confusion_matrices(ytrue, ypreds, nclasses=None, warn=False):
-#     """ Calculating confusion matrices for multiple predictions.
-#
-#     One true label, in vector of class number format.
-#     Multiple predictions of the same format.
-#     """
-#     if not isinstance(ytrue, np.ndarray):
-#         ytrue = np.array(ytrue)
-#
-#     if not isinstance(ypreds, np.ndarray):
-#         ypreds = np.array(ypreds)
-#
-#     assert ytrue.shape == ypreds.shape[
-#         1:], "Shape mismatch: True {} != {} Predictions".format(ytrue.shape,
-#                                                                 ypreds.shape)
-#
-#     assert len(ytrue.shape) == 1, "Only supports vectors of class labels"
-#
-#     Ytrue = to_categorical(ytrue, nclasses=nclasses, warn=warn)
-#
-#     # Ytrue tells the correct nclasses now
-#     Ypreds = to_categorical(ypreds, nclasses=Ytrue.shape[-1], warn=warn)
-#
-#     return categorical_confusion_matrices(Ytrue, Ypreds)
+    return confusion_matrix_forcategorical(
+        Ytrue, Ypred, axis=axis, keepdims=keepdims)
 
 
 def normalize_confusion_matrix(conf_matrix):
