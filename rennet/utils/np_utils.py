@@ -177,17 +177,10 @@ def confusion_matrix(ytrue,
         Ytrue, Ypred, axis=axis, keepdims=keepdims)
 
 
-def normalize_confusion_matrix(conf_matrix):
+def normalize_confusion_matrices(conf_matrix):
     if not isinstance(conf_matrix, np.ndarray):
         conf_matrix = np.array(conf_matrix)
         
-    # if len(conf_matrix.shape) == 2:
-    #   conf_matrix = conf_matrix[np.newaxis, :, :]
-
-    # confmat = conf_matrix[np.newaxis, ...]
-    # prec, recall = normalize_confusion_matrices(confmat)
-
-    # return prec[0, ...], recall[0, ...]
     conf_sum = conf_matrix.sum(axis=-2)
     confprec = conf_matrix / conf_sum[..., np.newaxis, :]
     
@@ -197,19 +190,7 @@ def normalize_confusion_matrix(conf_matrix):
     return confprec, confrec
 
 
-def normalize_confusion_matrices(conf_matrices):
-    if not isinstance(conf_matrices, np.ndarray):
-        conf_matrices = np.array(conf_matrices)
-
-    conf_sum = conf_matrices.sum(axis=-2)
-    confprec = conf_matrices / conf_sum[:, np.newaxis]
-
-    conf_sum = conf_matrices.sum(axis=-1)
-    confrec = np.transpose(conf_matrices, [0, 2, 1]) \
-              / conf_sum[:, np.newaxis]
-    confrec = np.transpose(confrec, [0, 2, 1])
-
-    return confprec, confrec
+normalize_confusion_matrix = normalize_confusion_matrices
 
 
 def print_normalized_confusion(confmat, title='CONFUSION MATRIX'):

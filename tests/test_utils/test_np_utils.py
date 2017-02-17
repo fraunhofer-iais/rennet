@@ -932,3 +932,81 @@ def test_pred1_batB_seql1_normconfmat(pred1_batB_seql1_cls3_preds_confmat):
     assert_almost_equal(confprecp, confprecisiong)
     assert_almost_equal(confrecp, confrecallg)
     
+    
+@pytest.mark.normconf
+def test_predP_batB_seql1_normconfmat(predP_batB_seql1_cls3_preds_confmat):
+    confmat, confrecall, confprecision = [
+        predP_batB_seql1_cls3_preds_confmat[k]
+        for k in ['confmat', 'confrecall', 'confprecision']
+    ]
+    
+    print(confmat.shape)
+    
+    confprecp, confrecp = nu.normalize_confusion_matrix(confmat)
+    assert_almost_equal(confprecp, confprecision)
+    assert_almost_equal(confrecp, confrecall)
+    
+    confmatg, confrecallg, confprecisiong = [
+        predP_batB_seql1_cls3_preds_confmat[k]
+        for k in ['confmatg', 'confrecallg', 'confprecisiong']
+    ]
+    
+    print("G:", confmatg.shape)
+    
+    confprecp, confrecp = nu.normalize_confusion_matrix(confmatg)
+    assert_almost_equal(confprecp, confprecisiong)
+    assert_almost_equal(confrecp, confrecallg)
+    
+    
+@pytest.mark.normconf
+def test_pred1_batB_seqlQ_normconfmat(pred1_batB_seqlQ_cls3_preds_confmat):
+    provider = pred1_batB_seqlQ_cls3_preds_confmat
+    confmat, confrecall, confprecision = [
+        provider[k]
+        for k in ['confmat', 'confrecall', 'confprecision']
+    ]
+    
+    print(confmat.shape)
+    
+    confprecp, confrecp = nu.normalize_confusion_matrix(confmat)
+    assert_almost_equal(confprecp, confprecision)
+    assert_almost_equal(confrecp, confrecall)
+    
+    confmatg, confrecallg, confprecisiong = [
+        provider[k]
+        for k in ['confmatg', 'confrecallg', 'confprecisiong']
+    ]
+    
+    print("G:", confmatg.shape)
+    
+    confprecp, confrecp = nu.normalize_confusion_matrix(confmatg)
+    assert_almost_equal(confprecp, confprecisiong)
+    assert_almost_equal(confrecp, confrecallg)
+    
+    
+@pytest.mark.normconf
+def test_predP_batB_seqlQ_normconfmat(predP_batB_seqlQ_cls3_preds_confmat):
+    provider = predP_batB_seqlQ_cls3_preds_confmat
+    confmat, confrecall, confprecision = [
+        provider[k]
+        for k in ['confmat', 'confrecall', 'confprecision']
+    ]
+    
+    print(confmat.shape)
+    
+    confprecp, confrecp = nu.normalize_confusion_matrix(confmat)
+    assert_almost_equal(confprecp, confprecision)
+    assert_almost_equal(confrecp, confrecall)
+    
+    confmatg, confrecallg, confprecisiong = [
+        provider[k]
+        for k in ['confmatg', 'confrecallg', 'confprecisiong']
+    ]
+    
+    print("G:", confmatg.shape)
+    
+    confprecp, confrecp = nu.normalize_confusion_matrix(confmatg)
+    assert_almost_equal(confprecp, confprecisiong)
+    assert_almost_equal(confrecp, confrecallg)
+    
+    
