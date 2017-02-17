@@ -180,11 +180,24 @@ def confusion_matrix(ytrue,
 def normalize_confusion_matrix(conf_matrix):
     if not isinstance(conf_matrix, np.ndarray):
         conf_matrix = np.array(conf_matrix)
+        
+    # if len(conf_matrix.shape) == 2:
+    #   conf_matrix = conf_matrix[np.newaxis, :, :]
 
-    confmat = conf_matrix[np.newaxis, ...]
-    prec, recall = normalize_confusion_matrices(confmat)
+    # confmat = conf_matrix[np.newaxis, ...]
+    # prec, recall = normalize_confusion_matrices(confmat)
 
-    return prec[0, ...], recall[0, ...]
+    # return prec[0, ...], recall[0, ...]
+    conf_sum = conf_matrix.sum(axis=-2)
+    print(conf_sum)
+    print(conf_matrix[..., np.newaxis, :, :].shape)
+    print(conf_sum.shape)
+    confprec = conf_matrix[..., np.newaxis, :] / conf_sum[..., np.newaxis]
+    
+    conf_sum = conf_matrix.sum(axis=-1)
+    confrec = conf_matrix[..., np.newaxis, :] / conf_sum[np.newaxis, :]
+    
+    return confprec, confrec
 
 
 def normalize_confusion_matrices(conf_matrices):

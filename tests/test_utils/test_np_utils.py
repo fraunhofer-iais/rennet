@@ -442,6 +442,7 @@ def test_tocategorical_predP_batB_seqLQ_generic(
 
     assert True
 
+    
 ## FIXTURES AND TESTS FOR CONFUSION MATRIX CALCULATIONS #######################
 
 
@@ -521,7 +522,6 @@ def pred1_batB_seql1_cls3_preds_confmat(request, base_labels_cls3,
 
 
 @pytest.mark.confmat
-@pytest.mark.user
 def test_pred1_batB_seql1_user_confmat(pred1_batB_seql1_cls3_preds_confmat):
     Yt, Yp, confmat = [
         pred1_batB_seql1_cls3_preds_confmat[k] for k in ['Yt', 'Yp', 'confmat']
@@ -538,7 +538,6 @@ def test_pred1_batB_seql1_user_confmat(pred1_batB_seql1_cls3_preds_confmat):
 
 
 @pytest.mark.confmat
-@pytest.mark.generic
 def test_pred1_batB_seql1_generic_confmat(pred1_batB_seql1_cls3_preds_confmat):
     Yt, Yp, confmat = [
         pred1_batB_seql1_cls3_preds_confmat[k]
@@ -623,7 +622,6 @@ def predP_batB_seql1_cls3_preds_confmat(request, base_labels_cls3,
 
 
 @pytest.mark.confmat
-@pytest.mark.user
 def test_predP_batB_seql1_user_confmat(predP_batB_seql1_cls3_preds_confmat):
     Yt, Yp, confmat = [
         predP_batB_seql1_cls3_preds_confmat[k] for k in ['Yt', 'Yp', 'confmat']
@@ -641,7 +639,6 @@ def test_predP_batB_seql1_user_confmat(predP_batB_seql1_cls3_preds_confmat):
 
 
 @pytest.mark.confmat
-@pytest.mark.generic
 def test_predP_batB_seql1_generic_confmat(predP_batB_seql1_cls3_preds_confmat):
     Yt, Yp, confmat = [
         predP_batB_seql1_cls3_preds_confmat[k]
@@ -754,7 +751,6 @@ def pred1_batB_seqlQ_cls3_preds_confmat(request, base_labels_cls3,
 
 
 @pytest.mark.confmat
-@pytest.mark.user
 def test_pred1_batB_seqlQ_user_confmat(pred1_batB_seqlQ_cls3_preds_confmat):
     Yt, Yp, confmat = [
         pred1_batB_seqlQ_cls3_preds_confmat[k] for k in ['Yt', 'Yp', 'confmat']
@@ -772,7 +768,6 @@ def test_pred1_batB_seqlQ_user_confmat(pred1_batB_seqlQ_cls3_preds_confmat):
 
 
 @pytest.mark.confmat
-@pytest.mark.generic
 def test_pred1_batB_seqlQ_generic_confmat(pred1_batB_seqlQ_cls3_preds_confmat):
     Yt, Yp, confmat = [
         pred1_batB_seqlQ_cls3_preds_confmat[k]
@@ -870,7 +865,6 @@ def predP_batB_seqlQ_cls3_preds_confmat(request, base_labels_cls3,
 
 
 @pytest.mark.confmat
-@pytest.mark.user
 def test_predP_batB_seqlQ_user_confmat(predP_batB_seqlQ_cls3_preds_confmat):
     Yt, Yp, confmat = [
         predP_batB_seqlQ_cls3_preds_confmat[k] for k in ['Yt', 'Yp', 'confmat']
@@ -888,7 +882,6 @@ def test_predP_batB_seqlQ_user_confmat(predP_batB_seqlQ_cls3_preds_confmat):
 
 
 @pytest.mark.confmat
-@pytest.mark.generic
 def test_predP_batB_seqlQ_generic_confmat(predP_batB_seqlQ_cls3_preds_confmat):
     Yt, Yp, confmat = [
         predP_batB_seqlQ_cls3_preds_confmat[k]
@@ -909,4 +902,23 @@ def test_predP_batB_seqlQ_generic_confmat(predP_batB_seqlQ_cls3_preds_confmat):
 
     assert True
 
+    
 # TODO: test for different confusion matrix reduction axis
+
+
+## TESTS FOR NORMALIZING CONFUSION MATRICES ################################
+
+@pytest.mark.normconf
+def test_pred1_batB_seql1_normconfmat(pred1_batB_seql1_cls3_preds_confmat):
+    confmat, confrecall, confprecision = [
+        pred1_batB_seql1_cls3_preds_confmat[k]
+        for k in ['confmat', 'confrecall', 'confprecision']
+    ]
+    
+    print(confmat)
+    
+    confprecp, confrecp = nu.normalize_confusion_matrix(confmat)
+    assert_almost_equal(confprecp, confprecision)
+    # assert_almost_equal(confrecp, confrec)
+    
+    
