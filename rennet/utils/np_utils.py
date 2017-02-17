@@ -189,10 +189,7 @@ def normalize_confusion_matrix(conf_matrix):
 
     # return prec[0, ...], recall[0, ...]
     conf_sum = conf_matrix.sum(axis=-2)
-    print(conf_sum)
-    print(conf_matrix[..., np.newaxis, :, :].shape)
-    print(conf_sum.shape)
-    confprec = conf_matrix[..., np.newaxis, :] / conf_sum[..., np.newaxis]
+    confprec = conf_matrix / conf_sum[..., np.newaxis, :]
     
     conf_sum = conf_matrix.sum(axis=-1)
     confrec = conf_matrix[..., np.newaxis, :] / conf_sum[np.newaxis, :]

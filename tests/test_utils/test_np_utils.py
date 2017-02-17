@@ -915,10 +915,20 @@ def test_pred1_batB_seql1_normconfmat(pred1_batB_seql1_cls3_preds_confmat):
         for k in ['confmat', 'confrecall', 'confprecision']
     ]
     
-    print(confmat)
+    print(confmat.shape)
     
     confprecp, confrecp = nu.normalize_confusion_matrix(confmat)
     assert_almost_equal(confprecp, confprecision)
-    # assert_almost_equal(confrecp, confrec)
+    # assert_almost_equal(confrecp, confrecall)
     
+    confmatg, confrecallg, confprecisiong = [
+        pred1_batB_seql1_cls3_preds_confmat[k]
+        for k in ['confmatg', 'confrecallg', 'confprecisiong']
+    ]
+    
+    print("G:", confmatg.shape)
+    
+    confprecp, confrecp = nu.normalize_confusion_matrix(confmatg)
+    assert_almost_equal(confprecp, confprecisiong)
+    # assert_almost_equal(confrecp, confrecallg)
     
