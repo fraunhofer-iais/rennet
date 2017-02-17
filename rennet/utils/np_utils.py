@@ -101,6 +101,12 @@ def _generic_confusion_matrix_forcat(Ytrue,
     _valid_axes = [
         i for i in range(len(Ypred.shape) - 1) if Ypred.shape[i] > 1
     ]
+    if len(_valid_axes) == 0:
+        msg = """ No valid reduction axes found\n
+        - Are there more than one examples, at all? Check Shape.\n\tTrue: {}, Pred: {}\n
+        - Are you providing categorical (one-hot) labels? Check Values.\n\tTRUE: {}\n\tPRED: {}
+        """.format(Ytrue.shape, Ypred.shape, Ytrue, Ypred)
+        raise ValueError(msg)
     if reduce_axis is None:
         # choose the last axis > 1, excluding the ClassLabel axis
         # will raise error if none qualify, since then max is looking into empty
@@ -109,9 +115,10 @@ def _generic_confusion_matrix_forcat(Ytrue,
         if reduce_axis not in _valid_axes:
             msg = """The axis argument cannot be:
             - The last axis (axis of class label) {}
-            - An axis of size <= 1 {}""".format(
-                "TRUE" if reduce_axis == len(Ypred.shape) - 1 else "", "TRUE"
-                if Ypred.shape[reduce_axis] <= 1 else "")
+            - An axis of size <= 1 {}
+            """.format(
+                "TRUE" if reduce_axis == len(Ypred.shape) - 1 else "",
+                "TRUE" if Ypred.shape[reduce_axis] <= 1 else "", )
             raise ValueError(msg)
 
     conf = reduce_function(
