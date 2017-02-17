@@ -667,3 +667,138 @@ def test_predP_batB_seql1_generic_confmat(predP_batB_seql1_cls3_preds_confmat):
             yt, yp, nclasses, keepdims=True), confmat)
 
     assert True
+
+
+@pytest.fixture(
+    scope='module',
+    params=[[b + q for q in range(2)]
+            for b in range(3)],  # B: batchsize, Q: SequenceLength
+    ids=lambda i: "T={}".format(i),  #pylint: disable=unnecessary-lambda
+)
+def batB_seqlQ_cls3_trues_confmat(request, base_labels_cls3):
+    i = request.param
+
+    y_user = [base_labels_cls3[ii] for ii in i]
+    nclasses = 3
+    y_user = np.array(y_user)
+    Y_user = nu.to_categorical(y_user, nclasses)
+
+    # Batchsize=B, SequenceLength=Q, ClassLabel=1(implicit)
+    y_generic = y_user
+    Y_generic = nu.to_categorical(y_generic, nclasses)
+
+    return {
+        'yt': y_user,
+        'Yt': Y_user,
+        'nclasses': nclasses,
+        'ytg': y_generic,
+        'Ytg': Y_generic
+    }
+
+
+@pytest.fixture(
+    scope='module',
+    params=[list(range(2))],  # B: batchsize, Q: SequenceLength
+    ids=lambda i: "P={}".format(i),  #pylint: disable=unnecessary-lambda
+)
+def pred1_batB_seqlQ_cls3_preds_confmat(request, base_labels_cls3,
+                                        batB_seqlQ_cls3_trues_confmat):
+    i = request.param
+
+    yp = [base_labels_cls3[ii] for ii in i]
+
+    nclasses = batB_seqlQ_cls3_trues_confmat['nclasses']
+    Yp = nu.to_categorical(yp, nclasses)
+
+    yt = batB_seqlQ_cls3_trues_confmat['yt']
+    Yt = batB_seqlQ_cls3_trues_confmat['Yt']
+
+    confmat, confrecall, confprecision = [], [], []
+    for b, ybb in enumerate(yp):
+        _confmat = ext_confusionmatrix(
+            yt[b, ...], ybb, labels=np.arange(nclasses))
+
+        _confrecall = _confmat / (_confmat.sum(axis=1))[:, np.newaxis]
+        _confprecision = (_confmat.T / (_confmat.sum(axis=0))[:, np.newaxis]).T
+
+        confmat.append(_confmat)
+        confrecall.append(_confrecall)
+        confprecision.append(_confprecision)
+
+    confmat = np.array(confmat)
+    confrecall = np.array(confrecall)
+    confprecision = np.array(confprecision)
+    yp = np.array(yp)
+
+    # Predictor=1, Batchsize=B, SequenceLength=Q, ClassLabel=1(implicit)
+    ytg = batB_seqlQ_cls3_trues_confmat['ytg']
+    Ytg = batB_seqlQ_cls3_trues_confmat['Ytg']
+    ypg = yp[np.newaxis, ...]
+    Ypg = nu.to_categorical(ypg, nclasses)
+
+    # Predictor=1, Batchsize=B, SequenceLength=1(sumaxis), ClassLabel=(nclasses, nclasses)(implicit)
+    confmatg = confmat[np.newaxis, :, np.newaxis, ...]
+    confrecallg = confrecall[np.newaxis, :, np.newaxis, ...]
+    confprecisiong = confprecision[np.newaxis, :, np.newaxis, ...]
+
+    return {
+        'yt': yt,
+        'Yt': Yt,
+        'yp': yp,
+        'Yp': Yp,
+        'confmat': confmat,
+        'confrecall': confrecall,
+        'confprecision': confprecision,
+        'ytg': ytg,
+        'Ytg': Ytg,
+        'ypg': ypg,
+        'Ypg': Ypg,
+        'confmatg': confmatg,
+        'confrecallg': confrecallg,
+        'confprecisiong': confprecisiong,
+    }
+
+
+@pytest.mark.confmat
+@pytest.mark.user
+def test_pred1_batB_seqlQ_user_confmat(pred1_batB_seqlQ_cls3_preds_confmat):
+    Yt, Yp, confmat = [
+        pred1_batB_seqlQ_cls3_preds_confmat[k]
+        for k in ['Yt', 'Yp', 'confmat']
+    ]
+    print("\nTEST", Yt.shape, Yp.shape, confmat.shape)
+    print()
+    assert_almost_equal(nu.confusion_matrix_forcategorical(Yt, Yp), confmat)
+
+    yt, yp = [pred1_batB_seqlQ_cls3_preds_confmat[k] for k in ['yt', 'yp']]
+    nclasses = Yt.shape[-1]
+    print(yt.shape, yp.shape)
+    assert_almost_equal(nu.confusion_matrix(yt, yp, nclasses), confmat)
+
+    assert True
+
+
+@pytest.mark.confmat
+@pytest.mark.generic
+def test_pred1_batB_seqlQ_generic_confmat(pred1_batB_seqlQ_cls3_preds_confmat):
+    Yt, Yp, confmat = [
+        pred1_batB_seqlQ_cls3_preds_confmat[k]
+        for k in ['Ytg', 'Ypg', 'confmatg']
+    ]
+    print("\nTEST", Yt.shape, Yp.shape, confmat.shape)
+    print()
+    assert_almost_equal(
+        nu.confusion_matrix_forcategorical(
+            Yt, Yp, keepdims=True), confmat)
+
+    yt, yp = [pred1_batB_seqlQ_cls3_preds_confmat[k] for k in ['ytg', 'ypg']]
+    nclasses = Yt.shape[-1]
+    print(yt.shape, yp.shape)
+    assert_almost_equal(
+        nu.confusion_matrix(
+            yt, yp, nclasses, keepdims=True), confmat)
+
+    assert True
+
+
+# TODO: test for different confusion matrix reduction axis
