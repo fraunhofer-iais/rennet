@@ -919,7 +919,7 @@ def test_pred1_batB_seql1_normconfmat(pred1_batB_seql1_cls3_preds_confmat):
     
     confprecp, confrecp = nu.normalize_confusion_matrix(confmat)
     assert_almost_equal(confprecp, confprecision)
-    # assert_almost_equal(confrecp, confrecall)
+    assert_almost_equal(confrecp, confrecall)
     
     confmatg, confrecallg, confprecisiong = [
         pred1_batB_seql1_cls3_preds_confmat[k]
@@ -930,5 +930,5 @@ def test_pred1_batB_seql1_normconfmat(pred1_batB_seql1_cls3_preds_confmat):
     
     confprecp, confrecp = nu.normalize_confusion_matrix(confmatg)
     assert_almost_equal(confprecp, confprecisiong)
-    # assert_almost_equal(confrecp, confrecallg)
+    assert_almost_equal(confrecp, confrecallg)
     
