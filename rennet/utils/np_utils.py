@@ -4,7 +4,7 @@ Created: 28-09-2016
 
 Numpy utilities
 """
-from __future__ import division
+from __future__ import division, print_function
 import numpy as np
 
 
@@ -180,13 +180,13 @@ def confusion_matrix(ytrue,
 def normalize_confusion_matrices(conf_matrix):
     if not isinstance(conf_matrix, np.ndarray):
         conf_matrix = np.array(conf_matrix)
-        
+
     conf_sum = conf_matrix.sum(axis=-2)
     confprec = conf_matrix / conf_sum[..., np.newaxis, :]
-    
+
     conf_sum = conf_matrix.sum(axis=-1)
     confrec = conf_matrix / conf_sum[..., :, np.newaxis]
-    
+
     return confprec, confrec
 
 

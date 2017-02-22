@@ -4,6 +4,7 @@ Created: 08-02-2017
 
 Test the Numpy Utilities
 """
+from __future__ import division, print_function
 import pytest
 import numpy as np
 from numpy.testing import assert_almost_equal
@@ -30,6 +31,7 @@ def base_labels_cls3():
         [1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 0, 0, 0],  # None correct
         [4, 4, 3, 2, 2, 2, 2, 1, 1, 1, 1, 1, 0, 0],  # Extra class
     ])
+
 
 ## FIXTURES AND TESTS FOR TO_CATEGORICAL ###########################################
 
@@ -380,7 +382,8 @@ def predP_batB_seqlQ_cls3_preds_user_cat(request, base_labels_cls3):
 def test_tocategorical_predP_batB_seqLQ_user(
         predP_batB_seqlQ_cls3_preds_user_cat):
     y, Y, nc = [
-        predP_batB_seqlQ_cls3_preds_user_cat[k] for k in ['y', 'Y', 'nclasses']
+        predP_batB_seqlQ_cls3_preds_user_cat[k]
+        for k in ['y', 'Y', 'nclasses']
     ]
 
     print(y.shape, Y.shape, nu.to_categorical(y, nc).shape)
@@ -524,7 +527,8 @@ def pred1_batB_seql1_cls3_preds_confmat(request, base_labels_cls3,
 @pytest.mark.confmat
 def test_pred1_batB_seql1_user_confmat(pred1_batB_seql1_cls3_preds_confmat):
     Yt, Yp, confmat = [
-        pred1_batB_seql1_cls3_preds_confmat[k] for k in ['Yt', 'Yp', 'confmat']
+        pred1_batB_seql1_cls3_preds_confmat[k]
+        for k in ['Yt', 'Yp', 'confmat']
     ]
     print(Yt.shape, Yp.shape)
     assert_almost_equal(nu.confusion_matrix_forcategorical(Yt, Yp), confmat)
@@ -624,7 +628,8 @@ def predP_batB_seql1_cls3_preds_confmat(request, base_labels_cls3,
 @pytest.mark.confmat
 def test_predP_batB_seql1_user_confmat(predP_batB_seql1_cls3_preds_confmat):
     Yt, Yp, confmat = [
-        predP_batB_seql1_cls3_preds_confmat[k] for k in ['Yt', 'Yp', 'confmat']
+        predP_batB_seql1_cls3_preds_confmat[k]
+        for k in ['Yt', 'Yp', 'confmat']
     ]
     print("\nTEST", Yt.shape, Yp.shape, confmat.shape)
     print()
@@ -753,7 +758,8 @@ def pred1_batB_seqlQ_cls3_preds_confmat(request, base_labels_cls3,
 @pytest.mark.confmat
 def test_pred1_batB_seqlQ_user_confmat(pred1_batB_seqlQ_cls3_preds_confmat):
     Yt, Yp, confmat = [
-        pred1_batB_seqlQ_cls3_preds_confmat[k] for k in ['Yt', 'Yp', 'confmat']
+        pred1_batB_seqlQ_cls3_preds_confmat[k]
+        for k in ['Yt', 'Yp', 'confmat']
     ]
     print("\nTEST", Yt.shape, Yp.shape, confmat.shape)
     print()
@@ -867,7 +873,8 @@ def predP_batB_seqlQ_cls3_preds_confmat(request, base_labels_cls3,
 @pytest.mark.confmat
 def test_predP_batB_seqlQ_user_confmat(predP_batB_seqlQ_cls3_preds_confmat):
     Yt, Yp, confmat = [
-        predP_batB_seqlQ_cls3_preds_confmat[k] for k in ['Yt', 'Yp', 'confmat']
+        predP_batB_seqlQ_cls3_preds_confmat[k]
+        for k in ['Yt', 'Yp', 'confmat']
     ]
     print("\nTEST", Yt.shape, Yp.shape, confmat.shape)
     print()
@@ -905,8 +912,8 @@ def test_predP_batB_seqlQ_generic_confmat(predP_batB_seqlQ_cls3_preds_confmat):
 
 # TODO: test for different confusion matrix reduction axis
 
-
 ## TESTS FOR NORMALIZING CONFUSION MATRICES ################################
+
 
 @pytest.mark.normconf
 def test_pred1_batB_seql1_normconfmat(pred1_batB_seql1_cls3_preds_confmat):
@@ -962,8 +969,7 @@ def test_predP_batB_seql1_normconfmat(predP_batB_seql1_cls3_preds_confmat):
 def test_pred1_batB_seqlQ_normconfmat(pred1_batB_seqlQ_cls3_preds_confmat):
     provider = pred1_batB_seqlQ_cls3_preds_confmat
     confmat, confrecall, confprecision = [
-        provider[k]
-        for k in ['confmat', 'confrecall', 'confprecision']
+        provider[k] for k in ['confmat', 'confrecall', 'confprecision']
     ]
 
     print(confmat.shape)
@@ -973,8 +979,7 @@ def test_pred1_batB_seqlQ_normconfmat(pred1_batB_seqlQ_cls3_preds_confmat):
     assert_almost_equal(confrecp, confrecall)
 
     confmatg, confrecallg, confprecisiong = [
-        provider[k]
-        for k in ['confmatg', 'confrecallg', 'confprecisiong']
+        provider[k] for k in ['confmatg', 'confrecallg', 'confprecisiong']
     ]
 
     print("G:", confmatg.shape)
@@ -988,8 +993,7 @@ def test_pred1_batB_seqlQ_normconfmat(pred1_batB_seqlQ_cls3_preds_confmat):
 def test_predP_batB_seqlQ_normconfmat(predP_batB_seqlQ_cls3_preds_confmat):
     provider = predP_batB_seqlQ_cls3_preds_confmat
     confmat, confrecall, confprecision = [
-        provider[k]
-        for k in ['confmat', 'confrecall', 'confprecision']
+        provider[k] for k in ['confmat', 'confrecall', 'confprecision']
     ]
 
     print(confmat.shape)
@@ -999,8 +1003,7 @@ def test_predP_batB_seqlQ_normconfmat(predP_batB_seqlQ_cls3_preds_confmat):
     assert_almost_equal(confrecp, confrecall)
 
     confmatg, confrecallg, confprecisiong = [
-        provider[k]
-        for k in ['confmatg', 'confrecallg', 'confprecisiong']
+        provider[k] for k in ['confmatg', 'confrecallg', 'confprecisiong']
     ]
 
     print("G:", confmatg.shape)
