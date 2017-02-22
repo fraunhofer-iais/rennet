@@ -1011,3 +1011,17 @@ def test_predP_batB_seqlQ_normconfmat(predP_batB_seqlQ_cls3_preds_confmat):
     confprecp, confrecp = nu.normalize_confusion_matrix(confmatg)
     assert_almost_equal(confprecp, confprecisiong)
     assert_almost_equal(confrecp, confrecallg)
+
+
+@pytest.mark.confmat
+def test_pred1_batB_seql1_confmat_printing(
+        pred1_batB_seql1_cls3_preds_confmat):
+    confrecall, confprecision = [
+        pred1_batB_seql1_cls3_preds_confmat[k]
+        for k in ['confrecall', 'confprecision']
+    ]
+
+    nu.print_normalized_confusion(confrecall)
+    nu.print_normalized_confusion(confprecision)
+
+    assert True
