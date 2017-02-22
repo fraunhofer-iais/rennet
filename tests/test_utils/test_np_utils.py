@@ -429,9 +429,9 @@ def predP_batB_seqlQ_cls3_generic_cat(request, base_labels_cls3):
 
 
 def test_tocategorical_predP_batB_seqLQ_generic(
-        predP_batB_seqlQ_cls3_preds_user_cat):
+        predP_batB_seqlQ_cls3_generic_cat):
     y, Y, nc = [
-        predP_batB_seqlQ_cls3_preds_user_cat[k] for k in ['y', 'Y', 'nclasses']
+        predP_batB_seqlQ_cls3_generic_cat[k] for k in ['y', 'Y', 'nclasses']
     ]
 
     print(y.shape, Y.shape, nu.to_categorical(y, nc).shape)
@@ -442,7 +442,7 @@ def test_tocategorical_predP_batB_seqLQ_generic(
 
     assert True
 
-    
+
 ## FIXTURES AND TESTS FOR CONFUSION MATRIX CALCULATIONS #######################
 
 
@@ -902,7 +902,7 @@ def test_predP_batB_seqlQ_generic_confmat(predP_batB_seqlQ_cls3_preds_confmat):
 
     assert True
 
-    
+
 # TODO: test for different confusion matrix reduction axis
 
 
@@ -914,50 +914,50 @@ def test_pred1_batB_seql1_normconfmat(pred1_batB_seql1_cls3_preds_confmat):
         pred1_batB_seql1_cls3_preds_confmat[k]
         for k in ['confmat', 'confrecall', 'confprecision']
     ]
-    
+
     print(confmat.shape)
-    
+
     confprecp, confrecp = nu.normalize_confusion_matrix(confmat)
     assert_almost_equal(confprecp, confprecision)
     assert_almost_equal(confrecp, confrecall)
-    
+
     confmatg, confrecallg, confprecisiong = [
         pred1_batB_seql1_cls3_preds_confmat[k]
         for k in ['confmatg', 'confrecallg', 'confprecisiong']
     ]
-    
+
     print("G:", confmatg.shape)
-    
+
     confprecp, confrecp = nu.normalize_confusion_matrix(confmatg)
     assert_almost_equal(confprecp, confprecisiong)
     assert_almost_equal(confrecp, confrecallg)
-    
-    
+
+
 @pytest.mark.normconf
 def test_predP_batB_seql1_normconfmat(predP_batB_seql1_cls3_preds_confmat):
     confmat, confrecall, confprecision = [
         predP_batB_seql1_cls3_preds_confmat[k]
         for k in ['confmat', 'confrecall', 'confprecision']
     ]
-    
+
     print(confmat.shape)
-    
+
     confprecp, confrecp = nu.normalize_confusion_matrix(confmat)
     assert_almost_equal(confprecp, confprecision)
     assert_almost_equal(confrecp, confrecall)
-    
+
     confmatg, confrecallg, confprecisiong = [
         predP_batB_seql1_cls3_preds_confmat[k]
         for k in ['confmatg', 'confrecallg', 'confprecisiong']
     ]
-    
+
     print("G:", confmatg.shape)
-    
+
     confprecp, confrecp = nu.normalize_confusion_matrix(confmatg)
     assert_almost_equal(confprecp, confprecisiong)
     assert_almost_equal(confrecp, confrecallg)
-    
-    
+
+
 @pytest.mark.normconf
 def test_pred1_batB_seqlQ_normconfmat(pred1_batB_seqlQ_cls3_preds_confmat):
     provider = pred1_batB_seqlQ_cls3_preds_confmat
@@ -965,25 +965,25 @@ def test_pred1_batB_seqlQ_normconfmat(pred1_batB_seqlQ_cls3_preds_confmat):
         provider[k]
         for k in ['confmat', 'confrecall', 'confprecision']
     ]
-    
+
     print(confmat.shape)
-    
+
     confprecp, confrecp = nu.normalize_confusion_matrix(confmat)
     assert_almost_equal(confprecp, confprecision)
     assert_almost_equal(confrecp, confrecall)
-    
+
     confmatg, confrecallg, confprecisiong = [
         provider[k]
         for k in ['confmatg', 'confrecallg', 'confprecisiong']
     ]
-    
+
     print("G:", confmatg.shape)
-    
+
     confprecp, confrecp = nu.normalize_confusion_matrix(confmatg)
     assert_almost_equal(confprecp, confprecisiong)
     assert_almost_equal(confrecp, confrecallg)
-    
-    
+
+
 @pytest.mark.normconf
 def test_predP_batB_seqlQ_normconfmat(predP_batB_seqlQ_cls3_preds_confmat):
     provider = predP_batB_seqlQ_cls3_preds_confmat
@@ -991,22 +991,20 @@ def test_predP_batB_seqlQ_normconfmat(predP_batB_seqlQ_cls3_preds_confmat):
         provider[k]
         for k in ['confmat', 'confrecall', 'confprecision']
     ]
-    
+
     print(confmat.shape)
-    
+
     confprecp, confrecp = nu.normalize_confusion_matrix(confmat)
     assert_almost_equal(confprecp, confprecision)
     assert_almost_equal(confrecp, confrecall)
-    
+
     confmatg, confrecallg, confprecisiong = [
         provider[k]
         for k in ['confmatg', 'confrecallg', 'confprecisiong']
     ]
-    
+
     print("G:", confmatg.shape)
-    
+
     confprecp, confrecp = nu.normalize_confusion_matrix(confmatg)
     assert_almost_equal(confprecp, confprecisiong)
     assert_almost_equal(confrecp, confrecallg)
-    
-    
