@@ -381,14 +381,14 @@ def SequenceLabels_small_seqdata_labels_at_general(request,
             la_labels.append(l)
 
         la_ends.extend([mins, maxe])
-        la_labels.extend([None, None])
+        la_labels.extend((None, None))
     else:
         for e, l in init_small_seqdata['labels_at']:
             la_ends.append(e)
-            la_labels.append([l])
+            la_labels.append((l, ))
 
         la_ends.extend([mins, maxe])
-        la_labels.extend([None, None])
+        la_labels.extend((None, None))
 
     # ends are more than likely to be provided as np.ndarray
     la_ends = np.array(la_ends) * la_sr
@@ -399,6 +399,19 @@ def SequenceLabels_small_seqdata_labels_at_general(request,
         'at_sr': la_sr,
         'target_labels': la_labels,
     }
+
+
+def test_SequenceLabels_labels_at_general(
+        SequenceLabels_small_seqdata_labels_at_general):
+    s, la_ends, lasr, target_labels = [
+        SequenceLabels_small_seqdata_labels_at_general[k]
+        for k in ['seqlabelinst', 'ends', 'at_sr', 'target_labels']
+    ]
+
+    labels = s.labels_at(la_ends, lasr, None)
+
+    assert all([e == r for e, r in zip(target_labels, labels)]), ", ".join(
+        "({} {})".format(e, t) for e, t in zip(target_labels, labels))
 
 
 @pytest.fixture(
