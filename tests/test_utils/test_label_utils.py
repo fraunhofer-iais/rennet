@@ -84,7 +84,7 @@ def base_small_seqdata(request):
 
 @pytest.fixture(
     scope='module',
-    params=[1., 3., 3, 101, 8000, 16000],  # samplerate
+    params=[1.],  # 3., 3, 101, 8000, 16000],  # samplerate
     ids=lambda x: "SR={}".format(x))  # pylint: disable=unnecessary-lambda
 def init_small_seqdata(request, base_small_seqdata):
     sr = request.param
@@ -415,9 +415,7 @@ def ContiSequenceLabels_small_seqdata_labels_at_allwithin(request,
     """
     se = init_small_seqdata['starts_ends']
     sr = init_small_seqdata['samplerate']
-    l = init_small_seqdata['labels']
-
-    s = lu.SequenceLabels(se, l, samplerate=sr)
+    _l = init_small_seqdata['labels']
 
     la_ends, la_labels = [], []
     if not init_small_seqdata['isconti']:
@@ -427,11 +425,13 @@ def ContiSequenceLabels_small_seqdata_labels_at_allwithin(request,
     else:
         for e, l in init_small_seqdata['labels_at']:
             la_ends.append(e)
-            la_labels.append((l, ))
+            la_labels.append(l)
 
     la_sr = request.param
     # ends are more than likely to be provided as np.ndarray
     la_ends = np.array(la_ends) * la_sr
+
+    s = lu.ContiguousSequenceLabels(se, _l, samplerate=sr)
 
     return {
         'seqlabelinst': s,
@@ -453,6 +453,54 @@ def test_ContiSequenceLabels_labels_at_allwithin(
     assert all([e == r for e, r in zip(target_labels, labels)]), list(
         zip(target_labels, labels))
 
+
+# @pytest.fixture(
+#     scope='module',
+#     params=[None, [], -1, [-1]],  # expected default labels
+#     ids=lambda x: "laSR={}".format(x)  #pylint: disable=unnecessary-lambda
+# )
+# def ContiSequenceLabels_small_seqdata_labels_at_outside(request,
+#                                                    init_small_seqdata):
+#     """ fixture with labels_at at different samplerates
+#
+#     And of course instance of SequenceLabels class that handles both
+#     contiguous and non-contiguous seqdata
+#     """
+#     se = init_small_seqdata['starts_ends']
+#     sr = init_small_seqdata['samplerate']
+#     _l = init_small_seqdata['labels']
+#
+#     sminstart = s.starts.min()
+#     smaxend = s.ends.max()
+#     la_ends = [sminstart - (1 / sr), sminstart, smaxend + (1 / sr)]
+#     # Yes, there is no label for sminstart. So the default_label is expected
+#     # Why? We are looking at the label for the segment between
+#     # (x - (1/samplerate)) and (x) when finding labels_at
+#     # and we don't have any info about the label before sminstart
+#
+#     la_labels = [request.param for _ in range(len(la_ends))]
+#
+#     s = lu.ContiguousSequenceLabels(se, _l, samplerate=sr)
+#
+#     return {
+#         'seqlabelinst': s,
+#         'ends': la_ends,
+#         'target_labels': la_labels,
+#         'default_label': request.param
+#     }
+
+# def test_ContiSequenceLabels_labels_at_outside(
+#         ContiSequenceLabels_small_seqdata_labels_at_outside):
+#     s, ends, tlabels, deflabel = [
+#         ContiSequenceLabels_small_seqdata_labels_at_outside[k]
+#         for k in ['seqlabelinst', 'ends', 'target_labels', 'default_label']
+#     ]
+#
+#     # not passing default label == passing None
+#     labels = s.labels_at(ends, default_label=deflabel)
+#
+#     assert all([e == r for e, r in zip(tlabels, labels)]), list(
+#         zip(tlabels, labels))
 
 # TODO: Test for multi-dimensional labels
 # TODO: Test for non-numerical labels

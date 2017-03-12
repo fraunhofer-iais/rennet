@@ -225,20 +225,21 @@ class ContiguousSequenceLabels(SequenceLabels):
         #       arbitrary self.orig_samplerate and samplerate
         #
 
-        # all ends are within the segments
+        # all ends that are within the segments
         endings = se[:, 1]
         maxend = endings.max()
-        minstart = endings.min()
+        minstart = se[:, 0].min()
         endswithin = (ends > minstart) & (ends <= maxend)
 
-        allwithin = len(endswithin) == len(ends)  # no default label required
+        # find indices of the labels for ends that are within the segments
+        within_labelidx = np.searchsorted(
+            endings, ends[endswithin], side='left')
 
-        if allwithin:
-            # find indices of the labels for each ends
-            label_idx = np.searchsorted(endings, se[:, 1], side='left')
-
+        if sum(endswithin) == len(ends):  # all ends are within
             # pick the labels at those indices, and return
-            return self.labels[label_idx]
+            print(minstart, maxend)
+            print(*zip(endswithin, ends), sep='\n')
+            return self.labels[within_labelidx, ...]
 
         else:
             raise NotImplementedError()
