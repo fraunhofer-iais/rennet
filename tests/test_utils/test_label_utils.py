@@ -538,5 +538,144 @@ def test_ContiSequenceLabels_labels_at_outside_with_auto_deflabel(
         zip(zlabels, labels))
 
 
+@pytest.fixture(
+    scope='module',
+    params=[1., 3., 3, 101, 1000, 8000, 16000],  # samplerate for labels_at
+    ids=lambda x: "laSR={}".format(x)  #pylint: disable=unnecessary-lambda
+)
+def ContiSequenceLabels_small_seqdata_labels_at_general(request,
+                                                        init_small_seqdata):
+    """ fixture with labels_at at different samplerates for general case
+
+    General case where ends can be outside the starts_ends as well
+
+    And of course instance of SequenceLabels class that handles both
+    contiguous and non-contiguous seqdata
+    """
+    if not init_small_seqdata['isconti']:
+        pytest.skip(
+            "Non-Contiguous Sequence data for ContiguousSequenceLabels "
+            "will fail to initialize")
+
+    se = init_small_seqdata['starts_ends']
+    sr = init_small_seqdata['samplerate']
+    l = init_small_seqdata['labels']
+
+    s = lu.ContiguousSequenceLabels(se, l, samplerate=sr)
+
+    la_sr = request.param
+    with s.samplerate_as(la_sr):
+        _se = s.starts_ends
+        mins = _se[:, 0].min()
+        maxe = _se[:, 1].max() + (1 / la_sr)
+
+    la_ends, la_labels = [], []
+    if not init_small_seqdata['isconti']:
+        pytest.skip(
+            "Non-Contiguous Sequence data for ContiguousSequenceLabels "
+            "will fail to initialize")
+    else:
+        for e, l in init_small_seqdata['labels_at']:
+            la_ends.append(e)
+            la_labels.append(l)
+
+        la_ends.extend([mins, maxe])
+        la_labels.extend([0, 0])
+
+    # ends are more than likely to be provided as np.ndarray
+    la_ends = np.array(la_ends) * la_sr
+    la_labels = np.array(la_labels)
+
+    return {
+        'seqlabelinst': s,
+        'ends': la_ends,
+        'at_sr': la_sr,
+        'target_labels': la_labels,
+    }
+
+
+def test_ContiSequenceLabels_labels_at_general_with_auto_deflabel(
+        ContiSequenceLabels_small_seqdata_labels_at_general):
+    s, la_ends, lasr, target_labels = [
+        ContiSequenceLabels_small_seqdata_labels_at_general[k]
+        for k in ['seqlabelinst', 'ends', 'at_sr', 'target_labels']
+    ]
+
+    labels = s.labels_at(la_ends, lasr, default_label='auto')
+
+    assert all([e == r for e, r in zip(target_labels, labels)]), ", ".join(
+        "({} {})".format(e, t) for e, t in zip(target_labels, labels))
+
+
+@pytest.fixture(
+    scope='module',
+    params=[None, [], -1, [-1]],  # expected default labels
+    ids=lambda x: "laSR={}".format(x)  #pylint: disable=unnecessary-lambda
+)
+def ContiSequenceLabels_small_seqdata_labels_at_general_with_deflabel(
+        request, init_small_seqdata):
+    """ fixture with labels_at at different samplerates for general case
+
+    General case where ends can be outside the starts_ends as well
+
+    And of course instance of SequenceLabels class that handles both
+    contiguous and non-contiguous seqdata
+    """
+    if not init_small_seqdata['isconti']:
+        pytest.skip(
+            "Non-Contiguous Sequence data for ContiguousSequenceLabels "
+            "will fail to initialize")
+
+    se = init_small_seqdata['starts_ends']
+    sr = init_small_seqdata['samplerate']
+    l = init_small_seqdata['labels']
+
+    s = lu.ContiguousSequenceLabels(se, l, samplerate=sr)
+
+    la_sr = 1.0
+    with s.samplerate_as(la_sr):
+        _se = s.starts_ends
+        mins = _se[:, 0].min()
+        maxe = _se[:, 1].max() + (1 / la_sr)
+
+    la_ends, la_labels = [], []
+    if not init_small_seqdata['isconti']:
+        pytest.skip(
+            "Non-Contiguous Sequence data for ContiguousSequenceLabels "
+            "will fail to initialize")
+    else:
+        for e, l in init_small_seqdata['labels_at']:
+            la_ends.append(e)
+            la_labels.append(l)
+
+        la_ends.extend([mins, maxe])
+        la_labels.extend([request.param, request.param])
+
+    # ends are more than likely to be provided as np.ndarray
+    la_ends = np.array(la_ends) * la_sr
+
+    return {
+        'seqlabelinst': s,
+        'ends': la_ends,
+        'at_sr': la_sr,
+        'target_labels': la_labels,
+        'deflabel': request.param,
+    }
+
+
+def test_ContiSequenceLabels_labels_at_general_with_deflabel(
+        ContiSequenceLabels_small_seqdata_labels_at_general_with_deflabel):
+    s, la_ends, lasr, target_labels, deflabel = [
+        ContiSequenceLabels_small_seqdata_labels_at_general_with_deflabel[k]
+        for k in
+        ['seqlabelinst', 'ends', 'at_sr', 'target_labels', 'deflabel']
+    ]
+
+    labels = s.labels_at(la_ends, lasr, default_label=deflabel)
+
+    assert all([e == r for e, r in zip(target_labels, labels)]), ", ".join(
+        "({} {})".format(e, t) for e, t in zip(target_labels, labels))
+
+
 # TODO: Test for multi-dimensional labels
 # TODO: Test for non-numerical labels

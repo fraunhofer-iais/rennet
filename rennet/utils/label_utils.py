@@ -263,7 +263,7 @@ class ContiguousSequenceLabels(SequenceLabels):
         else:
             # provided default_label will be inserted for ends which are outside
 
-            label_idx = np.ones_like(ends) * -1
+            label_idx = np.ones_like(ends, dtype=np.int) * -1
             label_idx[endswithin] = within_labelidx
 
             res = []
@@ -271,6 +271,10 @@ class ContiguousSequenceLabels(SequenceLabels):
                 if li < 0:  # default_label
                     res.append(default_label)
                 else:
-                    res.append(self.labels[li, ...])
+                    try:
+                        res.append(self.labels[li, ...])
+                    except IndexError as e:
+                        print(li)
+                        raise e
 
             return res
