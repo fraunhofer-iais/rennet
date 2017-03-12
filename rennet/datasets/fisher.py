@@ -5,7 +5,7 @@ Created: 01-02-2017
 Helpers for working with Fisher dataset
 """
 from __future__ import print_function, division
-from collections import namedtuple, Iterable
+from collections import namedtuple
 import os
 from csv import reader
 import numpy as np
@@ -33,6 +33,10 @@ class FisherAnnotations(lu.SequenceLabels):
     - ka3 module was not designed to be sub-classed.
     - Don't want headache of maintaining compatibility where I don't have to
     """
+
+    # PARENT'S SLOTS
+    # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate')
+    __slots__ = ('sourcefile', 'speakers')
 
     def __init__(self, filepath, speakers, *args, **kwargs):
         self.sourcefile = filepath
@@ -81,7 +85,11 @@ class FisherAnnotations(lu.SequenceLabels):
         return s
 
 
-class FisherActiveSpeakers(lu.SequenceLabels):
+class FisherActiveSpeakers(lu.ContiguousSequenceLabels):
+    # PARENT'S SLOTS
+    # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate')
+    __slots__ = ('sourcefile', 'speakers')
+
     def __init__(self, filepath, speakers, *args, **kwargs):
         self.sourcefile = filepath
         self.speakers = sorted(speakers, key=lambda s: s.speakerid)
@@ -120,7 +128,7 @@ class FisherActiveSpeakers(lu.SequenceLabels):
             for i in ann.idx_for_speaker(speaker):
                 start, end = se[i]
 
-                # NOTE: not setting to 1 straighaway to catch duplicates
+                # NOTE: not setting to 1 straightaway to catch duplicates
                 active_speakers[start:end, s] += 1
 
         if active_speakers.max() > 1:
@@ -145,54 +153,6 @@ class FisherActiveSpeakers(lu.SequenceLabels):
 
         # min time resolution 1ms, mostly
         return cls.from_annotations(ann, samplerate=samplerate, warn=warn)
-
-    def labels_at(self, ends, samplerate=None):
-        """
-        NOTE: Here and not in the base class cuz
-            The segments are contigious and guaranteed non-overlapping
-        """
-        if not isinstance(ends, Iterable):
-            ends = [ends]
-
-        ends = np.array(ends)
-
-        # NOTE: To make sure that we are working with the correct samplerate
-
-        # the samplerate could be set temporarily in a different context
-        in_diffcontext = self._samplerate != self._orig_samplerate
-
-        if samplerate is None or samplerate == self._orig_samplerate:
-            # Assume that the samplerate of given ends == self.samplerate
-            # irrespective of being in a different context
-            se = self.starts_ends
-        elif in_diffcontext:
-            # temporarily change to required samplerate context
-            # then change back to the previous context
-            # TODO: [ ] test this, properly, probably
-            ctx_samplerate = self._samplerate
-            with self.samplerate_as(samplerate):
-                se = self.starts_ends
-
-            self._samplerate = ctx_samplerate
-        else:
-            # temporarily change to required samplerate context
-            with self.samplerate_as(samplerate):
-                se = self.starts_ends
-
-        endings = se[:, 1]
-        maxend = endings.max()
-        minstart = se[:, 0].min()
-        endswithin = (ends <= maxend) & (ends >= minstart)
-
-        # find labels for valid ends that are smaller than or equal to endings
-        label_idx = np.searchsorted(endings, ends[endswithin], side='left')
-
-        # NOTE: Can't resolve for ends that are not indside,
-        #   will assume to spit out zeros
-        labels = np.zeros((len(ends), *self.labels.shape[1:]), dtype=np.int)
-        labels[endswithin] = self.labels[label_idx]
-
-        return labels
 
     def __str__(self):
         s = "Source filepath: {}".format(self.sourcefile)
