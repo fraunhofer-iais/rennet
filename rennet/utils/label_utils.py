@@ -35,6 +35,8 @@ class SequenceLabels(object):
     TODO: [ ] Export to ELAN
     """
 
+    __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate')
+
     def __init__(self, starts_ends, labels, samplerate=1):
         assert all(isinstance(x, Iterable)
                    for x in [starts_ends, labels]), "starts_ends and labels" + \
@@ -180,6 +182,10 @@ class ContiguousSequenceLabels(SequenceLabels):
 
     """
 
+    # PARENT'S SLOTS
+    # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate')
+    __slots__ = ()
+
     def __init__(self, *args, **kwargs):
         super(ContiguousSequenceLabels, self).__init__(*args, **kwargs)
         # the starts_ends were sorted in __init__ on starts
@@ -189,6 +195,12 @@ class ContiguousSequenceLabels(SequenceLabels):
             self.starts_ends[1:, 0] == self.starts_ends[:-1, 1]
         ), "All ends should be the starts of the next segment, except the last"
 
+        # convert labels to np.array
+        # this is a bit controversial, since the conversion may lead
+        # to some unexpected results. Unexpected for a n00b like me at least.
+        # eg. list of namedtuple get converted to array of tuples.
+        # user small, __slot__ classes in that case
+        self.labels = np.array(self.labels)
         # IDEA: store only the unique values? min_start and ends?
         # May be pointless here in python
 
@@ -219,4 +231,14 @@ class ContiguousSequenceLabels(SequenceLabels):
         minstart = endings.min()
         endswithin = (ends > minstart) & (ends <= maxend)
 
-        raise NotImplementedError()
+        allwithin = len(endswithin) == len(ends)  # no default label required
+
+        if allwithin:
+            # find indices of the labels for each ends
+            label_idx = np.searchsorted(endings, se[:, 1], side='left')
+
+            # pick the labels at those indices, and return
+            return self.labels[label_idx]
+
+        else:
+            raise NotImplementedError()
