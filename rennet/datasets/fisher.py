@@ -49,7 +49,7 @@ class FisherAnnotations(lu.SequenceLabels):
         else:
             raise NotImplementedError("Reading FisherCalldata not implemented")
 
-        super().__init__(*args, **kwargs)
+        super(FisherAnnotations, self).__init__(*args, **kwargs)
 
     @classmethod
     def from_file(cls, filepath, allcalldata=None):
@@ -95,7 +95,7 @@ class FisherAnnotations(lu.SequenceLabels):
     def __str__(self):
         s = "Source filepath: {}".format(self.sourcefile)
         s += "Calldata:\n{}".format(self.calldata)
-        s += "\n" + super().__str__()
+        s += "\n" + super(FisherAnnotations, self).__str__()
         return s
 
 
@@ -108,7 +108,7 @@ class FisherActiveSpeakers(lu.ContiguousSequenceLabels):
         self.sourcefile = filepath
         self.calldata = calldata
 
-        super().__init__(*args, **kwargs)
+        super(FisherActiveSpeakers, self).__init__(*args, **kwargs)
 
         # SequenceLabels makes labels into a list
         self.labels = np.array(self.labels)
@@ -169,5 +169,5 @@ class FisherActiveSpeakers(lu.ContiguousSequenceLabels):
     def __str__(self):
         s = "Source filepath: {}".format(self.sourcefile)
         s += "Calldata:\n{}".format(self.calldata)
-        s += "\n" + super().__str__()
+        s += "\n" + super(FisherActiveSpeakers, self).__str__()
         return s
