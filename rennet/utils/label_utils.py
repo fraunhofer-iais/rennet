@@ -204,7 +204,7 @@ class ContiguousSequenceLabels(SequenceLabels):
         # IDEA: store only the unique values? min_start and ends?
         # May be pointless here in python
 
-    def labels_at(self, ends, samplerate=None, default_label=None):
+    def labels_at(self, ends, samplerate=None, default_label='auto'):
         if not isinstance(ends, Iterable):
             ends = [ends]
 
@@ -235,11 +235,28 @@ class ContiguousSequenceLabels(SequenceLabels):
         within_labelidx = np.searchsorted(
             endings, ends[endswithin], side='left')
 
-        if sum(endswithin) == len(ends):  # all ends are within
+        if sum(endswithin) == len(ends):
+            # all ends are within
+
             # pick the labels at those indices, and return
-            print(minstart, maxend)
-            print(*zip(endswithin, ends), sep='\n')
             return self.labels[within_labelidx, ...]
 
-        else:
+        elif default_label == 'auto':
+            # some ends are outside and a default label is not provided
+
+            # a default label will be inferred from the existing self.labels
             raise NotImplementedError()
+        else:
+            # provided default_label will be inserted for ends which are outside
+
+            label_idx = np.ones_like(ends) * -1
+            label_idx[endswithin] = within_labelidx
+
+            res = []
+            for li in label_idx:
+                if li < 0:  # default_label
+                    res.append(default_label)
+                else:
+                    res.append(self.labels[li])
+
+            return res
