@@ -5,7 +5,6 @@ Created: 01-02-2017
 Helpers for working with Fisher dataset
 """
 from __future__ import print_function, division
-from collections import namedtuple
 import os
 from csv import reader
 import numpy as np
@@ -14,14 +13,19 @@ import warnings
 import rennet.utils.label_utils as lu
 from rennet.utils.np_utils import group_by_values
 
-# TODO: Extract gender?
-# Will require reading the extra database files or something
-FisherSpeaker = namedtuple('FisherSpeaker', ['speakerid'])
 
-# TODO: Extract confidence?
-# Will require reading the extra database files or something
-FisherTranscription = namedtuple('FisherTranscription',
-                                 ['speakerid', 'content'])
+class FisherTranscription(object):
+    __slots__ = ('speakerchannel', 'content')
+
+    def __init__(self, speakerchannel, content):
+        self.speakerchannel = speakerchannel
+        self.content = content
+
+    def __repr__(self):
+        return "{}({}={}, {}={})".format(self.__class__.__name__,
+                                         'speakerchannel',
+                                         repr(self.speakerchannel), 'content',
+                                         repr(self.content))
 
 
 class FisherAnnotations(lu.SequenceLabels):
@@ -36,19 +40,22 @@ class FisherAnnotations(lu.SequenceLabels):
 
     # PARENT'S SLOTS
     # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate')
-    __slots__ = ('sourcefile', 'speakers')
+    __slots__ = ('sourcefile', 'calldata')
 
-    def __init__(self, filepath, speakers, *args, **kwargs):
+    def __init__(self, filepath, calldata, *args, **kwargs):
         self.sourcefile = filepath
-        self.speakers = sorted(speakers, key=lambda s: s.speakerid)
+        if calldata is None:
+            self.calldata = calldata
+        else:
+            raise NotImplementedError("Reading FisherCalldata not implemented")
+
         super().__init__(*args, **kwargs)
 
     @classmethod
-    def from_file(cls, filepath):
+    def from_file(cls, filepath, allcalldata=None):
         afp = os.path.abspath(filepath)
 
         se = []
-        sid = set()
         trans = []
 
         with open(afp, 'r') as f:
@@ -60,27 +67,34 @@ class FisherAnnotations(lu.SequenceLabels):
                     continue
                 else:
                     s, e, spk = row[0].split(' ')
+                    se.append((float(s), float(e)))
+
                     spk = spk.strip()
                     content = row[1].strip()
+                    if spk.upper() == 'A':
+                        trans.append(FisherTranscription(0, content))
+                    elif spk.upper() == 'B':
+                        trans.append(FisherTranscription(1, content))
+                    else:
+                        raise ValueError(
+                            "Speaker channel other than A and B ({}) in file\n{}".
+                            format(spk, filepath))
 
-                    sid.add(spk)
-                    se.append((float(s), float(e)))
-                    trans.append(FisherTranscription(spk, content))
+        if allcalldata is None:
+            calldata = None
+        else:
+            raise NotImplementedError("Reading FisherCalldata not implemented")
 
-        speakers = [FisherSpeaker(id) for id in sid]
+        return cls(afp, calldata, se, trans, samplerate=1)
 
-        return cls(afp, speakers, se, trans, samplerate=1)
-
-    def idx_for_speaker(self, speaker):
-        speakerid = speaker.speakerid
+    def idx_for_speaker(self, speakerchannel):
         for i, l in enumerate(self.labels):
-            if l.speakerid == speakerid:
+            if l.speakerchannel == speakerchannel:
                 yield i
 
     def __str__(self):
         s = "Source filepath: {}".format(self.sourcefile)
-        s += "\nSpeakers: {}\n".format(len(self.speakers))
-        s += "\n".join(str(s) for s in self.speakers)
+        s += "Calldata:\n{}".format(self.calldata)
         s += "\n" + super().__str__()
         return s
 
@@ -88,11 +102,11 @@ class FisherAnnotations(lu.SequenceLabels):
 class FisherActiveSpeakers(lu.ContiguousSequenceLabels):
     # PARENT'S SLOTS
     # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate')
-    __slots__ = ('sourcefile', 'speakers')
+    __slots__ = ('sourcefile', 'calldata')
 
-    def __init__(self, filepath, speakers, *args, **kwargs):
+    def __init__(self, filepath, calldata, *args, **kwargs):
         self.sourcefile = filepath
-        self.speakers = sorted(speakers, key=lambda s: s.speakerid)
+        self.calldata = calldata
 
         super().__init__(*args, **kwargs)
 
@@ -121,15 +135,14 @@ class FisherActiveSpeakers(lu.ContiguousSequenceLabels):
                 warnings.warn(_w)
 
         # make contigious array of shape (total_duration, n_speakers)
+        # NOTE: n_speakers is 2 for all Fisher data
+        n_speakers = 2
         active_speakers = np.zeros(
-            shape=(se[:, 1].max(), len(ann.speakers)), dtype=np.int)
+            shape=(se[:, 1].max(), n_speakers), dtype=np.int)
 
-        for s, speaker in enumerate(ann.speakers):
-            for i in ann.idx_for_speaker(speaker):
-                start, end = se[i]
-
-                # NOTE: not setting to 1 straightaway to catch duplicates
-                active_speakers[start:end, s] += 1
+        for (start, end), l in zip(se, ann.labels):
+            # NOTE: not setting to 1 straightaway to catch duplicates
+            active_speakers[start:end, l.speakerchannel] += 1
 
         if active_speakers.max() > 1:
             if warn:
@@ -142,21 +155,19 @@ class FisherActiveSpeakers(lu.ContiguousSequenceLabels):
         starts_ends, active_speakers = group_by_values(active_speakers)
 
         return cls(ann.sourcefile,
-                   ann.speakers,
+                   ann.calldata,
                    starts_ends,
                    active_speakers,
                    samplerate=samplerate)
 
     @classmethod
-    def from_file(cls, filepath, samplerate=100, warn=True):
-        ann = FisherAnnotations.from_file(filepath)
-
+    def from_file(cls, filepath, samplerate=100, allcalldata=None, warn=True):
+        ann = FisherAnnotations.from_file(filepath, allcalldata)
         # min time resolution 1ms, mostly
         return cls.from_annotations(ann, samplerate=samplerate, warn=warn)
 
     def __str__(self):
         s = "Source filepath: {}".format(self.sourcefile)
-        s += "\nSpeakers: {}\n".format(len(self.speakers))
-        s += "\n".join(str(s) for s in self.speakers)
+        s += "Calldata:\n{}".format(self.calldata)
         s += "\n" + super().__str__()
         return s
