@@ -678,4 +678,5 @@ def test_ContiSequenceLabels_labels_at_general_with_deflabel(
 
 
 # TODO: Test for multi-dimensional labels
+# TODO: Test ContiguousSequenceLabels for differet dtype labels
 # TODO: Test for non-numerical labels

@@ -204,7 +204,7 @@ class ContiguousSequenceLabels(SequenceLabels):
         # IDEA: store only the unique values? min_start and ends?
         # May be pointless here in python
 
-    def _get_filled_default_labels(self, shape):
+    def _infer_and_get_filled_default_labels(self, shape):
         if self.labels.dtype == np.object:
             return np.array([None for _ in range(len(shape[0]))])
         else:
@@ -254,7 +254,7 @@ class ContiguousSequenceLabels(SequenceLabels):
 
             # a default label will be inferred from the existing self.labels
             # We construct the numpy array with default label for all ends
-            res = self._get_filled_default_labels(ends.shape)
+            res = self._infer_and_get_filled_default_labels(ends.shape)
 
             # then fill it up with found labels where ends are within
             res[endswithin] = self.labels[within_labelidx, ...]
