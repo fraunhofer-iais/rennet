@@ -243,7 +243,7 @@ class ContiguousSequenceLabels(SequenceLabels):
         within_labelidx = np.searchsorted(
             endings, ends[endswithin], side='left')
 
-        if sum(endswithin) == len(ends):
+        if endswithin.sum() == len(ends):
             # all ends are within
 
             # pick the labels at those indices, and return
