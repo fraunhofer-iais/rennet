@@ -84,7 +84,7 @@ def base_small_seqdata(request):
 
 @pytest.fixture(
     scope='module',
-    params=[1.], #, 3., 3, 101, 8000, 16000],  # samplerate
+    params=[1., 3., 3, 101, 8000, 16000],  # samplerate
     ids=lambda x: "SR={}".format(x))  # pylint: disable=unnecessary-lambda
 def init_small_seqdata(request, base_small_seqdata):
     sr = request.param
@@ -460,7 +460,7 @@ def test_ContiSequenceLabels_labels_at_allwithin(
     ids=lambda x: "laSR={}".format(x)  #pylint: disable=unnecessary-lambda
 )
 def ContiSequenceLabels_small_seqdata_labels_at_outside(request,
-                                                   init_small_seqdata):
+                                                        init_small_seqdata):
     """ fixture with labels_at at different samplerates
 
     And of course instance of SequenceLabels class that handles both
@@ -487,7 +487,6 @@ def ContiSequenceLabels_small_seqdata_labels_at_outside(request,
 
     la_labels = [request.param for _ in range(len(la_ends))]
 
-
     return {
         'seqlabelinst': s,
         'ends': la_ends,
@@ -496,7 +495,6 @@ def ContiSequenceLabels_small_seqdata_labels_at_outside(request,
     }
 
 
-@pytest.mark.this
 def test_ContiSequenceLabels_labels_at_outside_with_deflabel(
         ContiSequenceLabels_small_seqdata_labels_at_outside):
     s, ends, tlabels, deflabel = [
@@ -511,22 +509,20 @@ def test_ContiSequenceLabels_labels_at_outside_with_deflabel(
         zip(tlabels, labels))
 
 
-@pytest.mark.this
 def test_ContiSequenceLabels_labels_at_outside_with_auto_deflabel(
         ContiSequenceLabels_small_seqdata_labels_at_outside):
-    s, ends, tlabels = [
+    s, ends = [
         ContiSequenceLabels_small_seqdata_labels_at_outside[k]
-        for k in ['seqlabelinst', 'ends', 'target_labels']
+        for k in ['seqlabelinst', 'ends']
     ]
+    zlabels = np.zeros(
+        shape=((len(ends), ) + s.labels.shape[1:]), dtype=s.labels.dtype)
 
-    tlabels = np.zeros_like(tlabels)
+    # when default_label is to be determined automatically
+    labels = s.labels_at(ends, default_label='auto')
 
-    with pytest.raises(NotImplementedError):
-        # when default_label is passed
-        labels = s.labels_at(ends, default_label='auto')
-
-        assert all([e == r for e, r in zip(tlabels, labels)]), list(
-            zip(tlabels, labels))
+    assert all([e == r for e, r in zip(zlabels, labels)]), list(
+        zip(zlabels, labels))
 
 
 # TODO: Test for multi-dimensional labels
