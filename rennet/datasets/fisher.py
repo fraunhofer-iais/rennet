@@ -87,11 +87,6 @@ class FisherAnnotations(lu.SequenceLabels):
 
         return cls(afp, calldata, se, trans, samplerate=1)
 
-    def idx_for_speaker(self, speakerchannel):
-        for i, l in enumerate(self.labels):
-            if l.speakerchannel == speakerchannel:
-                yield i
-
     def __str__(self):
         s = "Source filepath: {}".format(self.sourcefile)
         s += "Calldata:\n{}".format(self.calldata)
