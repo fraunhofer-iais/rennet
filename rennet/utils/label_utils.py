@@ -110,37 +110,7 @@ class SequenceLabels(object):
             with self.samplerate_as(samplerate):
                 return self.starts_ends
 
-    def _labels_at_ends_naivepy(self, se, ends, default_label):
-        """ Implementation of the algorithm to find labels for ends """
-        l = []
-        for end in ends:
-            end_label = []
-            for i, (s, e) in enumerate(se):
-                if s < end <= e:
-                    end_label.append(self.labels[i])
-
-            if len(end_label) == 0:
-                end_label = default_label
-
-            l.append(end_label)
-
-        return l
-
-    def _labels_at_ends_numpy_forlends_forlabel(self, se, ends, default_label):
-        idx = (se[:, 0][np.newaxis, :] < ends[:, np.newaxis]) & (
-            se[:, 1][np.newaxis, :] >= ends[:, np.newaxis])
-
-        l = []
-        for i in range(len(ends)):
-            l_idx = np.where(idx[i, :])[0]
-            if len(l_idx) == 0:
-                l.append(default_label)
-            else:
-                l.append([self.labels[li] for li in l_idx])
-
-        return l
-
-    def labels_at(self, ends, samplerate=None, default_label=None):
+    def labels_at(self, ends, samplerate=None, default_label=()):
         if not isinstance(ends, Iterable):
             ends = [ends]
 
@@ -167,9 +137,15 @@ class SequenceLabels(object):
         #       arbitrary self.orig_samplerate and samplerate
         #
 
-        # return self._labels_at_ends_naivepy(se, ends, default_label)   # slower
-        return self._labels_at_ends_numpy_forlends_forlabel(se, ends,
-                                                            default_label)
+        res = []
+        for e in ends:
+            l_idx = np.where((se[:, 0] < e) & (se[:, 1] >= e))[0]
+            if len(l_idx) == 0:  # end not within segments
+                res.append(default_label)
+            else:
+                res.append(tuple(self.labels[i] for i in l_idx))
+
+        return res
 
     def __len__(self):
         return len(self.starts_ends)
@@ -216,21 +192,6 @@ class ContiguousSequenceLabels(SequenceLabels):
         # IDEA: store only the unique values? min_start and ends?
         # May be pointless here in python
 
-    def _labels_at_ends_naivepy(self, se, ends, default_label):
-        l = []
-        for end in ends:
-            for i, (s, e) in enumerate(se):
-                if s < end <= e:
-                    l.append(self.labels[i])
-                    break  # there is only one segment where end can be
-            else:  # if the for loop didn't break
-                l.append(default_label)
-
-        return l
-
-    def _labels_at_ends_numpy_forlends_forlabel(self, se, ends, default_label):
-        raise NotImplementedError()
-
     def labels_at(self, ends, samplerate=None, default_label=None):
         if not isinstance(ends, Iterable):
             ends = [ends]
@@ -258,35 +219,4 @@ class ContiguousSequenceLabels(SequenceLabels):
         minstart = endings.min()
         endswithin = (ends > minstart) & (ends <= maxend)
 
-        if len(endswithin) == len(ends):
-            # all ends are within
-            # raise NotImplementedError()
-            return self._labels_at_ends_naivepy(se, ends, default_label)
-        # else:
-        #     endsleft = (ends <= minstart)
-        #     endsright = (ends > maxend)
-
-        # we need to behave appropriately for default_label
-
-        # NOTE: if default_label provided is of the same type and shape
-        # as of elements of self.labels, then, the returned labels will be
-        # of the same type of self.labels
-        # ELSE, it will be a list with elements of type self.labels
-        # where ends are within, and default_label otherwise
-        if (isinstance(self.labels, np.ndarray) and
-                isinstance(default_label, type(self.labels[0]))):
-            if (isinstance(default_label, np.ndarray) and
-                    default_label.shape != self.labels[0].shape):
-                # np.concatenate will not work raise error
-                msg = """ default_label is not the same shape as any element of labels """
-                raise ValueError(msg)
-
-            # np.concatenate should work
-            # and so should using np.empty_like(self.labels, ...)
-            # or, they gonna raise errors
-            # raise NotImplementedError()
-            return self._labels_at_ends_naivepy(se, ends, default_label)
-        else:
-            # return list with self.labels for ends_within, default_label otherwise
-            # raise NotImplementedError()
-            return self._labels_at_ends_naivepy(se, ends, default_label)
+        raise NotImplementedError()
