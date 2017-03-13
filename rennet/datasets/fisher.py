@@ -51,6 +51,11 @@ class FisherAnnotations(lu.SequenceLabels):
 
         super(FisherAnnotations, self).__init__(*args, **kwargs)
 
+    @property
+    def callid(self):
+        # filenames are fe_03_CALLID.*
+        return os.path.basename(self.sourcefile).split('_')[-1].split('.')[0]
+
     @classmethod
     def from_file(cls, filepath, allcalldata=None):
         afp = os.path.abspath(filepath)
