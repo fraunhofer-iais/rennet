@@ -266,15 +266,15 @@ class ContiguousSequenceLabels(SequenceLabels):
             label_idx = np.ones_like(ends, dtype=np.int) * -1
             label_idx[endswithin] = within_labelidx
 
-            res = []
+            result = []
             for li in label_idx:
                 if li < 0:  # default_label
-                    res.append(default_label)
+                    result.append(default_label)
                 else:
                     try:
-                        res.append(self.labels[li, ...])
+                        result.append(self.labels[li, ...])
                     except IndexError as e:
                         print(li)
                         raise e
 
-            return res
+            return result
