@@ -8,24 +8,14 @@ from __future__ import print_function, division
 import os
 from csv import reader
 import numpy as np
+from collections import namedtuple
 import warnings
 
 import rennet.utils.label_utils as lu
 from rennet.utils.np_utils import group_by_values
 
-
-class FisherTranscription(object):
-    __slots__ = ('speakerchannel', 'content')
-
-    def __init__(self, speakerchannel, content):
-        self.speakerchannel = speakerchannel
-        self.content = content
-
-    def __repr__(self):
-        return "{}({}={}, {}={})".format(self.__class__.__name__,
-                                         'speakerchannel',
-                                         repr(self.speakerchannel), 'content',
-                                         repr(self.content))
+FisherTranscription = namedtuple('FisherTranscription',
+                                 ['speakerchannel', 'content'])
 
 
 class FisherAnnotations(lu.SequenceLabels):
