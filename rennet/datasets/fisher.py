@@ -113,6 +113,11 @@ class FisherActiveSpeakers(lu.ContiguousSequenceLabels):
         # SequenceLabels makes labels into a list
         self.labels = np.array(self.labels)
 
+    @property
+    def callid(self):
+        # filenames are fe_03_CALLID.*
+        return os.path.basename(self.sourcefile).split('_')[-1].split('.')[0]
+
     @classmethod
     def from_annotations(cls, ann, samplerate=100,
                          warn=True):  # min time resolution 1ms, mostly
