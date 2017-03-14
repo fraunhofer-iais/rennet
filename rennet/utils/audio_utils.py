@@ -483,7 +483,7 @@ def convert_to_standard(filepath,
     tofilename = os.path.splitext(os.path.basename(filepath))[0] + "." + tofmt
     tofilepath = os.path.join(todir, tofilename)
     s = AudioIO.from_file(filepath)
-    f = s.export_standard(
+    f = s.export_standard(  # pylint: disable=no-member
         tofilepath, samplerate=samplerate, channels=channels, fmt=tofmt)
     f.close()
     return [tofilename, ]
