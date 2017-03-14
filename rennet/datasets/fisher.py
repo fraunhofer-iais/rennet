@@ -85,7 +85,7 @@ class FisherAnnotations(lu.SequenceLabels):
 
     def __str__(self):
         s = "Source filepath: {}".format(self.sourcefile)
-        s += "Calldata:\n{}".format(self.calldata)
+        s += "\nCalldata: {}".format(self.calldata)
         s += "\n" + super(FisherAnnotations, self).__str__()
         return s
 
@@ -164,6 +164,6 @@ class FisherActiveSpeakers(lu.ContiguousSequenceLabels):
 
     def __str__(self):
         s = "Source filepath: {}".format(self.sourcefile)
-        s += "Calldata:\n{}".format(self.calldata)
+        s += "\nCalldata: {}".format(self.calldata)
         s += "\n" + super(FisherActiveSpeakers, self).__str__()
         return s
