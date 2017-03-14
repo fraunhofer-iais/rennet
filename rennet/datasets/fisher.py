@@ -14,9 +14,6 @@ import warnings
 import rennet.utils.label_utils as lu
 from rennet.utils.np_utils import group_by_values
 
-FisherTranscription = namedtuple('FisherTranscription',
-                                 ['speakerchannel', 'content'])
-
 
 class FisherAnnotations(lu.SequenceLabels):
     """
@@ -31,6 +28,10 @@ class FisherAnnotations(lu.SequenceLabels):
     # PARENT'S SLOTS
     # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate')
     __slots__ = ('sourcefile', 'calldata')
+
+    FisherTranscription = namedtuple('FisherTranscription',
+                                     ['speakerchannel', 'content'])
+
 
     def __init__(self, filepath, calldata, *args, **kwargs):
         self.sourcefile = filepath
@@ -67,9 +68,9 @@ class FisherAnnotations(lu.SequenceLabels):
                     spk = spk.strip()
                     content = row[1].strip()
                     if spk.upper() == 'A':
-                        trans.append(FisherTranscription(0, content))
+                        trans.append(cls.FisherTranscription(0, content))
                     elif spk.upper() == 'B':
-                        trans.append(FisherTranscription(1, content))
+                        trans.append(cls.FisherTranscription(1, content))
                     else:
                         raise ValueError(
                             "Speaker channel other than A and B ({}) in file\n{}".
