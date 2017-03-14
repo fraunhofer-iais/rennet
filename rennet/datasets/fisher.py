@@ -15,6 +15,69 @@ import rennet.utils.label_utils as lu
 from rennet.utils.np_utils import group_by_values
 
 
+class FisherAllCallData(object):
+
+    FisherChannelSpeaker = namedtuple(
+        'FisherChannelSpeaker', ['id', 'gender', 'dialect', 'phone_service'])
+
+    FisherCallData = namedtuple(
+        'FisherCallData',
+        [
+            'callid',
+            'topicid',
+            'signalgrade',
+            'convgrade',
+            'channelspeakers'  # List, on order [A, B]
+        ])
+
+    def __init__(self, allcalldata):
+        self.allcalldata = sorted(allcalldata, key=lambda c: c.callid)
+        self._callid_idx = {
+            callid: i
+            for i, callid in enumerate(c.callid for c in allcalldata)
+        }
+
+    def calldata_for_callid(self, callid):
+        return self.allcalldata[self._callid_idx[callid]]
+
+    def calldata_for_filename(self, filename):
+        callid = os.path.basename(filename).split('_')[-1].split('.')[0]
+        return self.calldata_for_callid(callid)
+
+    @classmethod
+    def from_file(cls, filepath):  # pylint: disable=too-many-locals
+        afp = os.path.abspath(filepath)
+
+        allcalldata = []
+        with open(afp, 'r') as f:
+            rdr = reader(f, delimiter=',')
+
+            for i, row in enumerate(rdr):
+                if i == 0:
+                    # Header
+                    continue
+
+                callid, _, topicid, siggrade, convgrade = row[:5]
+                apin, agendia, _, _, aphtype = row[5:-5]
+                bpin, bgendia, _, _, bphtype = row[-5:]
+
+                agen, adia = agendia.split('.')
+                bgen, bdia = bgendia.split('.')
+
+                calldata = cls.FisherCallData(
+                    callid,
+                    topicid,
+                    float(siggrade),
+                    float(convgrade),
+                    [
+                        cls.FisherChannelSpeaker(apin, agen, adia, aphtype),
+                        cls.FisherChannelSpeaker(bpin, bgen, bdia, bphtype),
+                    ], )
+                allcalldata.append(calldata)
+
+        return cls(allcalldata)
+
+
 class FisherAnnotations(lu.SequenceLabels):
     """
     TODO: [ ] Add proper docs
@@ -32,20 +95,28 @@ class FisherAnnotations(lu.SequenceLabels):
     FisherTranscription = namedtuple('FisherTranscription',
                                      ['speakerchannel', 'content'])
 
-
     def __init__(self, filepath, calldata, *args, **kwargs):
         self.sourcefile = filepath
-        if calldata is None:
-            self.calldata = calldata
-        else:
-            raise NotImplementedError("Reading FisherCalldata not implemented")
+        self.calldata = calldata
 
         super(FisherAnnotations, self).__init__(*args, **kwargs)
 
     @property
     def callid(self):
-        # filenames are fe_03_CALLID.*
-        return os.path.basename(self.sourcefile).split('_')[-1].split('.')[0]
+        if self.calldata is None:
+            # filenames are fe_03_CALLID.*
+            return os.path.basename(self.sourcefile).split('_')[-1].split('.')[
+                0]
+        else:
+            return self.calldata.callid
+
+    def find_and_set_calldata(self, allcalldata):
+        try:
+            self.calldata = allcalldata.calldata_for_callid[self.callid]
+        except KeyError:
+            raise KeyError(
+                "Call Data for callid {} not found in provided allcalldata".
+                format(self.callid))
 
     @classmethod
     def from_file(cls, filepath, allcalldata=None):
@@ -79,7 +150,7 @@ class FisherAnnotations(lu.SequenceLabels):
         if allcalldata is None:
             calldata = None
         else:
-            raise NotImplementedError("Reading FisherCalldata not implemented")
+            calldata = allcalldata.calldata_for_filename(afp)
 
         return cls(afp, calldata, se, trans, samplerate=1)
 
@@ -106,8 +177,20 @@ class FisherActiveSpeakers(lu.ContiguousSequenceLabels):
 
     @property
     def callid(self):
-        # filenames are fe_03_CALLID.*
-        return os.path.basename(self.sourcefile).split('_')[-1].split('.')[0]
+        if self.calldata is None:
+            # filenames are fe_03_CALLID.*
+            return os.path.basename(self.sourcefile).split('_')[-1].split('.')[
+                0]
+        else:
+            return self.calldata.callid
+
+    def find_and_set_calldata(self, allcalldata):
+        try:
+            self.calldata = allcalldata.calldata_for_callid[self.callid]
+        except KeyError:
+            raise KeyError(
+                "Call Data for callid {} not found in provided allcalldata".
+                format(self.callid))
 
     @classmethod
     def from_annotations(cls, ann, samplerate=100,
