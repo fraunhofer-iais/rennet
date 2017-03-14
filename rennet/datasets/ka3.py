@@ -9,7 +9,6 @@ from collections import namedtuple
 import xml.etree.ElementTree as et
 import numpy as np
 import warnings
-from collections import Iterable
 
 import rennet.utils.label_utils as lu
 from rennet.utils.np_utils import group_by_values
@@ -126,7 +125,7 @@ def _parse_descriptor(descriptor, TAGS):
 
 
 # pylint: disable=too-many-locals
-def parse_mpeg7(filepath, use_tags="mpeg7"):
+def parse_mpeg7(filepath, use_tags="ns"):
     """ Parse MPEG7 speech annotations into lists of data
 
     """
@@ -192,6 +191,10 @@ Transcription = namedtuple('Transcription',
 
 
 class Annotations(lu.SequenceLabels):
+    # PARENT'S SLOTS
+    # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate')
+    __slots__ = ('sourcefile', 'speakers')
+
     def __init__(self, filepath, speakers, *args, **kwargs):
         self.sourcefile = filepath
         self.speakers = speakers
@@ -199,7 +202,7 @@ class Annotations(lu.SequenceLabels):
 
     # pylint: disable=too-many-locals
     @classmethod
-    def from_file(cls, filepath, use_tags="mpeg7"):
+    def from_file(cls, filepath, use_tags="ns"):
         se, sids, gen, gn, conf, trn = parse_mpeg7(filepath, use_tags)
 
         uniq_sids = sorted(set(sids))
@@ -224,12 +227,6 @@ class Annotations(lu.SequenceLabels):
 
     # pylint: enable=too-many-locals
 
-    def idx_for_speaker(self, speaker):
-        speakerid = speaker.speakerid
-        for i, l in enumerate(self.labels):
-            if l.speakerid == speakerid:
-                yield i
-
     def __str__(self):
         s = "Source filepath: {}".format(self.sourcefile)
         s += "\nSpeakers: {}\n".format(len(self.speakers))
@@ -238,11 +235,15 @@ class Annotations(lu.SequenceLabels):
         return s
 
 
-class ActiveSpeakers(Annotations):
+class ActiveSpeakers(lu.ContiguousSequenceLabels):
+    # PARENT'S SLOTS
+    # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate')
+    __slots__ = ('sourcefile', 'speakers')
+
     def __init__(self, filepath, speakers, *args, **kwargs):
+        self.sourcefile = filepath
+        self.speakers = speakers
         super().__init__(filepath, speakers, *args, **kwargs)
-        self.labels = np.array(
-            self.labels)  # SequenceLabels makes it into a list
 
     @classmethod
     def from_annotations(cls, ann, samplerate=100):  # default 100 for ka3
@@ -289,43 +290,3 @@ class ActiveSpeakers(Annotations):
         # HACK: I don't know why super() does not work here
         ann = Annotations.from_file(filepath, use_tags)
         return cls.from_annotations(ann, samplerate=100)
-
-    def labels_at(self, ends, samplerate=None):
-        """ NOTE: here because he segments are contiguous
-
-        """
-        if not isinstance(ends, Iterable):
-            ends = [ends]
-
-        ends = np.array(ends)
-
-        # Are we in a contextually different samplerate
-        diffcontext = self._samplerate != self._orig_samplerate
-
-        if samplerate is None or samplerate == self._samplerate:
-            # assume that samplerate of given ends == self.samplerate
-            endings = self.ends
-            minstart = self.starts.min()
-        elif diffcontext:
-            cntxt_samplerate = self._samplerate
-            with self.samplerate_as(samplerate):
-                endings = self.ends
-                minstart = self.starts.min()
-            self._samplerate = cntxt_samplerate
-        else:
-            with self.samplerate_as(samplerate):
-                endings = self.ends
-                minstart = self.starts.min()
-
-        maxend = endings.max()
-
-        # Can't resolve for ends that are not inside
-        endswithin = (ends <= maxend) & (ends >= minstart)
-
-        # find labels for valid ends that are smaller than or equal to endings
-        label_idx = np.searchsorted(endings, ends[endswithin], side='left')
-
-        labels = np.zeros((len(ends), *self.labels.shape[1:]), dtype=np.int)
-        labels[endswithin] = self.labels[label_idx]
-
-        return labels
