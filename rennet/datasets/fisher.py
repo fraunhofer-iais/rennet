@@ -155,8 +155,8 @@ class FisherAnnotations(lu.SequenceLabels):
         return cls(afp, calldata, se, trans, samplerate=1)
 
     def __str__(self):
-        s = "Source filepath: {}".format(self.sourcefile)
-        s += "\nCalldata: {}".format(self.calldata)
+        s = "Source filepath:\n{}\n".format(self.sourcefile)
+        s += "\nCalldata:\n{}\n".format(self.calldata)
         s += "\n" + super(FisherAnnotations, self).__str__()
         return s
 
@@ -246,7 +246,7 @@ class FisherActiveSpeakers(lu.ContiguousSequenceLabels):
         return cls.from_annotations(ann, samplerate=samplerate, warn=warn)
 
     def __str__(self):
-        s = "Source filepath: {}".format(self.sourcefile)
-        s += "\nCalldata: {}".format(self.calldata)
+        s = "Source filepath:\n{}\n".format(self.sourcefile)
+        s += "\nCalldata:\n{}\n".format(self.calldata)
         s += "\n" + super(FisherActiveSpeakers, self).__str__()
         return s
