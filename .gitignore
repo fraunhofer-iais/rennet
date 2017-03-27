@@ -90,3 +90,6 @@ docs/_build/
 /data/working
 /data/raw
 /outputs/**
+
+# temporary org files
+**/.#*.org
