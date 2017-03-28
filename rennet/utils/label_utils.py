@@ -8,6 +8,7 @@ from __future__ import print_function, division
 import numpy as np
 from collections import Iterable
 from contextlib import contextmanager
+from librosa import frame_to_time
 
 
 class SequenceLabels(object):
@@ -278,3 +279,13 @@ class ContiguousSequenceLabels(SequenceLabels):
                         raise e
 
             return result
+
+
+def times_for_labelsat(total_duration_sec, samplerate, hop_sec, win_sec):
+    frames = np.arange(int(total_duration_sec * samplerate))
+    return frame_to_time(
+        frames,
+        sr=samplerate,
+        hop_length=int(hop_sec * samplerate),
+        n_fft=int(win_sec * samplerate)
+    )
