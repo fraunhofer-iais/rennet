@@ -4,7 +4,7 @@ Created: 29-08-2016
 
 Helpers for working with KA3 dataset
 """
-from __future__ import print_function
+from __future__ import print_function, division
 from collections import namedtuple
 import xml.etree.ElementTree as et
 import numpy as np
@@ -198,7 +198,7 @@ class Annotations(lu.SequenceLabels):
     def __init__(self, filepath, speakers, *args, **kwargs):
         self.sourcefile = filepath
         self.speakers = speakers
-        super().__init__(*args, **kwargs)
+        super(Annotations, self).__init__(*args, **kwargs)
 
     # pylint: disable=too-many-locals
     @classmethod
@@ -231,7 +231,7 @@ class Annotations(lu.SequenceLabels):
         s = "Source filepath: {}".format(self.sourcefile)
         s += "\nSpeakers: {}\n".format(len(self.speakers))
         s += "\n".join(str(s) for s in self.speakers)
-        s += "\n" + super().__str__()
+        s += "\n" + super(Annotations, self).__str__()
         return s
 
 
