@@ -290,10 +290,9 @@ def times_for_labelsat(total_duration_sec, samplerate, hop_sec, win_sec):
 
 
 def samples_for_labelsat(nsamples, hop_len, win_len):
-    offset = win_len // 2
-    nframes = (nsamples - offset) // hop_len
+    nframes = 1 + (nsamples - win_len) // hop_len
     frames_idx = np.arange(nframes)
 
-    samples_out = (frames_idx * hop_len) + offset
+    samples_out = (frames_idx * hop_len) + (win_len // 2)
 
     return samples_out

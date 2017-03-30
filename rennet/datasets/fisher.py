@@ -15,6 +15,9 @@ import rennet.utils.label_utils as lu
 from rennet.utils.np_utils import group_by_values
 
 
+samples_for_labelsat = lu.samples_for_labelsat
+times_for_labelsat = lu.times_for_labelsat
+
 class FisherAllCallData(object):
 
     FisherChannelSpeaker = namedtuple(
