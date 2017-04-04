@@ -278,3 +278,21 @@ class ContiguousSequenceLabels(SequenceLabels):
                         raise e
 
             return result
+
+
+def times_for_labelsat(total_duration_sec, samplerate, hop_sec, win_sec):
+    # NOTE: all the samplerate multiplication cuz float is fucking AWESOME
+    hop_len = int(hop_sec * samplerate)
+    win_len = int(win_sec * samplerate)
+    nsamples = int(total_duration_sec * samplerate)
+
+    return samples_for_labelsat(nsamples, hop_len, win_len) / samplerate
+
+
+def samples_for_labelsat(nsamples, hop_len, win_len):
+    nframes = 1 + (nsamples - win_len) // hop_len
+    frames_idx = np.arange(nframes)
+
+    samples_out = (frames_idx * hop_len) + (win_len // 2)
+
+    return samples_out

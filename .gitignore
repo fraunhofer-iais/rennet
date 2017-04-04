@@ -83,7 +83,13 @@ docs/_build/
 **/.idea/*
 .cache/*
 
+# Jupyter Notebook
+.ipynb_checkpoints
+
 # ########################################################################### #
 /data/working
 /data/raw
 /outputs/**
+
+# temporary org files
+**/.#*.org
