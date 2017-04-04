@@ -93,3 +93,4 @@ docs/_build/
 
 # temporary org files
 **/.#*.org
+rennet/utils/sph*/sph2pipe
