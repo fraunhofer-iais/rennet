@@ -259,26 +259,49 @@ class FisherActiveSpeakers(lu.ContiguousSequenceLabels):
 fisher_groupid_for_callid = lambda callid: callid[:3]
 
 
-class FisherH5Reader(object):
-    def __init__(self,
-                 filepath,
-                 audios_root='audios',
-                 labels_root='labels',
-                 read_infos=True):
+class BaseH5Reader(object):
+    # TODO: [ ] move to utils
+
+    def __init__(self, filepath):
         self.filepath = filepath
+
+    @property
+    def totlens(self):
+        raise NotImplementedError("Not implemented in Base class")
+
+    @property
+    def chunkings(self):
+        raise NotImplementedError("Not implemented in Base class")
+
+
+class FisherH5Reader(BaseH5Reader):
+    def __init__(self, filepath, audios_root='audios', labels_root='labels'):
+
+        super(FisherH5Reader, self).__init__(filepath)
 
         self.audios_root = audios_root
         self.labels_root = labels_root
 
-        self.grouped_callids = self.read_all_grouped_callids()
+        self.grouped_callids = self._read_all_grouped_callids()
 
-        if read_infos:
-            self.totlens, self.chunkings = self.read_dset_infos()
-        else:
-            self.totlens = None
-            self.chunkings = None
+        self._totlens = None
+        self._chunkings = None
 
-    def read_all_grouped_callids(self):
+    @property
+    def totlens(self):
+        if self._totlens is None:
+            self._read_dset_infos()
+
+        return self._totlens
+
+    @property
+    def chunkings(self):
+        if self._chunkings is None:
+            self._read_dset_infos()
+
+        return self._chunkings
+
+    def _read_all_grouped_callids(self):
         grouped_callids = dict()
 
         # NOTE: Assuming labels and audios have the same group and dset structure
@@ -291,7 +314,7 @@ class FisherH5Reader(object):
 
         return grouped_callids
 
-    def read_dset_infos(self):
+    def _read_dset_infos(self):
         # NOTE: We use the chunking info from the audios
         # and use the same for labels.
         chunkings = []
@@ -303,13 +326,13 @@ class FisherH5Reader(object):
 
             for groupid, callids in self.grouped_callids.items():
                 for callid in callids:
-                    ad = a[groupid][callid]  # h5 dataset
-                    ld = l[groupid][callid]  # h5 dataset
+                    ad = a[groupid][callid]  # h5 Dataset
+                    ld = l[groupid][callid]  # h5 Dataset
 
                     totlen = ad.shape[0]
 
                     starts = np.arange(0, totlen, ad.chunks[0])
-                    ends = np.ones_like(starts)
+                    ends = np.empty_like(starts)
                     ends[:-1] = starts[1:]
                     ends[-1] = totlen
 
@@ -317,7 +340,8 @@ class FisherH5Reader(object):
                                      for s, e in zip(starts, ends))
                     totlens[ad.name] = totlen
 
-        return totlens, chunkings
+        self._totlens = totlens
+        self._chunkings = chunkings
 
     @classmethod
     def for_groupids(cls,
@@ -325,10 +349,10 @@ class FisherH5Reader(object):
                      groupids='all',
                      audios_root='audios',
                      labels_root='labels'):
-        if groupids == 'all':
-            return cls(filepath, audios_root, labels_root, read_infos=True)
+        obj = cls(filepath, audios_root, labels_root)
 
-        obj = cls(filepath, audios_root, labels_root, read_infos=False)
+        if groupids == 'all':
+            return obj
 
         if not isinstance(groupids, list):
             # only calls from the single groupid has to be kept
@@ -343,8 +367,6 @@ class FisherH5Reader(object):
 
             obj.grouped_callids = grouped_callids
 
-        obj.totlens, obj.chunkings = obj.read_dset_infos()
-
         return obj
 
     @classmethod
@@ -353,10 +375,10 @@ class FisherH5Reader(object):
                         at=np.s_[:],
                         audios_root='audios',
                         labels_root='labels'):
-        if at == np.s_[:]:
-            return cls(filepath, audios_root, labels_root, read_infos=True)
+        obj = cls(filepath, audios_root, labels_root)
 
-        obj = cls(filepath, audios_root, labels_root, read_infos=False)
+        if at == np.s_[:]:
+            return obj
 
         allgroupids = np.sort(list(obj.grouped_callids.keys()))
 
@@ -379,8 +401,6 @@ class FisherH5Reader(object):
 
             obj.grouped_callids = grouped_callids
 
-        obj.totlens, obj.chunkings = obj.read_dset_infos()
-
         return obj
 
     @classmethod
@@ -389,10 +409,11 @@ class FisherH5Reader(object):
                     callids='all',
                     audios_root='audios',
                     labels_root='labels'):
-        if callids == 'all':
-            return cls(filepath, audios_root, labels_root, read_infos=True)
+        obj = cls(filepath, audios_root, labels_root)
 
-        obj = cls(filepath, audios_root, labels_root, read_infos=False)
+        if callids == 'all':
+            return obj
+
 
         allcallids = set.union(*obj.grouped_callids.values())
         if not isinstance(callids, list):
@@ -416,8 +437,6 @@ class FisherH5Reader(object):
 
             obj.grouped_callids = grouped_callids
 
-        obj.totlens, obj.chunkings = obj.read_dset_infos()
-
         return obj
 
     @classmethod
@@ -426,10 +445,10 @@ class FisherH5Reader(object):
                        at=np.s_[:],
                        audios_root='audios',
                        labels_root='labels'):
-        if at == np.s_[:]:
-            return cls(filepath, audios_root, labels_root, read_infos=True)
+        obj = cls(filepath, audios_root, labels_root)
 
-        obj = cls(filepath, audios_root, labels_root, read_infos=False)
+        if at == np.s_[:]:
+            return obj
 
         allcallids = np.sort(list(obj.grouped_callids.values()))
 
@@ -442,7 +461,7 @@ class FisherH5Reader(object):
         if not isinstance(callids_at, np.ndarray):
             # HACK: single callid
             obj.grouped_callids = {
-                fisher_groupid_for_callid(callids_at): callids_at
+                fisher_groupid_for_callid(callids_at): {callids_at}
             }
         else:
             grouped_callids = dict()
@@ -454,7 +473,5 @@ class FisherH5Reader(object):
                 grouped_callids[g] = v.union({c})
 
             obj.grouped_callids = grouped_callids
-
-        obj.totlens, obj.chunkings = obj.read_dset_infos()
 
         return obj
