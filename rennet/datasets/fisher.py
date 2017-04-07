@@ -316,7 +316,6 @@ class FisherH5Reader(object):
                     chunkings.extend((ad.name, ld.name, np.s_[s:e, ...])
                                      for s, e in zip(starts, ends))
                     totlens[ad.name] = totlen
-                    totlens[ld.name] = totlen
 
         return totlens, chunkings
 
