@@ -10,13 +10,14 @@ from csv import reader
 import numpy as np
 from collections import namedtuple
 import warnings
+import h5py as h
 
 import rennet.utils.label_utils as lu
 from rennet.utils.np_utils import group_by_values
 
-
 samples_for_labelsat = lu.samples_for_labelsat
 times_for_labelsat = lu.times_for_labelsat
+
 
 class FisherAllCallData(object):
 
@@ -108,8 +109,8 @@ class FisherAnnotations(lu.SequenceLabels):
     def callid(self):
         if self.calldata is None:
             # filenames are fe_03_CALLID.*
-            return os.path.basename(self.sourcefile).split('_')[-1].split('.')[
-                0]
+            return os.path.basename(
+                self.sourcefile).split('_')[-1].split('.')[0]
         else:
             return self.calldata.callid
 
@@ -182,8 +183,8 @@ class FisherActiveSpeakers(lu.ContiguousSequenceLabels):
     def callid(self):
         if self.calldata is None:
             # filenames are fe_03_CALLID.*
-            return os.path.basename(self.sourcefile).split('_')[-1].split('.')[
-                0]
+            return os.path.basename(
+                self.sourcefile).split('_')[-1].split('.')[0]
         else:
             return self.calldata.callid
 
@@ -253,3 +254,208 @@ class FisherActiveSpeakers(lu.ContiguousSequenceLabels):
         s += "\nCalldata:\n{}\n".format(self.calldata)
         s += "\n" + super(FisherActiveSpeakers, self).__str__()
         return s
+
+
+fisher_groupid_for_callid = lambda callid: callid[:3]
+
+
+class FisherH5Reader(object):
+    def __init__(self,
+                 filepath,
+                 audios_root='audios',
+                 labels_root='labels',
+                 read_infos=True):
+        self.filepath = filepath
+
+        self.audios_root = audios_root
+        self.labels_root = labels_root
+
+        self.grouped_callids = self.read_all_grouped_callids()
+
+        if read_infos:
+            self.totlens, self.chunkings = self.read_dset_infos()
+        else:
+            self.totlens = None
+            self.chunkings = None
+
+    def read_all_grouped_callids(self):
+        grouped_callids = dict()
+
+        # NOTE: Assuming labels and audios have the same group and dset structure
+        # use audio root to visit all the groupids, and subsequent callids
+        with h.File(self.filepath, 'r') as f:
+            root = f[self.audios_root]
+
+            for g in root.keys():  # groupids
+                grouped_callids[g] = set(root[g].keys())  # callids
+
+        return grouped_callids
+
+    def read_dset_infos(self):
+        # NOTE: We use the chunking info from the audios
+        # and use the same for labels.
+        chunkings = []
+        totlens = {}
+
+        with h.File(self.filepath, 'r') as f:
+            a = f[self.audios_root]
+            l = f[self.labels_root]
+
+            for groupid, callids in self.grouped_callids.items():
+                for callid in callids:
+                    ad = a[groupid][callid]  # h5 dataset
+                    ld = l[groupid][callid]  # h5 dataset
+
+                    totlen = ad.shape[0]
+
+                    starts = np.arange(0, totlen, ad.chunks[0])
+                    ends = np.ones_like(starts)
+                    ends[:-1] = starts[1:]
+                    ends[-1] = totlen
+
+                    chunkings.extend((ad.name, ld.name, np.s_[s:e, ...])
+                                     for s, e in zip(starts, ends))
+                    totlens[ad.name] = totlen
+                    totlens[ld.name] = totlen
+
+        return totlens, chunkings
+
+    @classmethod
+    def for_groupids(cls,
+                     filepath,
+                     groupids='all',
+                     audios_root='audios',
+                     labels_root='labels'):
+        if groupids == 'all':
+            return cls(filepath, audios_root, labels_root, read_infos=True)
+
+        obj = cls(filepath, audios_root, labels_root, read_infos=False)
+
+        if not isinstance(groupids, list):
+            # only calls from the single groupid has to be kept
+            obj.grouped_callids = {groupids: obj.grouped_callids[groupids]}
+        else:
+            # call callids from the specified groupids will be kept
+            grouped_callids = dict()
+
+            # NOTE: Doing like this to raise KeyError for incorrect groupids
+            for g in groupids:
+                grouped_callids[g] = obj.grouped_callids[g]
+
+            obj.grouped_callids = grouped_callids
+
+        obj.totlens, obj.chunkings = obj.read_dset_infos()
+
+        return obj
+
+    @classmethod
+    def for_groupids_at(cls,
+                        filepath,
+                        at=np.s_[:],
+                        audios_root='audios',
+                        labels_root='labels'):
+        if at == np.s_[:]:
+            return cls(filepath, audios_root, labels_root, read_infos=True)
+
+        obj = cls(filepath, audios_root, labels_root, read_infos=False)
+
+        allgroupids = np.sort(list(obj.grouped_callids.keys()))
+
+        try:
+            groupids_at = allgroupids[at]
+        except IndexError:
+            print("\nTotal number of GroupIDs: {}\n".format(len(allgroupids)))
+            raise
+
+        if not isinstance(groupids_at, np.ndarray):
+            # HACK: single group
+            obj.grouped_callids = {
+                groupids_at: obj.grouped_callids[groupids_at]
+            }
+        else:
+            grouped_callids = dict()
+
+            for g in groupids_at:
+                grouped_callids[g] = obj.grouped_callids[g]
+
+            obj.grouped_callids = grouped_callids
+
+        obj.totlens, obj.chunkings = obj.read_dset_infos()
+
+        return obj
+
+    @classmethod
+    def for_callids(cls,
+                    filepath,
+                    callids='all',
+                    audios_root='audios',
+                    labels_root='labels'):
+        if callids == 'all':
+            return cls(filepath, audios_root, labels_root, read_infos=True)
+
+        obj = cls(filepath, audios_root, labels_root, read_infos=False)
+
+        allcallids = set.union(*obj.grouped_callids.values())
+        if not isinstance(callids, list):
+            if callids not in allcallids:
+                raise ValueError("CallID {} not in file".format(callids))
+
+            obj.grouped_callids = {
+                fisher_groupid_for_callid(callids): {callids}
+            }
+        else:
+            if not set(callids).issubset(allcallids):
+                raise ValueError("Some CallIDs not in file")
+
+            grouped_callids = dict()
+
+            for c in callids:
+                g = fisher_groupid_for_callid(c)
+
+                v = grouped_callids.get(g, set())
+                grouped_callids[g] = v.union({c})
+
+            obj.grouped_callids = grouped_callids
+
+        obj.totlens, obj.chunkings = obj.read_dset_infos()
+
+        return obj
+
+    @classmethod
+    def for_callids_at(cls,
+                       filepath,
+                       at=np.s_[:],
+                       audios_root='audios',
+                       labels_root='labels'):
+        if at == np.s_[:]:
+            return cls(filepath, audios_root, labels_root, read_infos=True)
+
+        obj = cls(filepath, audios_root, labels_root, read_infos=False)
+
+        allcallids = np.sort(list(obj.grouped_callids.values()))
+
+        try:
+            callids_at = allcallids[at]
+        except IndexError:
+            print("\nTotal number of CallIDs: {}\n".format(len(allcallids)))
+            raise
+
+        if not isinstance(callids_at, np.ndarray):
+            # HACK: single callid
+            obj.grouped_callids = {
+                fisher_groupid_for_callid(callids_at): callids_at
+            }
+        else:
+            grouped_callids = dict()
+
+            for c in callids_at:
+                g = fisher_groupid_for_callid(c)
+
+                v = grouped_callids.get(g, set())
+                grouped_callids[g] = v.union({c})
+
+            obj.grouped_callids = grouped_callids
+
+        obj.totlens, obj.chunkings = obj.read_dset_infos()
+
+        return obj
