@@ -259,14 +259,21 @@ class FisherActiveSpeakers(lu.ContiguousSequenceLabels):
 fisher_groupid_for_callid = lambda callid: callid[:3]
 
 
-class BaseH5Reader(object):
+class BaseH5ChunkingsReader(object):
     # TODO: [ ] move to utils
+
+    Chunking = namedtuple('Chunking', [
+        'datapath',
+        'dataslice',
+        'labelpath',
+        'labelslice',
+    ])
 
     def __init__(self, filepath):
         self.filepath = filepath
 
     @property
-    def totlens(self):
+    def totlen(self):
         raise NotImplementedError("Not implemented in Base class")
 
     @property
@@ -274,30 +281,30 @@ class BaseH5Reader(object):
         raise NotImplementedError("Not implemented in Base class")
 
 
-class FisherH5Reader(BaseH5Reader):
+class FisherH5ChunkingsReader(BaseH5ChunkingsReader):
     def __init__(self, filepath, audios_root='audios', labels_root='labels'):
 
-        super(FisherH5Reader, self).__init__(filepath)
+        super(FisherH5ChunkingsReader, self).__init__(filepath)
 
         self.audios_root = audios_root
         self.labels_root = labels_root
 
         self.grouped_callids = self._read_all_grouped_callids()
 
-        self._totlens = None
+        self._totlen = None
         self._chunkings = None
 
     @property
-    def totlens(self):
-        if self._totlens is None:
-            self._read_dset_infos()
+    def totlen(self):
+        if self._totlen is None:
+            self._read_chunkings()
 
-        return self._totlens
+        return self._totlen
 
     @property
     def chunkings(self):
         if self._chunkings is None:
-            self._read_dset_infos()
+            self._read_chunkings()
 
         return self._chunkings
 
@@ -314,18 +321,18 @@ class FisherH5Reader(BaseH5Reader):
 
         return grouped_callids
 
-    def _read_dset_infos(self):
+    def _read_chunkings(self):
         # NOTE: We use the chunking info from the audios
         # and use the same for labels.
         chunkings = []
-        totlens = {}
+        total_len = 0
 
         with h.File(self.filepath, 'r') as f:
             a = f[self.audios_root]
             l = f[self.labels_root]
 
-            for groupid, callids in self.grouped_callids.items():
-                for callid in callids:
+            for groupid in sorted(self.grouped_callids.keys()):
+                for callid in sorted(self.grouped_callids[groupid]):
                     ad = a[groupid][callid]  # h5 Dataset
                     ld = l[groupid][callid]  # h5 Dataset
 
@@ -336,11 +343,17 @@ class FisherH5Reader(BaseH5Reader):
                     ends[:-1] = starts[1:]
                     ends[-1] = totlen
 
-                    chunkings.extend((ad.name, ld.name, np.s_[s:e, ...])
-                                     for s, e in zip(starts, ends))
-                    totlens[ad.name] = totlen
+                    total_len += totlen
 
-        self._totlens = totlens
+                    chunkings.extend(
+                        self.Chunking(
+                            datapath=ad.name,
+                            dataslice=np.s_[s:e, ...],
+                            labelpath=ld.name,
+                            labelslice=np.s_[s:e, ...])
+                        for s, e in zip(starts, ends))
+
+        self._totlen = total_len
         self._chunkings = chunkings
 
     @classmethod
@@ -413,7 +426,6 @@ class FisherH5Reader(BaseH5Reader):
 
         if callids == 'all':
             return obj
-
 
         allcallids = set.union(*obj.grouped_callids.values())
         if not isinstance(callids, list):
