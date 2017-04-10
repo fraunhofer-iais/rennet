@@ -283,7 +283,11 @@ class BaseH5ChunkingsReader(object):
 
 
 class FisherH5ChunkingsReader(BaseH5ChunkingsReader):
-    def __init__(self, filepath, audios_root='audios', labels_root='labels', **kwargs):
+    def __init__(self,
+                 filepath,
+                 audios_root='audios',
+                 labels_root='labels',
+                 **kwargs):
 
         super(FisherH5ChunkingsReader, self).__init__(filepath, **kwargs)
 
@@ -423,7 +427,10 @@ class FisherH5ChunkingsReader(BaseH5ChunkingsReader):
                     callids='all',
                     audios_root='audios',
                     labels_root='labels'):
-        obj = cls(filepath, audios_root=audios_root, labels_root=labels_root)
+        obj = cls(filepath,
+                  audios_root=audios_root,
+                  labels_root=labels_root,
+                  kwargs=None)
 
         if callids == 'all':
             return obj
@@ -508,14 +515,28 @@ class BaseDataPrepper(object):
     def prep_label(self, label):
         raise NotImplementedError("Not implemented in base class")
 
-    def get_prepped_data_label(self, datapath, dataslice, labelpath,
-                               labelslice):
+    def get_prepped_data_label(self,
+                               datapath,
+                               dataslice,
+                               labelpath,
+                               labelslice,
+                               shuffle_seed=None):
         data, label = self.read_h5_data_label(datapath, dataslice, labelpath,
                                               labelslice)
         data = self.prep_data(data)
         label = self.prep_label(label)
 
-        return data, label
+        if shuffle_seed is None:
+            return data, label
+        elif isinstance(shuffle_seed, int):
+            np.random.seed(shuffle_seed)
+            np.random.shuffle(data)
+            np.random.seed(shuffle_seed)
+            np.random.shuffle(label)
+        else:
+            raise ValueError(
+                "shuffle_seed should be either None (no shuffling) or an integer"
+            )
 
 
 class FisherPerSamplePrepper(BaseDataPrepper):
@@ -523,12 +544,15 @@ class FisherPerSamplePrepper(BaseDataPrepper):
     - The data is normalized, if set to True, on a per-chunk basis
     - The label is normalized to nclasses to_categorical form, which can also be set
     """
-    def __init__(self,  # pylint: disable=too-many-arguments
-                 filepath,
-                 mean_it=True,
-                 std_it=True,
-                 nclasses=3,
-                 to_categorical=True, **kwargs):
+
+    def __init__(
+            self,  # pylint: disable=too-many-arguments
+            filepath,
+            mean_it=True,
+            std_it=True,
+            nclasses=3,
+            to_categorical=True,
+            **kwargs):
         super(FisherPerSamplePrepper, self).__init__(filepath, **kwargs)
         self.mean_it = mean_it
         self.std_it = std_it
@@ -558,3 +582,78 @@ class FisherPerSamplePrepper(BaseDataPrepper):
 
     def prep_label(self, label):
         return self.normalize_label(label)
+
+
+class BaseDataProvider(BaseH5ChunkingsReader, BaseDataPrepper):
+    def __init__(self,
+                 filepath,
+                 shuffle_seed=None,
+                 nepochs=1,
+                 batchsize=None,
+                 **kwargs):
+        if shuffle_seed is not None and not isinstance(shuffle_seed, int):
+            raise ValueError(
+                "shuffle_seed should be either None (no shuffling) or an integer, Found: {}".
+                format(shuffle_seed))
+        else:
+            self.shuffle_seed = shuffle_seed
+
+        super(BaseDataProvider, self).__init__(filepath, **kwargs)
+        self.nchunks = len(self.chunkings)
+
+        self.nepochs = nepochs
+        self.batchsize = batchsize
+
+        self.epoch_shuffle_seeds = None  # seeds to permute chunk indices, one per epoch
+        self.chunk_shuffle_seeds = None  # seeds to permute sample indices, one per chunk per epoch
+        self.setup_shuffling_seeds()
+
+    def setup_shuffling_seeds(self):
+        if not self.shuffle_seed is None:
+            np.random.seed(self.shuffle_seed)
+            nseedsrequired = self.nepochs + (self.nchunks * self.nepochs)
+            seeds = np.random.randint(size=nseedsrequired)
+
+            self.epoch_shuffle_seeds = seeds[:self.nepochs]
+            if self.nepochs == 1:
+                self.epoch_shuffle_seeds = [self.epoch_shuffle_seeds]
+
+            self.chunk_shuffle_seeds = seeds[self.nepochs:]
+            if len(chunk_shuffle_seeds) == 1:
+                self.epoch_shuffle_seeds = [[self.epoch_shuffle_seeds]]
+            else:
+                self.epoch_shuffle_seeds = self.epoch_shuffle_seeds.reshape(
+                    (self.nepochs, self.nchunks))
+
+    def flow(self):
+        for e in range(self.nepochs):
+
+            # setup chunks order
+            if self.epoch_shuffle_seeds is not None:
+                chunk_idx = np.random.permutation(self.nchunks)
+            else:
+                chunk_idx = np.arange(self.nchunks)
+
+            chunking_seeds = self.chunk_shuffle_seeds[
+                e] if self.chunk_shuffle_seeds is not None else [
+                    None for _ in range(self.nchunks)
+                ]
+            for c in range(self.nchunks):
+                chunking = self.chunkings[chunk_idx[c]]
+                chunking_seed = chunking_seeds[c]
+
+                datapath, dataslice = chunking.datapath, chunking.dataslice
+                labelpath, labelslice = chunking.labelpath, chunking.labelslice
+                (data_label) = self.get_prepped_data_label(
+                    datapath,
+                    dataslice,
+                    labelpath,
+                    labelslice,
+                    shuffle_seed=chunking_seed)
+
+                yield data_label
+
+
+class FisherPerSampleDataProvider(FisherH5ChunkingsReader,
+                                  FisherPerSamplePrepper, BaseDataProvider):
+    pass
