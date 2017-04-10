@@ -269,7 +269,7 @@ class BaseH5ChunkingsReader(object):
         'labelslice',
     ])
 
-    def __init__(self, filepath):
+    def __init__(self, filepath, **kwargs):  # pylint: disable=unused-argument
         self.filepath = filepath
 
     @property
@@ -282,9 +282,9 @@ class BaseH5ChunkingsReader(object):
 
 
 class FisherH5ChunkingsReader(BaseH5ChunkingsReader):
-    def __init__(self, filepath, audios_root='audios', labels_root='labels'):
+    def __init__(self, filepath, audios_root='audios', labels_root='labels', **kwargs):
 
-        super(FisherH5ChunkingsReader, self).__init__(filepath)
+        super(FisherH5ChunkingsReader, self).__init__(filepath, **kwargs)
 
         self.audios_root = audios_root
         self.labels_root = labels_root
@@ -362,7 +362,7 @@ class FisherH5ChunkingsReader(BaseH5ChunkingsReader):
                      groupids='all',
                      audios_root='audios',
                      labels_root='labels'):
-        obj = cls(filepath, audios_root, labels_root)
+        obj = cls(filepath, audios_root=audios_root, labels_root=labels_root)
 
         if groupids == 'all':
             return obj
@@ -388,7 +388,7 @@ class FisherH5ChunkingsReader(BaseH5ChunkingsReader):
                         at=np.s_[:],
                         audios_root='audios',
                         labels_root='labels'):
-        obj = cls(filepath, audios_root, labels_root)
+        obj = cls(filepath, audios_root=audios_root, labels_root=labels_root)
 
         if at == np.s_[:]:
             return obj
@@ -422,7 +422,7 @@ class FisherH5ChunkingsReader(BaseH5ChunkingsReader):
                     callids='all',
                     audios_root='audios',
                     labels_root='labels'):
-        obj = cls(filepath, audios_root, labels_root)
+        obj = cls(filepath, audios_root=audios_root, labels_root=labels_root)
 
         if callids == 'all':
             return obj
@@ -457,7 +457,7 @@ class FisherH5ChunkingsReader(BaseH5ChunkingsReader):
                        at=np.s_[:],
                        audios_root='audios',
                        labels_root='labels'):
-        obj = cls(filepath, audios_root, labels_root)
+        obj = cls(filepath, audios_root=audios_root, labels_root=labels_root)
 
         if at == np.s_[:]:
             return obj
