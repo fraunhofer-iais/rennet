@@ -427,6 +427,7 @@ class FisherH5ChunkingsReader(BaseH5ChunkingsReader):
                     callids='all',
                     audios_root='audios',
                     labels_root='labels'):
+        # FIXME: figure out proper way to kwargs
         obj = cls(filepath,
                   audios_root=audios_root,
                   labels_root=labels_root,
@@ -599,19 +600,19 @@ class BaseDataProvider(BaseH5ChunkingsReader, BaseDataPrepper):
             self.shuffle_seed = shuffle_seed
 
         super(BaseDataProvider, self).__init__(filepath, **kwargs)
-        self.nchunks = len(self.chunkings)
 
+        if nepochs <= 0:
+            raise ValueError("nepochs should be >= 1")
         self.nepochs = nepochs
         self.batchsize = batchsize
 
         self.epoch_shuffle_seeds = None  # seeds to permute chunk indices, one per epoch
         self.chunk_shuffle_seeds = None  # seeds to permute sample indices, one per chunk per epoch
-        self.setup_shuffling_seeds()
 
-    def setup_shuffling_seeds(self):
+    def setup_shuffling_seeds(self, nchunks):
         if not self.shuffle_seed is None:
             np.random.seed(self.shuffle_seed)
-            nseedsrequired = self.nepochs + (self.nchunks * self.nepochs)
+            nseedsrequired = self.nepochs + (nchunks * self.nepochs)
             seeds = np.random.randint(size=nseedsrequired)
 
             self.epoch_shuffle_seeds = seeds[:self.nepochs]
@@ -619,24 +620,28 @@ class BaseDataProvider(BaseH5ChunkingsReader, BaseDataPrepper):
                 self.epoch_shuffle_seeds = [self.epoch_shuffle_seeds]
 
             self.chunk_shuffle_seeds = seeds[self.nepochs:]
-            if len(chunk_shuffle_seeds) == 1:
-                self.epoch_shuffle_seeds = [[self.epoch_shuffle_seeds]]
+            if len(self.chunk_shuffle_seeds) == 1:
+                self.epoch_shuffle_seeds = np.array([[self.epoch_shuffle_seeds]])
             else:
                 self.epoch_shuffle_seeds = self.epoch_shuffle_seeds.reshape(
-                    (self.nepochs, self.nchunks))
+                    (self.nepochs, nchunks))
 
     def flow(self):
+        # FIXME: Can't call in init, cuz chunkings is a calculated property
+        nchunks = len(self.chunkings)
+        self.setup_shuffling_seeds(nchunks)
+
         for e in range(self.nepochs):
 
             # setup chunks order
             if self.epoch_shuffle_seeds is not None:
-                chunk_idx = np.random.permutation(self.nchunks)
+                chunk_idx = np.random.permutation(nchunks)
             else:
-                chunk_idx = np.arange(self.nchunks)
+                chunk_idx = np.arange(nchunks)
 
             chunking_seeds = self.chunk_shuffle_seeds[
                 e] if self.chunk_shuffle_seeds is not None else [
-                    None for _ in range(self.nchunks)
+                    None for _ in range(nchunks)
                 ]
             for c in range(self.nchunks):
                 chunking = self.chunkings[chunk_idx[c]]
