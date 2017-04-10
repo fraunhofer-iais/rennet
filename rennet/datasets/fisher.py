@@ -14,6 +14,7 @@ import h5py as h
 
 import rennet.utils.label_utils as lu
 from rennet.utils.np_utils import group_by_values
+import rennet.utils.np_utils as nu
 
 samples_for_labelsat = lu.samples_for_labelsat
 times_for_labelsat = lu.times_for_labelsat
@@ -487,3 +488,73 @@ class FisherH5ChunkingsReader(BaseH5ChunkingsReader):
             obj.grouped_callids = grouped_callids
 
         return obj
+
+
+class BaseDataPrepper(object):
+    # TODO: [ ] add to utils
+    def __init__(self, filepath, **kwargs):  # pylint: disable=unused-argument
+        self.filepath = filepath
+
+    def read_h5_data_label(self, datapath, dataslice, labelpath, labelslice):
+        with h.File(self.filepath, 'r') as f:
+            data = f[datapath][dataslice]
+            label = f[labelpath][labelslice]
+
+        return data, label
+
+    def prep_data(self, data):
+        raise NotImplementedError("Not implemented in base class")
+
+    def prep_label(self, label):
+        raise NotImplementedError("Not implemented in base class")
+
+    def get_prepped_data_label(self, datapath, dataslice, labelpath,
+                               labelslice):
+        data, label = self.read_h5_data_label(datapath, dataslice, labelpath,
+                                              labelslice)
+        data = self.prep_data(data)
+        label = self.prep_label(label)
+
+        return data, label
+
+
+class FisherPerSamplePrepper(BaseDataPrepper):
+    """ Prep Fisher data, where each vector is an individual sample. No Context is added.
+    - The data is normalized, if set to True, on a per-chunk basis
+    - The label is normalized to nclasses to_categorical form, which can also be set
+    """
+    def __init__(self,  # pylint: disable=too-many-arguments
+                 filepath,
+                 mean_it=True,
+                 std_it=True,
+                 nclasses=3,
+                 to_categorical=True, **kwargs):
+        super(FisherPerSamplePrepper, self).__init__(filepath, **kwargs)
+        self.mean_it = mean_it
+        self.std_it = std_it
+        self.nclasses = nclasses
+        self.to_categorical = to_categorical
+
+    def normalize_data(self, data):
+        if self.mean_it:
+            ndata = (data - data.mean(axis=0))
+        else:
+            ndata = data
+
+        if self.std_it:
+            ndata = ndata / data.std(axis=0)
+
+        return ndata
+
+    def prep_data(self, data):
+        return self.normalize_data(data)
+
+    def normalize_label(self, label):
+        l = label.sum(axis=1).clip(min=0, max=self.nclasses - 1)
+        if self.to_categorical:
+            return nu.to_categorical(l, nclasses=self.nclasses, warn=False)
+        else:
+            return l
+
+    def prep_label(self, label):
+        return self.normalize_label(label)
