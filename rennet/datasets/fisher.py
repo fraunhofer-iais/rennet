@@ -13,8 +13,8 @@ import warnings
 import h5py as h
 
 import rennet.utils.label_utils as lu
-from rennet.utils.np_utils import group_by_values
 import rennet.utils.np_utils as nu
+import rennet.utils.training_utils as tu
 
 samples_for_labelsat = lu.samples_for_labelsat
 times_for_labelsat = lu.times_for_labelsat
@@ -110,8 +110,8 @@ class FisherAnnotations(lu.SequenceLabels):
     def callid(self):
         if self.calldata is None:
             # filenames are fe_03_CALLID.*
-            return os.path.basename(
-                self.sourcefile).split('_')[-1].split('.')[0]
+            return os.path.basename(self.sourcefile).split('_')[-1].split('.')[
+                0]
         else:
             return self.calldata.callid
 
@@ -184,8 +184,8 @@ class FisherActiveSpeakers(lu.ContiguousSequenceLabels):
     def callid(self):
         if self.calldata is None:
             # filenames are fe_03_CALLID.*
-            return os.path.basename(
-                self.sourcefile).split('_')[-1].split('.')[0]
+            return os.path.basename(self.sourcefile).split('_')[-1].split('.')[
+                0]
         else:
             return self.calldata.callid
 
@@ -236,7 +236,7 @@ class FisherActiveSpeakers(lu.ContiguousSequenceLabels):
 
             active_speakers[active_speakers > 1] = 1
 
-        starts_ends, active_speakers = group_by_values(active_speakers)
+        starts_ends, active_speakers = nu.group_by_values(active_speakers)
 
         return cls(ann.sourcefile,
                    ann.calldata,
@@ -260,29 +260,7 @@ class FisherActiveSpeakers(lu.ContiguousSequenceLabels):
 fisher_groupid_for_callid = lambda callid: callid[:3]
 
 
-class BaseH5ChunkingsReader(object):
-    # TODO: [ ] move to utils
-
-    Chunking = namedtuple('Chunking', [
-        'datapath',
-        'dataslice',
-        'labelpath',
-        'labelslice',
-    ])
-
-    def __init__(self, filepath, **kwargs):  # pylint: disable=unused-argument
-        self.filepath = filepath
-
-    @property
-    def totlen(self):
-        raise NotImplementedError("Not implemented in Base class")
-
-    @property
-    def chunkings(self):
-        raise NotImplementedError("Not implemented in Base class")
-
-
-class FisherH5ChunkingsReader(BaseH5ChunkingsReader):
+class FisherH5ChunkingsReader(tu.BaseH5ChunkingsReader):
     def __init__(self,
                  filepath,
                  audios_root='audios',
@@ -366,8 +344,12 @@ class FisherH5ChunkingsReader(BaseH5ChunkingsReader):
                      filepath,
                      groupids='all',
                      audios_root='audios',
-                     labels_root='labels'):
-        obj = cls(filepath, audios_root=audios_root, labels_root=labels_root)
+                     labels_root='labels',
+                     **kwargs):
+        obj = cls(filepath,
+                  audios_root=audios_root,
+                  labels_root=labels_root,
+                  **kwargs)
 
         if groupids == 'all':
             return obj
@@ -392,8 +374,12 @@ class FisherH5ChunkingsReader(BaseH5ChunkingsReader):
                         filepath,
                         at=np.s_[:],
                         audios_root='audios',
-                        labels_root='labels'):
-        obj = cls(filepath, audios_root=audios_root, labels_root=labels_root)
+                        labels_root='labels',
+                        **kwargs):
+        obj = cls(filepath,
+                  audios_root=audios_root,
+                  labels_root=labels_root,
+                  **kwargs)
 
         if at == np.s_[:]:
             return obj
@@ -426,12 +412,13 @@ class FisherH5ChunkingsReader(BaseH5ChunkingsReader):
                     filepath,
                     callids='all',
                     audios_root='audios',
-                    labels_root='labels'):
+                    labels_root='labels',
+                    **kwargs):
         # FIXME: figure out proper way to kwargs
         obj = cls(filepath,
                   audios_root=audios_root,
                   labels_root=labels_root,
-                  kwargs=None)
+                  **kwargs)
 
         if callids == 'all':
             return obj
@@ -465,8 +452,12 @@ class FisherH5ChunkingsReader(BaseH5ChunkingsReader):
                        filepath,
                        at=np.s_[:],
                        audios_root='audios',
-                       labels_root='labels'):
-        obj = cls(filepath, audios_root=audios_root, labels_root=labels_root)
+                       labels_root='labels',
+                       **kwargs):
+        obj = cls(filepath,
+                  audios_root=audios_root,
+                  labels_root=labels_root,
+                  **kwargs)
 
         if at == np.s_[:]:
             return obj
@@ -498,56 +489,14 @@ class FisherH5ChunkingsReader(BaseH5ChunkingsReader):
         return obj
 
 
-class BaseDataPrepper(object):
-    # TODO: [ ] add to utils
-    def __init__(self, filepath, **kwargs):  # pylint: disable=unused-argument
-        self.filepath = filepath
-
-    def read_h5_data_label(self, datapath, dataslice, labelpath, labelslice):
-        with h.File(self.filepath, 'r') as f:
-            data = f[datapath][dataslice]
-            label = f[labelpath][labelslice]
-
-        return data, label
-
-    def prep_data(self, data):
-        raise NotImplementedError("Not implemented in base class")
-
-    def prep_label(self, label):
-        raise NotImplementedError("Not implemented in base class")
-
-    def get_prepped_data_label(self,
-                               datapath,
-                               dataslice,
-                               labelpath,
-                               labelslice,
-                               shuffle_seed=None):
-        data, label = self.read_h5_data_label(datapath, dataslice, labelpath,
-                                              labelslice)
-        data = self.prep_data(data)
-        label = self.prep_label(label)
-
-        if shuffle_seed is None:
-            return data, label
-        elif isinstance(shuffle_seed, int):
-            np.random.seed(shuffle_seed)
-            np.random.shuffle(data)
-            np.random.seed(shuffle_seed)
-            np.random.shuffle(label)
-        else:
-            raise ValueError(
-                "shuffle_seed should be either None (no shuffling) or an integer"
-            )
-
-
-class FisherPerSamplePrepper(BaseDataPrepper):
+class FisherPerSamplePrepper(tu.BaseDataPrepper):
     """ Prep Fisher data, where each vector is an individual sample. No Context is added.
     - The data is normalized, if set to True, on a per-chunk basis
     - The label is normalized to nclasses to_categorical form, which can also be set
     """
 
-    def __init__(
-            self,  # pylint: disable=too-many-arguments
+    def __init__(  # pylint: disable=too-many-arguments
+            self,
             filepath,
             mean_it=True,
             std_it=True,
@@ -585,80 +534,6 @@ class FisherPerSamplePrepper(BaseDataPrepper):
         return self.normalize_label(label)
 
 
-class BaseDataProvider(BaseH5ChunkingsReader, BaseDataPrepper):
-    def __init__(self,
-                 filepath,
-                 shuffle_seed=None,
-                 nepochs=1,
-                 batchsize=None,
-                 **kwargs):
-        if shuffle_seed is not None and not isinstance(shuffle_seed, int):
-            raise ValueError(
-                "shuffle_seed should be either None (no shuffling) or an integer, Found: {}".
-                format(shuffle_seed))
-        else:
-            self.shuffle_seed = shuffle_seed
-
-        super(BaseDataProvider, self).__init__(filepath, **kwargs)
-
-        if nepochs <= 0:
-            raise ValueError("nepochs should be >= 1")
-        self.nepochs = nepochs
-        self.batchsize = batchsize
-
-        self.epoch_shuffle_seeds = None  # seeds to permute chunk indices, one per epoch
-        self.chunk_shuffle_seeds = None  # seeds to permute sample indices, one per chunk per epoch
-
-    def setup_shuffling_seeds(self, nchunks):
-        if not self.shuffle_seed is None:
-            np.random.seed(self.shuffle_seed)
-            nseedsrequired = self.nepochs + (nchunks * self.nepochs)
-            seeds = np.random.randint(size=nseedsrequired)
-
-            self.epoch_shuffle_seeds = seeds[:self.nepochs]
-            if self.nepochs == 1:
-                self.epoch_shuffle_seeds = [self.epoch_shuffle_seeds]
-
-            self.chunk_shuffle_seeds = seeds[self.nepochs:]
-            if len(self.chunk_shuffle_seeds) == 1:
-                self.epoch_shuffle_seeds = np.array([[self.epoch_shuffle_seeds]])
-            else:
-                self.epoch_shuffle_seeds = self.epoch_shuffle_seeds.reshape(
-                    (self.nepochs, nchunks))
-
-    def flow(self):
-        # FIXME: Can't call in init, cuz chunkings is a calculated property
-        nchunks = len(self.chunkings)
-        self.setup_shuffling_seeds(nchunks)
-
-        for e in range(self.nepochs):
-
-            # setup chunks order
-            if self.epoch_shuffle_seeds is not None:
-                chunk_idx = np.random.permutation(nchunks)
-            else:
-                chunk_idx = np.arange(nchunks)
-
-            chunking_seeds = self.chunk_shuffle_seeds[
-                e] if self.chunk_shuffle_seeds is not None else [
-                    None for _ in range(nchunks)
-                ]
-            for c in range(self.nchunks):
-                chunking = self.chunkings[chunk_idx[c]]
-                chunking_seed = chunking_seeds[c]
-
-                datapath, dataslice = chunking.datapath, chunking.dataslice
-                labelpath, labelslice = chunking.labelpath, chunking.labelslice
-                (data_label) = self.get_prepped_data_label(
-                    datapath,
-                    dataslice,
-                    labelpath,
-                    labelslice,
-                    shuffle_seed=chunking_seed)
-
-                yield data_label
-
-
 class FisherPerSampleDataProvider(FisherH5ChunkingsReader,
-                                  FisherPerSamplePrepper, BaseDataProvider):
+                                  FisherPerSamplePrepper, tu.BaseDataProvider):
     pass
