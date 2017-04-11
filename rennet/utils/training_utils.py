@@ -9,6 +9,8 @@ from collections import namedtuple
 import numpy as np
 import numpy.random as nr
 import h5py as h
+import time
+
 """ Basic namedtuple for Chunking information.
 But it is perfectly acceptable to just pass a custom Chunking class.
 Just meet the following expectations:
@@ -117,12 +119,14 @@ class BaseH5ChunkPrepper(object):
     def maybe_shuffle(self, arr, shuffle_seed):
         if shuffle_seed is None:
             return arr
-        elif isinstance(shuffle_seed, int):
-            nr.random.seed(shuffle_seed)
-            return nr.random.shuffle(arr)
+        elif isinstance(shuffle_seed, (int, np.int_)):
+            nr.seed(shuffle_seed)
+            nr.shuffle(arr)
+            return arr
         else:
             raise ValueError(
                 "shuffle_seed should either be None (no shuffling) or an integer"
+                " {} was given {}".format(shuffle_seed, type(shuffle_seed))
             )
 
     def get_prepped_inputs(self, chunking, shuffle_seed=None, **kwargs):  # pylint: disable=unused-argument
@@ -170,9 +174,9 @@ class BaseInputsProvider(BaseH5ChunkingsReader, BaseH5ChunkPrepper):  # pylint: 
 
     def setup_shuffling_seeds(self):
         if not self.shuffle_seed is None:
-            nr.random.seed(self.shuffle_seed)
             nseedsrequired = self.nepochs + (self.nchunks * self.nepochs)
-            seeds = nr.random.randint(size=nseedsrequired)
+            nr.seed(self.shuffle_seed)
+            seeds = nr.randint(41184535, size=nseedsrequired)
 
             self.epoch_shuffle_seeds = seeds[:self.nepochs]
             if self.nepochs == 1:
@@ -201,8 +205,8 @@ class BaseInputsProvider(BaseH5ChunkingsReader, BaseH5ChunkPrepper):  # pylint: 
     def flow_for_epoch_at(self, at):
         # setup chunks order
         if self.epoch_shuffle_seeds is not None:
-            nr.random.seed(self.epoch_shuffle_seeds[at])
-            chunk_idx = nr.random.permutation(self.nchunks)
+            nr.seed(self.epoch_shuffle_seeds[at])
+            chunk_idx = nr.permutation(self.nchunks)
         else:
             chunk_idx = np.arange(self.nchunks)
 
@@ -210,8 +214,7 @@ class BaseInputsProvider(BaseH5ChunkingsReader, BaseH5ChunkPrepper):  # pylint: 
             chunking_seeds = self.chunk_shuffle_seeds[at]
         else:
             chunking_seeds = [None] * self.nchunks
-
-        # Start yeilding chunks
+        # Start yielding chunks
         for c in range(self.nchunks):
             chunking = self.chunkings[chunk_idx[c]]
             seed = chunking_seeds[c]
