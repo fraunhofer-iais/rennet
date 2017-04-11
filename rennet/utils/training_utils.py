@@ -60,6 +60,12 @@ class BaseH5ChunkingsReader(object):
         raise NotImplementedError("Not implemented in base class {}".format(
             self.__class__.__name__))
 
+    @property
+    def nchunks(self):
+        """ Total number of chunks for which chunking information is available.
+        """
+        return len(self.chunkings)
+
 
 class BaseH5ChunkPrepper(object):
     """ Base class for reading and prepping data and labels from an HDF5 file chunkwise.
@@ -123,6 +129,8 @@ class BaseH5ChunkPrepper(object):
         """ The method that will be called by DataProvider (below).
 
         Override if, for example, you want to also have sample_weights returned.
+        However, other classes expect the first two arrays in the tuple to be
+        data and label, in that order.
         """
         data, label = self.get_prepped_data_label(chunking)
 
@@ -133,12 +141,7 @@ class BaseH5ChunkPrepper(object):
 
 
 class BaseInputsProvider(BaseH5ChunkingsReader, BaseH5ChunkPrepper):  # pylint: disable=abstract-method
-    def __init__(self,
-                 filepath,
-                 shuffle_seed=None,
-                 nepochs=1,
-                 batchsize=None,  # None => chunksize
-                 **kwargs):
+    def __init__(self, filepath, shuffle_seed=None, nepochs=1, **kwargs):
         if shuffle_seed is not None and not isinstance(shuffle_seed, int):
             raise ValueError(
                 "shuffle_seed should be either None (no shuffling) or an integer, Found: {}".
@@ -152,15 +155,23 @@ class BaseInputsProvider(BaseH5ChunkingsReader, BaseH5ChunkPrepper):  # pylint: 
             raise ValueError("nepochs should be >= 1")
 
         self.nepochs = nepochs
-        self.batchsize = batchsize
+        self._input_shape = None
 
         self.epoch_shuffle_seeds = None  # seeds to permute chunk indices, one per epoch
         self.chunk_shuffle_seeds = None  # seeds to permute sample indices, one per chunk per epoch
 
-    def setup_shuffling_seeds(self, nchunks):
+    @property
+    def input_shape(self, **kwargs):
+        if self._input_shape is None:
+            data = self.get_prepped_inputs(self.chunkings[0], **kwargs)[0]
+            self._input_shape = ((None, ) + data.shape[1:])
+
+        return self._input_shape
+
+    def setup_shuffling_seeds(self):
         if not self.shuffle_seed is None:
             nr.random.seed(self.shuffle_seed)
-            nseedsrequired = self.nepochs + (nchunks * self.nepochs)
+            nseedsrequired = self.nepochs + (self.nchunks * self.nepochs)
             seeds = nr.random.randint(size=nseedsrequired)
 
             self.epoch_shuffle_seeds = seeds[:self.nepochs]
@@ -173,49 +184,35 @@ class BaseInputsProvider(BaseH5ChunkingsReader, BaseH5ChunkPrepper):  # pylint: 
                 self.chunk_shuffle_seeds = np.array(
                     [[self.chunk_shuffle_seeds]])
             else:
-                self.chunk_shuffle_seeds = np.reshape(self.chunk_shuffle_seeds,
-                                                      (self.nepochs, nchunks))
-
-    def reset(self):
-        nchunks = len(self.chunkings)
-        self.setup_shuffling_seeds(nchunks)
+                self.chunk_shuffle_seeds = np.reshape(
+                    self.chunk_shuffle_seeds, (self.nepochs, self.nchunks))
 
     def flow(self):
+        self.setup_shuffling_seeds()
 
-        self.reset()
+        while True:  # keras expects indefinitely running generator
+            for e in range(self.nepochs):
+                self.flow_for_epoch_at(e)
 
-        nchunks = len(self.chunkings)
+    def flow_for_epoch_at(self, at):
 
-        for e in range(self.nepochs):
+        # setup chunks order
+        if self.epoch_shuffle_seeds is not None:
+            nr.random.seed(self.epoch_shuffle_seeds[at])
+            chunk_idx = nr.random.permutation(self.nchunks)
+        else:
+            chunk_idx = np.arange(self.nchunks)
 
-            # setup chunks order
-            if self.epoch_shuffle_seeds is not None:
-                chunk_idx = nr.random.permutation(nchunks)
-            else:
-                chunk_idx = np.arange(nchunks)
+        if self.chunk_shuffle_seeds is not None:
+            chunking_seeds = self.chunk_shuffle_seeds[at]
+        else:
+            chunking_seeds = [None] * self.nchunks
 
-            chunking_seeds = self.chunk_shuffle_seeds[
-                e] if self.chunk_shuffle_seeds is not None else [
-                    None for _ in range(nchunks)
-                ]
+        # Start yeilding chunks
+        for c in range(self.nchunks):
+            chunking = self.chunkings[chunk_idx[c]]
+            seed = chunking_seeds[c]
 
-            for c in range(nchunks):
-                chunking = self.chunkings[chunk_idx[c]]
-                chunking_seed = chunking_seeds[c]
+            inputs = self.get_prepped_inputs(chunking, shuffle_seed=seed)
 
-                data_label = self.get_prepped_inputs(
-                    chunking, shuffle_seed=chunking_seed)
-
-                yield data_label
-
-"""
-fit_generator(self, generator,
-steps_per_epoch,  TOTAL_LENGTH in an epoch
-epochs=1,
-verbose=1,
-callbacks=None,
-validation_data=None, validation_steps=None,
-class_weight=None,
-max_q_size=10,
-workers=1, pickle_safe=False, initial_epoch=0)
-"""
+            yield inputs
