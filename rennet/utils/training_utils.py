@@ -187,15 +187,18 @@ class BaseInputsProvider(BaseH5ChunkingsReader, BaseH5ChunkPrepper):  # pylint: 
                 self.chunk_shuffle_seeds = np.reshape(
                     self.chunk_shuffle_seeds, (self.nepochs, self.nchunks))
 
-    def flow(self):
+    def flow(self, indefinitely=False):
         self.setup_shuffling_seeds()
+        for e in range(self.nepochs):
+            for inputs in self.flow_for_epoch_at(e):
+                yield inputs
 
-        while True:  # keras expects indefinitely running generator
+        while indefinitely:  # keras expects indefinitely running generator
             for e in range(self.nepochs):
-                self.flow_for_epoch_at(e)
+                for inputs in self.flow_for_epoch_at(e):
+                    yield inputs
 
     def flow_for_epoch_at(self, at):
-
         # setup chunks order
         if self.epoch_shuffle_seeds is not None:
             nr.random.seed(self.epoch_shuffle_seeds[at])
