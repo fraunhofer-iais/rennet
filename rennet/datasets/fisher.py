@@ -329,7 +329,7 @@ class FisherH5ChunkingsReader(tu.BaseH5ChunkingsReader):
                     total_len += totlen
 
                     chunkings.extend(
-                        self.Chunking(
+                        tu.Chunking(
                             datapath=ad.name,
                             dataslice=np.s_[s:e, ...],
                             labelpath=ld.name,
@@ -489,7 +489,7 @@ class FisherH5ChunkingsReader(tu.BaseH5ChunkingsReader):
         return obj
 
 
-class FisherPerSamplePrepper(tu.BaseDataPrepper):
+class FisherPerSamplePrepper(tu.BaseH5ChunkPrepper):
     """ Prep Fisher data, where each vector is an individual sample. No Context is added.
     - The data is normalized, if set to True, on a per-chunk basis
     - The label is normalized to nclasses to_categorical form, which can also be set
@@ -535,5 +535,5 @@ class FisherPerSamplePrepper(tu.BaseDataPrepper):
 
 
 class FisherPerSampleDataProvider(FisherH5ChunkingsReader,
-                                  FisherPerSamplePrepper, tu.BaseDataProvider):
+                                  FisherPerSamplePrepper, tu.BaseInputsProvider):
     pass
