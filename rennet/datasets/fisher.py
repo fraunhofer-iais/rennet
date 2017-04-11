@@ -535,5 +535,6 @@ class FisherPerSamplePrepper(tu.BaseH5ChunkPrepper):
 
 
 class FisherPerSampleDataProvider(FisherH5ChunkingsReader,
-                                  FisherPerSamplePrepper, tu.BaseInputsProvider):
+                                  FisherPerSamplePrepper,
+                                  tu.BaseInputsProvider):
     pass
