@@ -10,13 +10,15 @@ from csv import reader
 import numpy as np
 from collections import namedtuple
 import warnings
+import h5py as h
 
 import rennet.utils.label_utils as lu
-from rennet.utils.np_utils import group_by_values
-
+import rennet.utils.np_utils as nu
+import rennet.utils.training_utils as tu
 
 samples_for_labelsat = lu.samples_for_labelsat
 times_for_labelsat = lu.times_for_labelsat
+
 
 class FisherAllCallData(object):
 
@@ -234,7 +236,7 @@ class FisherActiveSpeakers(lu.ContiguousSequenceLabels):
 
             active_speakers[active_speakers > 1] = 1
 
-        starts_ends, active_speakers = group_by_values(active_speakers)
+        starts_ends, active_speakers = nu.group_by_values(active_speakers)
 
         return cls(ann.sourcefile,
                    ann.calldata,
@@ -253,3 +255,286 @@ class FisherActiveSpeakers(lu.ContiguousSequenceLabels):
         s += "\nCalldata:\n{}\n".format(self.calldata)
         s += "\n" + super(FisherActiveSpeakers, self).__str__()
         return s
+
+
+fisher_groupid_for_callid = lambda callid: callid[:3]
+
+
+class FisherH5ChunkingsReader(tu.BaseH5ChunkingsReader):
+    def __init__(self,
+                 filepath,
+                 audios_root='audios',
+                 labels_root='labels',
+                 **kwargs):
+
+        super(FisherH5ChunkingsReader, self).__init__(filepath, **kwargs)
+
+        self.audios_root = audios_root
+        self.labels_root = labels_root
+
+        self.grouped_callids = self._read_all_grouped_callids()
+
+        self._totlen = None
+        self._chunkings = None
+
+    @property
+    def totlen(self):
+        if self._totlen is None:
+            self._read_chunkings()
+
+        return self._totlen
+
+    @property
+    def chunkings(self):
+        if self._chunkings is None:
+            self._read_chunkings()
+
+        return self._chunkings
+
+    def _read_all_grouped_callids(self):
+        grouped_callids = dict()
+
+        # NOTE: Assuming labels and audios have the same group and dset structure
+        # use audio root to visit all the groupids, and subsequent callids
+        with h.File(self.filepath, 'r') as f:
+            root = f[self.audios_root]
+
+            for g in root.keys():  # groupids
+                grouped_callids[g] = set(root[g].keys())  # callids
+
+        return grouped_callids
+
+    def _read_chunkings(self):
+        # NOTE: We use the chunking info from the audios
+        # and use the same for labels.
+        chunkings = []
+        total_len = 0
+
+        with h.File(self.filepath, 'r') as f:
+            a = f[self.audios_root]
+            l = f[self.labels_root]
+
+            for groupid in sorted(self.grouped_callids.keys()):
+                for callid in sorted(self.grouped_callids[groupid]):
+                    ad = a[groupid][callid]  # h5 Dataset
+                    ld = l[groupid][callid]  # h5 Dataset
+
+                    totlen = ad.shape[0]
+
+                    starts = np.arange(0, totlen, ad.chunks[0])
+                    ends = np.empty_like(starts)
+                    ends[:-1] = starts[1:]
+                    ends[-1] = totlen
+
+                    total_len += totlen
+
+                    chunkings.extend(
+                        tu.Chunking(
+                            datapath=ad.name,
+                            dataslice=np.s_[s:e, ...],
+                            labelpath=ld.name,
+                            labelslice=np.s_[s:e, ...])
+                        for s, e in zip(starts, ends))
+
+        self._totlen = total_len
+        self._chunkings = chunkings
+
+    @classmethod
+    def for_groupids(cls,
+                     filepath,
+                     groupids='all',
+                     audios_root='audios',
+                     labels_root='labels',
+                     **kwargs):
+        obj = cls(filepath,
+                  audios_root=audios_root,
+                  labels_root=labels_root,
+                  **kwargs)
+
+        if groupids == 'all':
+            return obj
+
+        if not isinstance(groupids, list):
+            # only calls from the single groupid has to be kept
+            obj.grouped_callids = {groupids: obj.grouped_callids[groupids]}
+        else:
+            # call callids from the specified groupids will be kept
+            grouped_callids = dict()
+
+            # NOTE: Doing like this to raise KeyError for incorrect groupids
+            for g in groupids:
+                grouped_callids[g] = obj.grouped_callids[g]
+
+            obj.grouped_callids = grouped_callids
+
+        return obj
+
+    @classmethod
+    def for_groupids_at(cls,
+                        filepath,
+                        at=np.s_[:],
+                        audios_root='audios',
+                        labels_root='labels',
+                        **kwargs):
+        obj = cls(filepath,
+                  audios_root=audios_root,
+                  labels_root=labels_root,
+                  **kwargs)
+
+        if at == np.s_[:]:
+            return obj
+
+        allgroupids = np.sort(list(obj.grouped_callids.keys()))
+
+        try:
+            groupids_at = allgroupids[at]
+        except IndexError:
+            print("\nTotal number of GroupIDs: {}\n".format(len(allgroupids)))
+            raise
+
+        if not isinstance(groupids_at, np.ndarray):
+            # HACK: single group
+            obj.grouped_callids = {
+                groupids_at: obj.grouped_callids[groupids_at]
+            }
+        else:
+            grouped_callids = dict()
+
+            for g in groupids_at:
+                grouped_callids[g] = obj.grouped_callids[g]
+
+            obj.grouped_callids = grouped_callids
+
+        return obj
+
+    @classmethod
+    def for_callids(cls,
+                    filepath,
+                    callids='all',
+                    audios_root='audios',
+                    labels_root='labels',
+                    **kwargs):
+        # FIXME: figure out proper way to kwargs
+        obj = cls(filepath,
+                  audios_root=audios_root,
+                  labels_root=labels_root,
+                  **kwargs)
+
+        if callids == 'all':
+            return obj
+
+        allcallids = set.union(*obj.grouped_callids.values())
+        if not isinstance(callids, list):
+            if callids not in allcallids:
+                raise ValueError("CallID {} not in file".format(callids))
+
+            obj.grouped_callids = {
+                fisher_groupid_for_callid(callids): {callids}
+            }
+        else:
+            if not set(callids).issubset(allcallids):
+                raise ValueError("Some CallIDs not in file")
+
+            grouped_callids = dict()
+
+            for c in callids:
+                g = fisher_groupid_for_callid(c)
+
+                v = grouped_callids.get(g, set())
+                grouped_callids[g] = v.union({c})
+
+            obj.grouped_callids = grouped_callids
+
+        return obj
+
+    @classmethod
+    def for_callids_at(cls,
+                       filepath,
+                       at=np.s_[:],
+                       audios_root='audios',
+                       labels_root='labels',
+                       **kwargs):
+        obj = cls(filepath,
+                  audios_root=audios_root,
+                  labels_root=labels_root,
+                  **kwargs)
+
+        if at == np.s_[:]:
+            return obj
+
+        allcallids = np.sort(list(obj.grouped_callids.values()))
+
+        try:
+            callids_at = allcallids[at]
+        except IndexError:
+            print("\nTotal number of CallIDs: {}\n".format(len(allcallids)))
+            raise
+
+        if not isinstance(callids_at, np.ndarray):
+            # HACK: single callid
+            obj.grouped_callids = {
+                fisher_groupid_for_callid(callids_at): {callids_at}
+            }
+        else:
+            grouped_callids = dict()
+
+            for c in callids_at:
+                g = fisher_groupid_for_callid(c)
+
+                v = grouped_callids.get(g, set())
+                grouped_callids[g] = v.union({c})
+
+            obj.grouped_callids = grouped_callids
+
+        return obj
+
+
+class FisherPerSamplePrepper(tu.BaseH5ChunkPrepper):
+    """ Prep Fisher data, where each vector is an individual sample. No Context is added.
+    - The data is normalized, if set to True, on a per-chunk basis
+    - The label is normalized to nclasses to_categorical form, which can also be set
+    """
+
+    def __init__(  # pylint: disable=too-many-arguments
+            self,
+            filepath,
+            mean_it=True,
+            std_it=True,
+            nclasses=3,
+            to_categorical=True,
+            **kwargs):
+        super(FisherPerSamplePrepper, self).__init__(filepath, **kwargs)
+        self.mean_it = mean_it
+        self.std_it = std_it
+        self.nclasses = nclasses
+        self.to_categorical = to_categorical
+
+    def normalize_data(self, data):
+        if self.mean_it:
+            ndata = (data - data.mean(axis=0))
+        else:
+            ndata = data
+
+        if self.std_it:
+            ndata = ndata / data.std(axis=0)
+
+        return ndata
+
+    def prep_data(self, data):
+        return self.normalize_data(data)
+
+    def normalize_label(self, label):
+        l = label.sum(axis=1).clip(min=0, max=self.nclasses - 1)
+        if self.to_categorical:
+            return nu.to_categorical(l, nclasses=self.nclasses, warn=False)
+        else:
+            return l
+
+    def prep_label(self, label):
+        return self.normalize_label(label)
+
+
+class FisherPerSampleDataProvider(FisherH5ChunkingsReader,
+                                  FisherPerSamplePrepper,
+                                  tu.BaseInputsProvider):
+    pass

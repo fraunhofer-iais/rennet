@@ -99,8 +99,7 @@ class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attrib
 
     def _update_confusions(self):
         self.confusions.append(
-            npu.categorical_confusion_matrix(self.true_label,
-                                             self.last_pred_categorical))
+            npu.confusion_matrix_forcategorical(self.true_label, self.last_pred_categorical))
 
     def plot_last_normalized_confusions(  # pylint: disable=too-many-arguments
             self,
