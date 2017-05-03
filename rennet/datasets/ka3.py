@@ -226,6 +226,11 @@ class Annotations(lu.SequenceLabels):
                    samplerate=1)
 
     # pylint: enable=too-many-locals
+    def idx_for_speaker(self, speaker):
+        speakerid = speaker.speakerid
+        for i, l in enumerate(self.labels):
+            if l.speakerid == speakerid:
+                yield i
 
     def __str__(self):
         s = "Source filepath: {}".format(self.sourcefile)
@@ -243,7 +248,7 @@ class ActiveSpeakers(lu.ContiguousSequenceLabels):
     def __init__(self, filepath, speakers, *args, **kwargs):
         self.sourcefile = filepath
         self.speakers = speakers
-        super().__init__(filepath, speakers, *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     @classmethod
     def from_annotations(cls, ann, samplerate=100):  # default 100 for ka3
