@@ -85,46 +85,42 @@ class SequenceLabels(object):
         return self.starts_ends[:, 1]
 
     @contextmanager
-    def samplerate_as(self, new_sr):
-        """ Temporarily change to a different samplerate to calculate values
+    def samplerate_as(self, new_samplerate):
+        """ Temporarily change to a different samplerate within context
 
-        To be used with a `with` clause.
+        To be used with a `with` clause, and supports nesting of such clauses.
 
-        The starts and ends will calculated on the contextually most up-to-date
-        samplerate.
+        if `new_samplerate` is `None`, the samplerate will remain as the
+        contextually most recent non `None` samplerate.
+
+        This can be used to get `starts_ends` as if they were calculated with
+        different samplerate than original. Within a nested `with` clause,
+        the samplerate from the most recent clause will be used.
+
+        For example, for segment with `starts_ends` [[1, 5]] at samplerate 1,
+        when calculated in context of `new_samplerate = 2`, the `starts_ends`
+        will be [[2, 10]].
         """
         old_sr = self.samplerate
-        self._samplerate = new_sr
+        self._samplerate = old_sr if new_samplerate is None else new_samplerate
         try:
             yield
         finally:
             self._samplerate = old_sr
 
-    def _starts_ends_for_samplerate(self, samplerate):
-        # Available to children classes and not expected to change in context
-        if samplerate == self.samplerate:
-            return self.starts_ends
-        else:
-            # Change the context to the new samplerate
-            # even if the self.samplerate was set to a different contextual one
-            # the starts_ends will be calculated for given samplerate
-            # and the contextual samplerate will be returned
-            with self.samplerate_as(samplerate):
-                return self.starts_ends
-
     def labels_at(self, ends, samplerate=None, default_label=()):
+        """ TODO: [ ] Proper Dox
+
+        if `samplerate` is `None`, it is assumed that `ends` are at the same
+        `samplerate` as our contextually most recent one. See `samplerate_as`
+        """
         if not isinstance(ends, Iterable):
             ends = [ends]
 
         ends = np.array(ends)
 
-        # make sure we are working with the correct samplerate for starts_ends
-        if samplerate is None:
-            # Assume the user is expecting the current samplerate
-            # self.samplerate always has the most up to date samplerate
+        with self.samplerate_as(samplerate):
             se = self.starts_ends
-        else:
-            se = self._starts_ends_for_samplerate(samplerate)
 
         se = np.round(se, 10)  # To avoid issues with floating points
         # Yes, it looks arbitrary
@@ -213,18 +209,18 @@ class ContiguousSequenceLabels(SequenceLabels):
                 dtype=self.labels.dtype)
 
     def labels_at(self, ends, samplerate=None, default_label='auto'):
+        """ TODO: [ ] Proper Dox
+
+        if `samplerate` is `None`, it is assumed that `ends` are at the same
+        `samplerate` as our contextually most recent one. See `samplerate_as`
+        """
         if not isinstance(ends, Iterable):
             ends = [ends]
 
         ends = np.array(ends)
 
-        # make sure we are working with the correct samplerate for starts_ends
-        if samplerate is None:
-            # Assume the user is expecting the current samplerate
-            # self.samplerate always has the most up to date samplerate
+        with self.samplerate_as(samplerate):
             se = self.starts_ends
-        else:
-            se = self._starts_ends_for_samplerate(samplerate)
 
         se = np.round(se, 10)  # To avoid issues with floating points
         # Yes, it looks arbitrary. Check SequenceLabels.labels_at(...)
