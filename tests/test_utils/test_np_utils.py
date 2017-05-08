@@ -49,7 +49,7 @@ def pred1_batB_seqL1_cls3_trues_preds_user_cat(request, base_labels_cls3):
     i = request.param
     y = base_labels_cls3[i]
     nclasses = max(y) + 1
-    Y = ext_tocategorical(y, nb_classes=nclasses)
+    Y = ext_tocategorical(y, num_classes=nclasses)
 
     return {
         'y': y,
@@ -88,7 +88,7 @@ def batB_seqL1_cls3_trues_generic_cat(request, base_labels_cls3):
     i = request.param
     y = base_labels_cls3[i]
     nclasses = max(y) + 1
-    Y = ext_tocategorical(y, nb_classes=nclasses)
+    Y = ext_tocategorical(y, num_classes=nclasses)
 
     return {
         'nclasses': nclasses,
@@ -129,7 +129,7 @@ def pred1_batB_seqL1_cls3_generic_cat(request, base_labels_cls3):
     i = request.param
     y = base_labels_cls3[i]
     nclasses = max(y) + 1
-    Y = ext_tocategorical(y, nb_classes=nclasses)
+    Y = ext_tocategorical(y, num_classes=nclasses)
 
     return {
         'nclasses': nclasses,
@@ -167,7 +167,7 @@ def predP_batB_seqL1_cls3_user_cat(request, base_labels_cls3):
     i = request.param
     y = [base_labels_cls3[ii] for ii in i]
     nclasses = max([max(yy) for yy in y]) + 1
-    Y = [ext_tocategorical(yy, nb_classes=nclasses) for yy in y]
+    Y = [ext_tocategorical(yy, num_classes=nclasses) for yy in y]
 
     return {
         'y': np.array(y),
@@ -200,7 +200,7 @@ def predP_batB_seqL1_cls3_generic_cat(request, base_labels_cls3):
     i = request.param
     y = [base_labels_cls3[ii] for ii in i]
     nclasses = max([max(yy) for yy in y]) + 1
-    Y = [ext_tocategorical(yy, nb_classes=nclasses) for yy in y]
+    Y = [ext_tocategorical(yy, num_classes=nclasses) for yy in y]
 
     return {
         'nclasses': nclasses,
@@ -241,7 +241,7 @@ def pred1_batB_seqlQ_cls3_trues_preds_user_cat(request, base_labels_cls3):
     i = request.param
     y = [base_labels_cls3[ii] for ii in i]
     nclasses = max([max(yy) for yy in y]) + 1
-    Y = [ext_tocategorical(yy, nb_classes=nclasses) for yy in y]
+    Y = [ext_tocategorical(yy, num_classes=nclasses) for yy in y]
 
     return {
         'y': np.array(y),
@@ -279,7 +279,7 @@ def batB_seqlQ_cls3_trues_generic_cat(request, base_labels_cls3):
     i = request.param
     y = [base_labels_cls3[ii] for ii in i]
     nclasses = max([max(yy) for yy in y]) + 1
-    Y = [ext_tocategorical(yy, nb_classes=nclasses) for yy in y]
+    Y = [ext_tocategorical(yy, num_classes=nclasses) for yy in y]
 
     return {
         'nclasses': nclasses,
@@ -318,7 +318,7 @@ def pred1_batB_seqlQ_cls3_preds_generic_cat(request, base_labels_cls3):
     i = request.param
     y = [base_labels_cls3[ii] for ii in i]
     nclasses = max([max(yy) for yy in y]) + 1
-    Y = [ext_tocategorical(yy, nb_classes=nclasses) for yy in y]
+    Y = [ext_tocategorical(yy, num_classes=nclasses) for yy in y]
 
     return {
         'nclasses': nclasses,
@@ -369,7 +369,7 @@ def predP_batB_seqlQ_cls3_preds_user_cat(request, base_labels_cls3):
     for yp in y:
         YY = []
         for yb in yp:
-            YY.append(ext_tocategorical(yb, nb_classes=nclasses))
+            YY.append(ext_tocategorical(yb, num_classes=nclasses))
         Y.append(YY)
 
     return {
@@ -417,7 +417,7 @@ def predP_batB_seqlQ_cls3_generic_cat(request, base_labels_cls3):
     for yp in y:
         YY = []
         for yb in yp:
-            YY.append(ext_tocategorical(yb, nb_classes=nclasses))
+            YY.append(ext_tocategorical(yb, num_classes=nclasses))
         Y.append(YY)
 
     return {
@@ -478,7 +478,7 @@ def batB_seql1_cls3_trues_confmat(request, base_labels_cls3):
     scope='module',
     params=list(range(5)),
     ids=lambda i: "P={}".format(i),  #pylint: disable=unnecessary-lambda
-)
+)  #pylint: disable=too-many-locals
 def pred1_batB_seql1_cls3_preds_confmat(request, base_labels_cls3,
                                         batB_seql1_cls3_trues_confmat):
     i = request.param
@@ -567,7 +567,7 @@ def test_pred1_batB_seql1_generic_confmat(pred1_batB_seql1_cls3_preds_confmat):
     scope='module',
     params=[list(range(2))],  # P: number of predictions
     ids=lambda i: "P={}".format(i),  #pylint: disable=unnecessary-lambda
-)
+)  #pylint: disable=too-many-locals
 def predP_batB_seql1_cls3_preds_confmat(request, base_labels_cls3,
                                         batB_seql1_cls3_trues_confmat):
     i = request.param
@@ -696,7 +696,7 @@ def batB_seqlQ_cls3_trues_confmat(request, base_labels_cls3):
     scope='module',
     params=[list(range(2))],  # B: batchsize, Q: SequenceLength
     ids=lambda i: "P={}".format(i),  #pylint: disable=unnecessary-lambda
-)
+)  #pylint: disable=too-many-locals
 def pred1_batB_seqlQ_cls3_preds_confmat(request, base_labels_cls3,
                                         batB_seqlQ_cls3_trues_confmat):
     i = request.param
@@ -799,7 +799,7 @@ def test_pred1_batB_seqlQ_generic_confmat(pred1_batB_seqlQ_cls3_preds_confmat):
     scope='module',
     params=[[list(range(4)), list(range(2))]],  # P: Predictors, B: batchsize,
     ids=lambda i: "P={}".format(i),  #pylint: disable=unnecessary-lambda
-)
+)  #pylint: disable=too-many-locals
 def predP_batB_seqlQ_cls3_preds_confmat(request, base_labels_cls3,
                                         batB_seqlQ_cls3_trues_confmat):
     p, b = request.param
