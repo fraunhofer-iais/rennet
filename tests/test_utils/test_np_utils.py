@@ -1025,3 +1025,60 @@ def test_pred1_batB_seql1_confmat_printing(
     nu.print_normalized_confusion(confprecision)
 
     assert True
+
+
+## TESTS FOR SHARE DATA #######################################################
+
+@pytest.fixture(
+    scope='module',
+)
+def base_2d_array(sourcefn=base_labels_cls3):
+    """ Base 2D array fixture for numpy tricks tests
+
+    Copying the `base_labels_cls3` cuz lazy
+    """
+    return sourcefn()
+
+
+@pytest.fixture(
+    scope="module",
+    params=list(range(len(base_2d_array()))),
+    ids= lambda x: "1D-[{}]".format(x),  #pylint: disable=unnecessary-lambda
+)
+def derived_1d_array(request, base_2d_array):
+    return base_2d_array[request.param, ...]
+
+
+@pytest.mark.shared_data
+def test_1d_does_share_data_with_base_2d(base_2d_array, derived_1d_array):
+    assert nu.arrays_do_share_data(base_2d_array, derived_1d_array)
+
+
+@pytest.mark.shared_data
+def test_1dcopy_does_not_share_data_with_base_2d(base_2d_array, derived_1d_array):
+    assert not nu.arrays_do_share_data(base_2d_array, derived_1d_array.copy())
+
+
+@pytest.fixture(
+    scope="module",
+    params=list(range(len(base_2d_array()))),
+    ids= lambda x: "2D-[{}]".format(x),  #pylint: disable=unnecessary-lambda
+)
+def derived_2d_array_from_0(request, base_2d_array):
+    """ this includes base_2d_array[0:0, ...] """
+    return base_2d_array[0:request.param, ...]
+
+
+@pytest.mark.shared_data
+def test_2d_does_share_data_with_base_2d(base_2d_array, derived_2d_array_from_0):
+    """ This should pass even for 0-length derived arrays """
+    assert nu.arrays_do_share_data(base_2d_array, derived_2d_array_from_0)
+
+
+@pytest.mark.shared_data
+def test_2dcopy_doesnot_share_data_with_base_2d(base_2d_array, derived_2d_array_from_0):
+    """ This should pass even for 0-length derived arrays """
+    assert not nu.arrays_do_share_data(base_2d_array, derived_2d_array_from_0.copy())
+
+
+# NOTE: Not testing for any other possible sub-arrays. Hope it is fine

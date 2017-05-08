@@ -8,6 +8,22 @@ from __future__ import division, print_function
 import numpy as np
 
 
+def arrays_do_share_data(x, y):
+    """ Find if the two numpy arrays share the same base data
+
+    Ref
+        - https://github.com/ipython-books/cookbook-code/issues/2
+    """
+    def _get_base(arr):
+        """ get the base numpy array that owns the data in `arr` """
+        base = arr
+        while isinstance(base.base, np.ndarray):
+            base = base.base
+        return base
+
+    return _get_base(x) is _get_base(y)
+
+
 def group_by_values(values):
     # TODO: [A] make it work with 1 dimensional arrays
     # Ref: http://stackoverflow.com/questions/4651683/numpy-grouping-using-itertools-groupby-performance
