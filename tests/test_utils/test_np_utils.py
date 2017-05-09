@@ -1095,3 +1095,6 @@ def test_2dcopy_doesnot_share_data_with_base_2d(base_2d_array,
 
 
 # NOTE: Not testing for any other possible sub-arrays. Hope it is fine
+
+# TODO: [ ] Test and implement a more intuitive striding function
+# TODO: [ ] Test strided for zero in some dim of arr

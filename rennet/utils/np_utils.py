@@ -6,6 +6,7 @@ Numpy utilities
 """
 from __future__ import division, print_function
 import numpy as np
+from collections import Iterable
 
 
 def base_array_of(arr):
@@ -23,6 +24,103 @@ def arrays_do_share_data(arr1, arr2):
         - https://github.com/ipython-books/cookbook-code/issues/2
     """
     return base_array_of(arr1) is base_array_of(arr2)
+
+
+def strided_view(arr, win_shape, step_shape):
+    """ Create strided view of `arr` without copying
+
+    NOTE: There are some restrictions to use of this method, considering numpy
+    suggests not using the underlying striding trick as far as possible.
+
+    It is suggested that this function be applied to copies of arrays, as later
+    operations may result in overwriting of the underlying data. This is
+    because the result from this function is just rearranged references to the
+    underlying data in arr, and any in-place changes may corrupt arr itself.
+
+    `win_shape` and `step_shape` can be positive integers > 0, or
+    iterables (of the same size) of positive integers > 0 or None.
+
+    When they are integers:
+    - the view is created by striding only in the first dimension of arr
+    - `win_shape` should be at most equal to len(arr)
+    - `step_shape` > `win_shape` will result in skipping of sub-arrays
+        + however, the first sub-array for a `win_shape` is always present
+    - `step_shape` > len(arr) will result in only a single stride
+        + essentially of shape starting as (1, win_shape, ...)
+
+    When they are iterables:
+    - len(win_shape) should be equal to len(step_shape)
+    - len(win_shape) should be atmost len(arr.shape)
+    - when len(win_shape) = d is smaller than len(arr.shape), arr is strided in the first d dimensions
+    - when any value at position d, either in win_shape or step_shape is None, arr is not strided for that dimension
+        + For striding in only one dimension, other than the first, pass iterables with None for all dimension before it
+        + e.g. win_shape=(None, None, w) and step_shape=(None, None, s) to stride in the third dimension only,
+        + NOTE: if a value at d is None in one, it should also be None in the other at d
+    """
+    if not isinstance(arr, np.ndarray):
+        raise ValueError("arr should be a Numpy.ndarray")
+
+    # validate shape of inputs
+    if isinstance(win_shape, Iterable) != isinstance(step_shape, Iterable):
+        # both are not iterables, or both are not not iterables
+        raise ValueError(
+            "Both win_shape: {} and step_shape: {} should be iterable or not iterable.".
+            format(win_shape, step_shape))
+    elif (isinstance(win_shape, Iterable) and
+          (len(win_shape) != len(step_shape) or
+           len(win_shape) > len(arr.shape))):
+        raise ValueError(
+            "iterables win_shape: {} and step_shape: {} should be of the same length,"
+            "and, the length should be <= len(arr.shape) : {}".format(
+                win_shape, step_shape, arr.shape))
+    else:
+        # both are not iterable
+        if (not (isinstance(win_shape, int) and isinstance(step_shape, int)) or
+            (win_shape <= 0 or step_shape <= 0)):
+            raise ValueError(
+                "Both win_shape: {} and step_shape: {} should be positive integers.".
+                format(win_shape, step_shape))
+
+    # create appropriate shaped inputs
+    if not isinstance(win_shape, Iterable):
+        win_shape = (win_shape, )
+        step_shape = (step_shape, )
+
+    nones_toadd = (None, ) * (len(arr.shape) - len(win_shape))
+    _win_shape = tuple(win_shape) + nones_toadd
+    _step_shape = tuple(step_shape) + nones_toadd
+
+    final_shape = tuple()
+    final_strides = tuple()
+
+    for d, (
+            win, step, shape, stride
+    ) in enumerate(zip(_win_shape, _step_shape, arr.shape, arr.strides)):
+        if win is None != step is None:
+            raise ValueError(
+                "BOTH win_shape: {} and step_shape: {} should be None at [{}] "
+                "or not None.".format(win_shape, step_shape, d))
+        elif win is None:
+            # Not striding in this dim
+            final_shape += (shape, )
+            final_strides += (stride, )
+        elif win <= 0 or step <= 0:
+            raise ValueError(
+                "Both win_shape: {} and step_shape: {} should be > 0 or None "
+                "(if you want to skip striding in a dimension) at [{}].".format(
+                    win_shape, step_shape, d))
+        elif win > shape:
+            raise ValueError(
+                "win_shape: {} should be <= arr.shape: {} at [{}], given: {} > {}".
+                format(win_shape, arr.shape, d, win, shape))
+        else:
+            # s is zero when step is larger, resulting in one stride in this dim
+            s = (shape - (win - step)) // step
+            final_shape += (s or 1, win, )
+            final_strides += (stride * (step if s else 1), stride, )
+
+    return np.lib.stride_tricks.as_strided(
+        arr, shape=final_shape, strides=final_strides)
 
 
 def group_by_values(values):
@@ -78,21 +176,6 @@ def to_categorical(y, nclasses=None, warn=False):
     res = res.astype(np.float)  # cuz it is a probability dist
 
     return res
-
-
-def strided(x, nperseg, noverlap):
-    """ Create strided view of array without copying
-
-    NOTE: Striding happens in the last dimension of multidimensional input
-
-    TODO: [ ] Add proper tests for multidimensional striding
-    TODO: [ ] Check allowing choice of striding dimension
-    """
-    step = nperseg - noverlap
-    shape = x.shape[:-1] + ((x.shape[-1] - noverlap) // step, nperseg)
-    strides = x.strides[:-1] + (step * x.strides[-1], x.strides[-1])
-
-    return np.lib.stride_tricks.as_strided(x, shape=shape, strides=strides)
 
 
 def _generic_confusion_matrix_forcat(Ytrue,
