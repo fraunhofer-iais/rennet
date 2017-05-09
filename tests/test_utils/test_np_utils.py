@@ -550,15 +550,13 @@ def test_pred1_batB_seql1_generic_confmat(pred1_batB_seql1_cls3_preds_confmat):
     print("TEST", Yt.shape, Yp.shape)
 
     assert_almost_equal(
-        nu.confusion_matrix_forcategorical(
-            Yt, Yp, keepdims=True), confmat)
+        nu.confusion_matrix_forcategorical(Yt, Yp, keepdims=True), confmat)
 
     yt, yp = [pred1_batB_seql1_cls3_preds_confmat[k] for k in ['ytg', 'ypg']]
     nclasses = Yt.shape[-1]
     print(yt.shape, yp.shape)
     assert_almost_equal(
-        nu.confusion_matrix(
-            yt, yp, nclasses, keepdims=True), confmat)
+        nu.confusion_matrix(yt, yp, nclasses, keepdims=True), confmat)
 
     assert True
 
@@ -652,15 +650,13 @@ def test_predP_batB_seql1_generic_confmat(predP_batB_seql1_cls3_preds_confmat):
     print("\nTEST", Yt.shape, Yp.shape, confmat.shape)
     print()
     assert_almost_equal(
-        nu.confusion_matrix_forcategorical(
-            Yt, Yp, keepdims=True), confmat)
+        nu.confusion_matrix_forcategorical(Yt, Yp, keepdims=True), confmat)
 
     yt, yp = [predP_batB_seql1_cls3_preds_confmat[k] for k in ['ytg', 'ypg']]
     nclasses = Yt.shape[-1]
     print(yt.shape, yp.shape)
     assert_almost_equal(
-        nu.confusion_matrix(
-            yt, yp, nclasses, keepdims=True), confmat)
+        nu.confusion_matrix(yt, yp, nclasses, keepdims=True), confmat)
 
     assert True
 
@@ -782,15 +778,13 @@ def test_pred1_batB_seqlQ_generic_confmat(pred1_batB_seqlQ_cls3_preds_confmat):
     print("\nTEST", Yt.shape, Yp.shape, confmat.shape)
     print()
     assert_almost_equal(
-        nu.confusion_matrix_forcategorical(
-            Yt, Yp, keepdims=True), confmat)
+        nu.confusion_matrix_forcategorical(Yt, Yp, keepdims=True), confmat)
 
     yt, yp = [pred1_batB_seqlQ_cls3_preds_confmat[k] for k in ['ytg', 'ypg']]
     nclasses = Yt.shape[-1]
     print(yt.shape, yp.shape)
     assert_almost_equal(
-        nu.confusion_matrix(
-            yt, yp, nclasses, keepdims=True), confmat)
+        nu.confusion_matrix(yt, yp, nclasses, keepdims=True), confmat)
 
     assert True
 
@@ -897,15 +891,13 @@ def test_predP_batB_seqlQ_generic_confmat(predP_batB_seqlQ_cls3_preds_confmat):
     print("\nTEST", Yt.shape, Yp.shape, confmat.shape)
     print()
     assert_almost_equal(
-        nu.confusion_matrix_forcategorical(
-            Yt, Yp, keepdims=True), confmat)
+        nu.confusion_matrix_forcategorical(Yt, Yp, keepdims=True), confmat)
 
     yt, yp = [predP_batB_seqlQ_cls3_preds_confmat[k] for k in ['ytg', 'ypg']]
     nclasses = Yt.shape[-1]
     print(yt.shape, yp.shape)
     assert_almost_equal(
-        nu.confusion_matrix(
-            yt, yp, nclasses, keepdims=True), confmat)
+        nu.confusion_matrix(yt, yp, nclasses, keepdims=True), confmat)
 
     assert True
 

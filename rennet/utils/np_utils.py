@@ -178,14 +178,15 @@ def to_categorical(y, nclasses=None, warn=False):
     return res
 
 
-def _generic_confusion_matrix_forcat(Ytrue,
-                                     predicate_true,
-                                     Ypred,
-                                     predicate_pred,
-                                     predicate_match,
-                                     reduce_function,
-                                     reduce_axis=None,
-                                     reduce_keepdims=False):
+def _generic_confusion_matrix_forcat(  #pylint: disable=too-many-arguments
+        Ytrue,
+        predicate_true,
+        Ypred,
+        predicate_pred,
+        predicate_match,
+        reduce_function,
+        reduce_axis=None,
+        reduce_keepdims=False):
     if not isinstance(Ytrue, np.ndarray):
         Ytrue = np.array(Ytrue)
 
@@ -232,8 +233,8 @@ def _generic_confusion_matrix_forcat(Ytrue,
 
 
 def confusion_matrix_forcategorical(Ytrue, Ypred, axis=None, keepdims=False):
-    predicate_npequal_1 = lambda x: np.equal(x, 1)
-    predicate_match = np.logical_and
+    predicate_npequal_1 = lambda x: np.equal(x, 1)  #pylint: disable=no-member
+    predicate_match = np.logical_and  #pylint: disable=no-member
     reduce_function = np.sum
     return _generic_confusion_matrix_forcat(
         Ytrue,
@@ -246,12 +247,13 @@ def confusion_matrix_forcategorical(Ytrue, Ypred, axis=None, keepdims=False):
         reduce_keepdims=keepdims)
 
 
-def confusion_matrix(ytrue,
-                     ypred,
-                     nclasses=None,
-                     axis=None,
-                     keepdims=False,
-                     warn=False):
+def confusion_matrix(  #pylint: disable=too-many-arguments
+        ytrue,
+        ypred,
+        nclasses=None,
+        axis=None,
+        keepdims=False,
+        warn=False):
     if not isinstance(ytrue, np.ndarray):
         ytrue = np.array(ytrue)
 
