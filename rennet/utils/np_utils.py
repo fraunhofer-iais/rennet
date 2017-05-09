@@ -124,6 +124,54 @@ def strided_view(arr, win_shape, step_shape):
         arr, shape=final_shape, strides=final_strides)
 
 
+def _apply_rolling(func, arr, win_len, step_len=1, axis=0, *args, **kwargs):
+    """ Apply a numpy function (that supports acting across an axis) in a rolling way
+
+    That is, apply `func` to `win_len` number of items along `axis`, every
+    `step_len`. This is equivalent in functionality as the code below, but
+    much more efficient and quicker.
+
+    ```
+    # example for applying func along first axis
+    result = []
+    for start in range(0, len(arr), step_len):
+        result.append(func(arr[start:start+win_len, ...],
+            axis=0, *args, **kwargs))
+    result = np.array(result)
+    ```
+
+    Check https://docs.scipy.org/doc/numpy/reference/routines.statistics.html
+    and some sample rolling functions below for inspiration.
+
+    NOTE: `func` must support application along an axis
+
+    TODO: [ ] Dox
+    """
+    win_shape = [None] * len(arr.shape)
+    win_shape[axis] = win_len
+    step_shape = [None] * len(arr.shape)
+    step_shape[axis] = step_len
+    strided_arr = strided_view(arr, win_shape, step_shape)
+
+    return func(strided_arr, axis=axis + 1, *args, **kwargs)
+
+
+def rolling_mean(arr, win_len, axis=0, *args, **kwargs):
+    return _apply_rolling(np.mean, arr, win_len, axis, *args, **kwargs)
+
+
+def rolling_sum(arr, win_len, axis=0, *args, **kwargs):
+    return _apply_rolling(np.sum, arr, win_len, axis, *args, **kwargs)
+
+
+def rolling_max(arr, win_len, axis=0, *args, **kwargs):
+    return _apply_rolling(np.max, arr, win_len, axis, *args, **kwargs)
+
+
+def rolling_min(arr, win_len, axis=0, *args, **kwargs):
+    return _apply_rolling(np.min, arr, win_len, axis, *args, **kwargs)
+
+
 def group_by_values(values):
     # TODO: [A] make it work with 1 dimensional arrays
     # Ref: http://stackoverflow.com/questions/4651683/numpy-grouping-using-itertools-groupby-performance
