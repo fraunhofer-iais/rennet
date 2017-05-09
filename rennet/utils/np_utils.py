@@ -62,7 +62,7 @@ def strided_view(arr, win_shape, step_shape):
 
     # validate shape of inputs
     if isinstance(win_shape, Iterable) != isinstance(step_shape, Iterable):
-        # both are not iterables, or both are not not iterables
+        # one is iterable, the other is not
         raise ValueError(
             "Both win_shape: {} and step_shape: {} should be iterable or not iterable.".
             format(win_shape, step_shape))
@@ -75,8 +75,9 @@ def strided_view(arr, win_shape, step_shape):
                 win_shape, step_shape, arr.shape))
     else:
         # both are not iterable
-        if (not (isinstance(win_shape, int) and isinstance(step_shape, int)) or
-            (win_shape <= 0 or step_shape <= 0)):
+        if (not isinstance(win_shape, Iterable) and
+            (not (isinstance(win_shape, int) and isinstance(step_shape, int))
+             or (win_shape <= 0 or step_shape <= 0))):
             raise ValueError(
                 "Both win_shape: {} and step_shape: {} should be positive integers.".
                 format(win_shape, step_shape))
