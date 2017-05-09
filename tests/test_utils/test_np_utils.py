@@ -1029,9 +1029,9 @@ def test_pred1_batB_seql1_confmat_printing(
 
 ## TESTS FOR SHARE DATA #######################################################
 
+
 @pytest.fixture(
-    scope='module',
-)
+    scope='module', )
 def base_2d_array(sourcefn=base_labels_cls3):
     """ Base 2D array fixture for numpy tricks tests
 
@@ -1043,7 +1043,7 @@ def base_2d_array(sourcefn=base_labels_cls3):
 @pytest.fixture(
     scope="module",
     params=list(range(len(base_2d_array()))),
-    ids= lambda x: "1D-[{}]".format(x),  #pylint: disable=unnecessary-lambda
+    ids=lambda x: "1D-[{}]".format(x),  #pylint: disable=unnecessary-lambda
 )
 def derived_1d_array(request, base_2d_array):
     return base_2d_array[request.param, ...]
@@ -1052,17 +1052,22 @@ def derived_1d_array(request, base_2d_array):
 @pytest.mark.shared_data
 def test_1d_does_share_data_with_base_2d(base_2d_array, derived_1d_array):
     assert nu.arrays_do_share_data(base_2d_array, derived_1d_array)
+    # striding creates a DummyArray with the same data
+    # pure call to the as_strided function does just that, without any striding
+    assert nu.arrays_do_share_data(
+        np.lib.stride_tricks.as_strided(derived_1d_array), base_2d_array)
 
 
 @pytest.mark.shared_data
-def test_1dcopy_does_not_share_data_with_base_2d(base_2d_array, derived_1d_array):
+def test_1dcopy_does_not_share_data_with_base_2d(base_2d_array,
+                                                 derived_1d_array):
     assert not nu.arrays_do_share_data(base_2d_array, derived_1d_array.copy())
 
 
 @pytest.fixture(
     scope="module",
     params=list(range(len(base_2d_array()))),
-    ids= lambda x: "2D-[{}]".format(x),  #pylint: disable=unnecessary-lambda
+    ids=lambda x: "2D-[{}]".format(x),  #pylint: disable=unnecessary-lambda
 )
 def derived_2d_array_from_0(request, base_2d_array):
     """ this includes base_2d_array[0:0, ...] """
@@ -1070,15 +1075,23 @@ def derived_2d_array_from_0(request, base_2d_array):
 
 
 @pytest.mark.shared_data
-def test_2d_does_share_data_with_base_2d(base_2d_array, derived_2d_array_from_0):
+def test_2d_does_share_data_with_base_2d(base_2d_array,
+                                         derived_2d_array_from_0):
     """ This should pass even for 0-length derived arrays """
     assert nu.arrays_do_share_data(base_2d_array, derived_2d_array_from_0)
+    # striding creates a DummyArray with the same data
+    # pure call to the as_strided function does just that, without any striding
+    assert nu.arrays_do_share_data(
+        np.lib.stride_tricks.as_strided(derived_2d_array_from_0),
+        base_2d_array)
 
 
 @pytest.mark.shared_data
-def test_2dcopy_doesnot_share_data_with_base_2d(base_2d_array, derived_2d_array_from_0):
+def test_2dcopy_doesnot_share_data_with_base_2d(base_2d_array,
+                                                derived_2d_array_from_0):
     """ This should pass even for 0-length derived arrays """
-    assert not nu.arrays_do_share_data(base_2d_array, derived_2d_array_from_0.copy())
+    assert not nu.arrays_do_share_data(base_2d_array,
+                                       derived_2d_array_from_0.copy())
 
 
 # NOTE: Not testing for any other possible sub-arrays. Hope it is fine
