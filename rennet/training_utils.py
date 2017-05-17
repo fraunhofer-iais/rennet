@@ -18,7 +18,7 @@ from rennet.models.training_utils import ConfusionHistory
 
 
 def make_output_dirs(out_root, activity_name):
-    activity_dir = os.path.join(out_root, activity_name)
+    activity_dir = os.path.join(out_root, activity_name, '005')
     checkpoints_dir = os.path.join(activity_dir, 'checkpoints')
     checkpoints_fn = os.path.join(
         checkpoints_dir,
@@ -31,14 +31,17 @@ def make_output_dirs(out_root, activity_name):
 
 
 def read_fps(data_root, provider, dataset, export, featquerystr=None):
-    pickles_dir = os.path.join(data_root, 'data', 'working', provider, dataset,
+    pickles_dir = os.path.join(data_root,'working', provider, dataset,
                                export, 'pickles')
 
     if featquerystr is not None:
         raise NotImplementedError("custom querystr not yet supported")
     else:
-        featdir = glob.glob(os.path.join(pickles_dir, "*"))[0]
+    #    featdir = glob.glob(os.path.join(pickles_dir, "*"))[0]
+        featdir = os.path.join(pickles_dir,
+                "20170404-spec129-win32ms-hop5ms")
 
+    print("Searching in {} for pickles and h5".format( pickles_dir))
     val_h5 = glob.glob(os.path.join(featdir, "*-val.h5"))[0]
     trn_h5 = glob.glob(os.path.join(featdir, "*-trn.h5"))[0]
 
@@ -264,7 +267,7 @@ def create_callbacks(activity_dir, checkpoints_fn, Xval, Yval):
             write_graph=False))
     callbacks.append(
         ChattyConfHist(
-            Xval, Yval, export_to=os.path.join(activity_dir, 'confhistory')))
+            Xval, Yval, export_to=os.path.join(activity_dir, 'confhistory.h5')))
 
     return callbacks
 
