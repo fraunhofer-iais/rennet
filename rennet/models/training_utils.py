@@ -69,7 +69,7 @@ class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attrib
         super(ConfusionHistory, self).__init__()
 
     def on_epoch_end(self, e, l=None):  # pylint: disable=unused-argument
-        self.last_preds = self.model.predict(self.true_data, verbose=0)
+        self.last_preds = self.model.predict(self.true_data, verbose=0, batch_size=1024)
         self._update_confusions()
 
     def on_train_end(self, l=None):  # pylint: disable=unused-argument
