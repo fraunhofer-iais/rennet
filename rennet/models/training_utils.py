@@ -47,13 +47,14 @@ class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attrib
             print_on_end=True,
             plot_on_end=False,
             sr=8000,
-            hop_sec=0.05):
+            hop_sec=0.005, export_to=None):
         self.true_data = true_data
         self.true_label = true_categorical_labels
         self.plot_on_end = plot_on_end
         self.print_on_end = print_on_end
         self.sr = sr
         self.hop_sec = hop_sec
+        self.export_to = export_to
 
         self.confusions = []
         self.confprec = None
