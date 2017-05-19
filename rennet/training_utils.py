@@ -23,10 +23,10 @@ def read_fps(data_root, provider, dataset, export, featquerystr=None):
 
     if featquerystr is not None:
         raise NotImplementedError("custom querystr not yet supported")
-    else:
-        featdir = os.path.join(pickles_dir, "*")[0]
 
-    print("Searching in {} for pickles and h5".format(pickles_dir))
+    featdir = glob.glob(os.path.join(pickles_dir, "*"))[0]
+
+    print("Searching in {} for pickles and h5".format(featdir))
     val_h5 = glob.glob(os.path.join(featdir, "*-val.h5"))[0]
     trn_h5 = glob.glob(os.path.join(featdir, "*-trn.h5"))[0]
 
@@ -164,11 +164,11 @@ class ChattyConfHist(ConfusionHistory):
 
             if self.export_to is not None:
                 with h.File(self.export_to, 'a') as f:
-                    if f['trues'] not in f.keys():
-                        f['trues'] = self.true_label
+                    if 'trues' not in f.keys():
+                        f.create_dataset('trues', data=self.true_label)
 
-                    f['preds/b/{}'.format(e)] = self.last_preds
-                    f['confs/b/{}'.format(e)] = self.confusions
+                    f.create_dataset('preds/b/{}'.format(b), data=self.last_preds)
+                    f.create_dataset('confs/b/{}'.format(b), data=self.confusions[-1])
 
             time.sleep(0)
 
@@ -184,11 +184,11 @@ class ChattyConfHist(ConfusionHistory):
 
         if self.export_to is not None:
             with h.File(self.export_to, 'a') as f:
-                if f['trues'] not in f.keys():
-                    f['trues'] = self.true_label
+                if 'trues' not in f.keys():
+                    f.create_dataset('trues', data=self.true_label)
 
-                f['preds/e/{}'.format(e)] = self.last_preds
-                f['confs/e/{}'.format(e)] = self.confusions
+                f.create_dataset('preds/e/{}'.format(e), data=self.last_preds)
+                f.create_dataset('confs/e/{}'.format(e), data=self.confusions[-1])
 
         time.sleep(0)
 
