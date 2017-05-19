@@ -17,31 +17,16 @@ from rennet.utils.training_utils import BaseInputsProvider
 from rennet.models.training_utils import ConfusionHistory
 
 
-def make_output_dirs(out_root, activity_name):
-    activity_dir = os.path.join(out_root, activity_name, '007')
-    checkpoints_dir = os.path.join(activity_dir, 'checkpoints')
-    checkpoints_fn = os.path.join(
-        checkpoints_dir,
-        'w.{epoch:04d}-{val_loss:.3f}-{val_categorical_accuracy:.3f}.h5')
-
-    os.makedirs(activity_dir)
-    os.makedirs(checkpoints_dir)
-
-    return activity_dir, checkpoints_dir, checkpoints_fn
-
-
 def read_fps(data_root, provider, dataset, export, featquerystr=None):
-    pickles_dir = os.path.join(data_root,'working', provider, dataset,
-                               export, 'pickles')
+    pickles_dir = os.path.join(data_root, 'working', provider, dataset, export,
+                               'pickles')
 
     if featquerystr is not None:
         raise NotImplementedError("custom querystr not yet supported")
     else:
-    #    featdir = glob.glob(os.path.join(pickles_dir, "*"))[0]
-        featdir = os.path.join(pickles_dir,
-                "20170404-spec129-win32ms-hop5ms")
+        featdir = os.path.join(pickles_dir, "*")[0]
 
-    print("Searching in {} for pickles and h5".format( pickles_dir))
+    print("Searching in {} for pickles and h5".format(pickles_dir))
     val_h5 = glob.glob(os.path.join(featdir, "*-val.h5"))[0]
     trn_h5 = glob.glob(os.path.join(featdir, "*-trn.h5"))[0]
 
@@ -124,7 +109,7 @@ class SequenceLogAmper(CallLogAmper):
 
 def only_splw_2(labels):
     lsums = labels.sum(axis=0)
-    if np.any(lsums == 0):
+    if lsums[-1] == 0:
         return None
 
     else:
@@ -149,10 +134,7 @@ def ones(labels):
 
 class FisherSeqSkippingLogAmperDP(fe.FisherH5ChunkingsReader, SequenceLogAmper,
                                   BaseInputsProvider):
-    def __init__(self,
-                 filepath,
-                 splwfn=ones,
-                 **kwargs):
+    def __init__(self, filepath, splwfn=ones, **kwargs):
         super(FisherSeqSkippingLogAmperDP, self).__init__(filepath, **kwargs)
 
         self.splwfn = splwfn
@@ -167,75 +149,34 @@ class FisherSeqSkippingLogAmperDP(fe.FisherH5ChunkingsReader, SequenceLogAmper,
                 if splw is None:
                     continue
                 else:
-                    # lsums = labels.sum(axis=0)
-                    # clsw = lsums.max() / lsums
-                    # splw = np.ones(shape=(len(labels), ), dtype=clsw.dtype)
-                    # # splw[labels[:, 0] == 1] = clsw[0]
-                    # splw[labels[:, 2] == 1] = clsw[2]
-
                     yield data, labels, splw
 
 
-def get_model(input_shape, nclasses=3):
-    model = Sequential()
-    model.add(
-        kl.Conv2D(
-            32,
-            3,
-            strides=1,
-            activation='relu',
-            name='block1_conv',
-            data_format='channels_last',
-            input_shape=input_shape[1:]))
-    model.add(kl.BatchNormalization(
-        name='block1_bn', ))
-    model.add(kl.Dropout(
-        0.2,
-        name='block1_dp', ))
-
-    model.add(kl.MaxPool2D(2))
-
-    model.add(
-        kl.Conv2D(64, 3, strides=1, activation='relu', name='block2_conv'))
-    model.add(kl.BatchNormalization(name='block2_bn'))
-    model.add(kl.Dropout(
-        0.2,
-        name='block2_dp', ))
-
-    model.add(kl.MaxPool2D(2))
-
-    model.add(
-        kl.Conv2D(64, 3, strides=1, activation='relu', name='block3_conv'))
-    model.add(kl.BatchNormalization(name='block3_bn'))
-    model.add(kl.Dropout(
-        0.2,
-        name='block3_dp', ))
-
-    model.add(kl.GlobalMaxPool2D(name='g_maxpool'))
-
-    w = 256
-    for i in range(2):
-        model.add(kl.Dropout(0.2, name='block4_dp_{}'.format(i)))
-        w = w // (4)
-        model.add(
-            kl.Dense(w, activation='relu', name='block4_fc{}_{}'.format(w, i)))
-
-    model.add(kl.Dense(nclasses, activation='softmax', name='softmax'))
-
-    model.compile(
-        loss='categorical_crossentropy',
-        optimizer='adam',
-        metrics=['categorical_accuracy'])
-
-    return model
-
-
 class ChattyConfHist(ConfusionHistory):
+    def on_batch_end(self, b, l=None):
+        if b % 400 == 0:
+            super(ChattyConfHist, self).on_epoch_end(b, l)
+            self._set_conf_prec_rec()
+            print("b-{:4} P(REC)".format(b), "  ".join(
+                "{:6.2f} ({:6.2f})".format(p, r)
+                for r, p in zip(self.confrec[-1, ...].diagonal() * 100,
+                                self.confprec[-1, ...].diagonal() * 100)))
+
+            if self.export_to is not None:
+                with h.File(self.export_to, 'a') as f:
+                    if f['trues'] not in f.keys():
+                        f['trues'] = self.true_label
+
+                    f['preds/b/{}'.format(e)] = self.last_preds
+                    f['confs/b/{}'.format(e)] = self.confusions
+
+            time.sleep(0)
+
     def on_epoch_end(self, e, l=None):
         super(ChattyConfHist, self).on_epoch_end(e, l)
         self._set_conf_prec_rec()
         print()
-        print("P(REC)", "  ".join(
+        print("e-{:4} P(REC)".format(e), "  ".join(
             "{:6.2f} ({:6.2f})".format(p, r)
             for r, p in zip(self.confrec[-1, ...].diagonal() * 100,
                             self.confprec[-1, ...].diagonal() * 100)))
@@ -246,8 +187,8 @@ class ChattyConfHist(ConfusionHistory):
                 if f['trues'] not in f.keys():
                     f['trues'] = self.true_label
 
-                f['preds/{}'.format(e)] = self.last_preds
-                f['confs/{}'.format(e)] = self.confusions
+                f['preds/e/{}'.format(e)] = self.last_preds
+                f['confs/e/{}'.format(e)] = self.confusions
 
         time.sleep(0)
 
@@ -262,10 +203,11 @@ def create_callbacks(activity_dir, checkpoints_fn, Xval, Yval):
             log_dir=activity_dir,
             histogram_freq=1,
             write_images=True,
-            write_graph=False))
+            write_graph=False, ))
     callbacks.append(
         ChattyConfHist(
-            Xval, Yval, export_to=os.path.join(activity_dir, 'confhistory.h5')))
+            Xval, Yval, export_to=os.path.join(activity_dir,
+                                               'confhistory.h5')))
 
     return callbacks
 
