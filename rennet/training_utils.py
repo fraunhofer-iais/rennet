@@ -18,7 +18,7 @@ from rennet.models.training_utils import ConfusionHistory
 
 
 def make_output_dirs(out_root, activity_name):
-    activity_dir = os.path.join(out_root, activity_name, '005')
+    activity_dir = os.path.join(out_root, activity_name, '007')
     checkpoints_dir = os.path.join(activity_dir, 'checkpoints')
     checkpoints_fn = os.path.join(
         checkpoints_dir,
@@ -151,11 +151,9 @@ class FisherSeqSkippingLogAmperDP(fe.FisherH5ChunkingsReader, SequenceLogAmper,
                                   BaseInputsProvider):
     def __init__(self,
                  filepath,
-                 shuffle_seed=None,
-                 nepochs=1,
                  splwfn=ones,
                  **kwargs):
-        super(FisherSeqSkippingLogAmperDP, self).__init__(filepath, shuffle_seed, nepochs, **kwargs)
+        super(FisherSeqSkippingLogAmperDP, self).__init__(filepath, **kwargs)
 
         self.splwfn = splwfn
 
