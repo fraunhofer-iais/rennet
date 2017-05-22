@@ -153,6 +153,10 @@ class FisherSeqSkippingLogAmperDP(fe.FisherH5ChunkingsReader, SequenceLogAmper,
 
 
 class ChattyConfHist(ConfusionHistory):
+	def __init__(self, *args, **kwargs):
+		super(ChattyConfHist, self).__init__(*args, **kwargs)
+		self._curr_e = 0
+
     def on_batch_end(self, b, l=None):
         if b % 400 == 0:
             super(ChattyConfHist, self).on_epoch_end(b, l)
@@ -167,14 +171,15 @@ class ChattyConfHist(ConfusionHistory):
                     if 'trues' not in f.keys():
                         f.create_dataset('trues', data=self.true_label)
 
-                    f.create_dataset('preds/b/{}'.format(b), data=self.last_preds)
-                    f.create_dataset('confs/b/{}'.format(b), data=self.confusions[-1])
+                    f.create_dataset('preds/e/b/{}_{}'.format(self._curr_e, b), data=self.last_preds)
+                    f.create_dataset('confs/e/b/{}_{}'.format(self._curr_e, b), data=self.confusions[-1])
 
             time.sleep(0)
 
     def on_epoch_end(self, e, l=None):
         super(ChattyConfHist, self).on_epoch_end(e, l)
         self._set_conf_prec_rec()
+
         print()
         print("e-{:4} P(REC)".format(e), "  ".join(
             "{:6.2f} ({:6.2f})".format(p, r)
@@ -189,6 +194,8 @@ class ChattyConfHist(ConfusionHistory):
 
                 f.create_dataset('preds/e/{}'.format(e), data=self.last_preds)
                 f.create_dataset('confs/e/{}'.format(e), data=self.confusions[-1])
+		
+		self._curr_e += 1
 
         time.sleep(0)
 
