@@ -153,9 +153,9 @@ class FisherSeqSkippingLogAmperDP(fe.FisherH5ChunkingsReader, SequenceLogAmper,
 
 
 class ChattyConfHist(ConfusionHistory):
-	def __init__(self, *args, **kwargs):
-		super(ChattyConfHist, self).__init__(*args, **kwargs)
-		self._curr_e = 0
+    def __init__(self, *args, **kwargs):
+            super(ChattyConfHist, self).__init__(*args, **kwargs)
+            self._curr_e = 0
 
     def on_batch_end(self, b, l=None):
         if b % 400 == 0:
@@ -195,7 +195,7 @@ class ChattyConfHist(ConfusionHistory):
                 f.create_dataset('preds/e/{}'.format(e), data=self.last_preds)
                 f.create_dataset('confs/e/{}'.format(e), data=self.confusions[-1])
 		
-		self._curr_e += 1
+        self._curr_e += 1
 
         time.sleep(0)
 
