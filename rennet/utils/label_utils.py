@@ -96,14 +96,6 @@ class SequenceLabels(object):
     def starts_ends(self):
         return self._starts_ends * (self.samplerate / self.orig_samplerate)
 
-    @property
-    def starts(self):
-        return self.starts_ends[:, 0]
-
-    @property
-    def ends(self):
-        return self.starts_ends[:, 1]
-
     @contextmanager
     def samplerate_as(self, new_samplerate):
         """ Temporarily change to a different samplerate within context
@@ -237,7 +229,7 @@ class ContiguousSequenceLabels(SequenceLabels):
     def __init__(self, *args, **kwargs):
         super(ContiguousSequenceLabels, self).__init__(*args, **kwargs)
         # the starts_ends were sorted in __init__ on starts
-        assert np.all(np.diff(self.starts) >
+        assert np.all(np.diff(self.starts_ends[:, 0]) >
                       0.), "There are multiple segments with the same starts"
         assert np.all(
             self.starts_ends[1:, 0] == self.starts_ends[:-1, 1]
