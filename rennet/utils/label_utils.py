@@ -164,7 +164,7 @@ class SequenceLabels(object):
             # return as `starts_ends` for `ContiguousSequenceLabels`
             return np.stack((bins[:-1], bins[1:]), axis=1), labels_indices
 
-    def labels_at(self, ends, samplerate=None, default_label=()):
+    def labels_at(self, ends, samplerate=None, default_label=(), rounded=10):
         """ TODO: [ ] Proper Dox
 
         if `samplerate` is `None`, it is assumed that `ends` are at the same
@@ -172,34 +172,30 @@ class SequenceLabels(object):
         """
         if not isinstance(ends, Iterable):
             ends = [ends]
-
         ends = np.array(ends)
 
         with self.samplerate_as(samplerate):
-            se = self.starts_ends
+            bins, labels_idx = self._flattened_indices(return_bins=True)
 
-        se = np.round(se, 10)  # To avoid issues with floating points
-        # Yes, it looks arbitrary
-        # There will be problems later in comparing floating point numbers
-        # esp when testing for equality to the ends
-        # the root of the cause is when the provided samplerate is higher than
-        # the orig_samplerate, esp when the ratio is irrational.
-        # A max disparity of 16000:1 gave correct results
-        # limited to the tests of course. Please look at the corresponding tests
-        #
-        # FIXME: It should not be the case anyway. All the trouble to support
-        #       arbitrary self.orig_samplerate and samplerate
-        #
+        bins = np.round(bins, rounded)  # floating point comparison issues
 
-        res = []
-        for e in ends:
-            l_idx = np.where((se[:, 0] < e) & (se[:, 1] >= e))[0]
-            if len(l_idx) == 0:  # end not within segments
-                res.append(default_label)
-            else:
-                res.append(tuple(self.labels[i] for i in l_idx))
+        # include right edge, not left, because we only know about what happened
+        # in the `(1/_orig_samplerate)` seconds finishing at an `end`
+        bin_idx = np.digitize(ends, bins, right=True)
 
-        return res
+        # lets construct labels for only the unique bin_idx
+        unique_bin_idx, bin_idx = np.unique(bin_idx, return_inverse=True)
+
+        unique_res_labels = [default_label] * len(unique_bin_idx)
+        for i, idx in enumerate(unique_bin_idx):
+            if idx != 0 and idx != len(bins):  # if not outside bins
+
+                # labels for bin_idx == 1 are at labels_idx[0]
+                l = tuple(self.labels[j] for j in labels_idx[idx - 1])
+
+                unique_res_labels[i] = l if l != tuple() else default_label
+
+        return [unique_res_labels[i] for i in bin_idx]
 
     def __len__(self):
         return len(self.starts_ends)
@@ -264,7 +260,11 @@ class ContiguousSequenceLabels(SequenceLabels):
                 shape=((shape[0], ) + self.labels.shape[1:]),
                 dtype=self.labels.dtype)
 
-    def labels_at(self, ends, samplerate=None, default_label='auto'):
+    def labels_at(self,
+                  ends,
+                  samplerate=None,
+                  default_label='auto',
+                  rounded=10):
         """ TODO: [ ] Proper Dox
 
         if `samplerate` is `None`, it is assumed that `ends` are at the same
@@ -278,12 +278,7 @@ class ContiguousSequenceLabels(SequenceLabels):
         with self.samplerate_as(samplerate):
             se = self.starts_ends
 
-        se = np.round(se, 10)  # To avoid issues with floating points
-        # Yes, it looks arbitrary. Check SequenceLabels.labels_at(...)
-        #
-        # FIXME: It should not be the case anyway. All the trouble to support
-        #       arbitrary self.orig_samplerate and samplerate
-        #
+        se = np.round(se, rounded)  # To avoid issues with floating points
 
         # all ends that are within the segments
         endings = se[:, 1]
