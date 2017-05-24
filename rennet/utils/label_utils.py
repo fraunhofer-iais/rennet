@@ -38,23 +38,43 @@ class SequenceLabels(object):
     __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate')
 
     def __init__(self, starts_ends, labels, samplerate=1):
-        assert all(isinstance(x, Iterable)
-                   for x in [starts_ends, labels]), "starts_ends and labels" + \
-                                                    " should be iterable"
-        assert len(starts_ends) == len(labels), "starts_ends and labels" + \
-                                                " mismatch in length "
+        """Initialize a SequenceLabels instance with starts_ends and labels"""
+        # TODO: [ ] Add dox, at least the params and attributes
+
+        if any(not isinstance(x, Iterable) for x in [starts_ends, labels]):
+            raise TypeError("starts_ends and labels should be Iterable")
+        if len(starts_ends) != len(labels):
+            raise AssertionError("starts_ends and labels mismatch in length")
 
         starts_ends = np.array(starts_ends)
-        assert np.all(starts_ends[:, 1] - starts_ends[:, 0] >
-                      0.), "(ends - starts) should be > 0 for all pairs"
+        if len(starts_ends.shape) != 2 or starts_ends.shape[-1] != 2:
+            raise AssertionError(
+                "starts_ends doesn't look like a list of pairs\n"
+                "converted numpy.ndarray shape is: {}. Expected {}".format(
+                    starts_ends.shape, (len(labels), 2)))
 
-        sidx = np.argsort(starts_ends[:, 0])  # save sorted by starts
-        self._starts_ends = starts_ends[sidx]
+        if samplerate <= 0:
+            # IDEA: Support negative samplerate?
+            raise ValueError("samplerate <= 0 not supported")
+        else:
+            if np.any(starts_ends[:, 1] - starts_ends[:, 0] <= 0):
+                raise ValueError("(ends - starts) should be > 0 for all pairs")
+            # sort primarily by starts, and secondarily by ends
+            sort_idx = np.lexsort(np.split(starts_ends[..., ::-1].T, 2))
+
+        if not sort_idx.shape[0] == 1:
+            # something has gone horribly wrong
+            raise RuntimeError(
+                "sort_idx has an unexpected shape: {}\nShould have been {}".
+                format(sort_idx.shape, (1, ) + sort_idx.shape[1:]))
+
+        sort_idx = sort_idx[0, :]  # shape in dim-0 **should** always be 1
+        self._starts_ends = starts_ends[sort_idx, ...]
 
         if isinstance(labels, np.ndarray):
-            self.labels = labels[sidx]
+            self.labels = labels[sort_idx, ...]
         else:
-            self.labels = [labels[i] for i in sidx]
+            self.labels = tuple(labels[i] for i in sort_idx)
 
         self._orig_samplerate = samplerate
         self._samplerate = samplerate
