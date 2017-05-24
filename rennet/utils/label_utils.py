@@ -128,6 +128,42 @@ class SequenceLabels(object):
         finally:
             self._samplerate = old_sr
 
+    def _flattened_indices(self, return_bins=False):
+        """Calculate indices of the labels that form the flattened labels.
+
+        Flattened means, there is 1 and only 1 "label" for each time-step within
+        the min-start and max-end.
+        """
+        # TODO: Proper dox; add params and returns
+
+        se = self.starts_ends
+
+        if np.all(se[1:, 0] == se[:-1, 1]):  # already flat
+            bins = np.zeros(len(se) + 1, dtype=se.dtype)
+            bins[:-1] = se[:, 0]
+            bins[-1] = se[-1, 1]
+
+            labels_indices = [(i, ) for i in range(len(se))]
+        else:
+            # `numpy.unique` also sorts the (flattened) array
+            bins, sorting_indices = np.unique(se, return_inverse=True)
+
+            sorting_indices = sorting_indices.reshape(-1, 2)  # un-flatten
+
+            labels_indices = [tuple()] * (len(bins) - 1)
+            for j, (s, e) in enumerate(sorting_indices):
+                # `(e - s)` is small but > 0, usually 1
+                # `s` may also repeat, hence can't do fancy `numpy` w/ readability
+                for i in range(s, e):
+                    labels_indices[i] += (j, )
+
+        if return_bins:
+            # return as bins for `numpy.digitize`
+            return bins, labels_indices
+        else:
+            # return as `starts_ends` for `ContiguousSequenceLabels`
+            return np.stack((bins[:-1], bins[1:]), axis=1), labels_indices
+
     def labels_at(self, ends, samplerate=None, default_label=()):
         """ TODO: [ ] Proper Dox
 
