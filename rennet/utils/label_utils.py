@@ -223,19 +223,24 @@ class SequenceLabels(object):
         return [unique_res_labels[i] for i in bin_idx]
 
     def __len__(self):
-        return len(self.starts_ends)
+        return len(self.labels)
 
     def __getitem__(self, idx):
-        se = self._starts_ends[idx]
+        se = self._starts_ends[idx, ...]
         l = self.labels[idx]
 
-        if isinstance(idx, int):  # case with only one segment
-            se = np.expand_dims(se, axis=0)  # shape (2,) to shape (1, 2)
-            l = [l]
+        if len(se.shape) == 1:  # case with only one segment
+            se = se[None, ...]
+            if isinstance(self.labels, np.ndarray):
+                l = l[None, ...]
+            else:
+                l = (l, )
 
-        sr = self.samplerate
+        if self.__class__ is SequenceLabels:
+            return self.__class__(se, l, self.orig_samplerate)
+        else:
+            return se, l, self.orig_samplerate
 
-        return SequenceLabels(se, l, sr)
 
     def __str__(self):
         s = self.__class__.__name__ + " with sample rate: " + str(
@@ -350,6 +355,13 @@ class ContiguousSequenceLabels(SequenceLabels):
                         raise e
 
             return result
+
+    def __getitem__(self, idx):
+        res = super(ContiguousSequenceLabels, self).__getitem__(idx)
+        if self.__class__ is ContiguousSequenceLabels:
+            return self.__class__(*res)
+        else:
+            return res
 
 
 def times_for_labelsat(total_duration_sec, samplerate, hop_sec, win_sec):
