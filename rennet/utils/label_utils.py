@@ -81,37 +81,67 @@ class SequenceLabels(object):
 
     @property
     def samplerate(self):
-        # If you want to set a different samplerate, use samplerate_as
-        # If you have made a mistake, create a new instance
-        return self._samplerate  # always the current samplerate
+        """float or int: The current samplerate of `starts_ends`.
+
+        Note
+        ----
+        The current samplerate can be changed within a `samplerate_as` context.
+        But that will also impact how the `starts_ends` are calculated.
+        """
+        return self._samplerate
 
     @property
     def orig_samplerate(self):
-        # Changing the original samplerate may lead to wrong results
-        # hence provided as a property to only read
-        # No one's stopping them. Hoping the user is an adult
+        """float or int: The original samplerate of `starts_ends`.
+
+        Note
+        ----
+        The effective samplerate can be changed within a `samplerate_as` context.
+        Here as a property to discourage from changing after initialization.
+        """
         return self._orig_samplerate
 
     @property
     def starts_ends(self):
+        """ndarray: `starts_ends` of the `labels`, calculated with contextually
+        the most recent non-`None` samplerate. See also `samplerate_as`.
+        """
         return self._starts_ends * (self.samplerate / self.orig_samplerate)
 
     @contextmanager
     def samplerate_as(self, new_samplerate):
-        """ Temporarily change to a different samplerate within context
+        """Temporarily change to a different samplerate within context.
 
         To be used with a `with` clause, and supports nesting of such clauses.
-
-        if `new_samplerate` is `None`, the samplerate will remain as the
-        contextually most recent non `None` samplerate.
+        Within a nested `with` clause, the samplerate from the most recent
+        clause will be used.
 
         This can be used to get `starts_ends` as if they were calculated with
-        different samplerate than original. Within a nested `with` clause,
-        the samplerate from the most recent clause will be used.
+        different samplerate than the original.
 
-        For example, for segment with `starts_ends` [[1, 5]] at samplerate 1,
+        Note
+        ----
+        EXCEPT for one for indexing/slicing, all methods honour the contextually
+        most recent and valid samplerate in their calculations. New instances
+        created on indexing/slicing are always created with the original samplerate.
+
+        Parameters
+        ----------
+        new_samplerate : float or int or None
+            The new samplerate with which `starts_ends` will be calculated while
+            within the `with` clause. if `None`, the samplerate will remain as
+            the contextually most recent non-`None` value.
+
+        Raises
+        ------
+        ValueError
+            If `new_samplerate` <= 0
+
+        Example
+        -------
+        For example, for segment with `starts_ends` [[1., 5.]] at samplerate 1,
         when calculated in context of `new_samplerate = 2`, the `starts_ends`
-        will be [[2, 10]].
+        will be [[2., 10.]].
         """
         old_sr = self.samplerate
         self._samplerate = old_sr if new_samplerate is None else new_samplerate
