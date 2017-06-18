@@ -11,31 +11,26 @@ from contextlib import contextmanager
 
 
 class SequenceLabels(object):
-    """ Base class for working with contiguous labels for sequences
+    """Base class for working with labels for a sequence.
 
     By default the samplerate is 1, but a default one can be set at the time
     of instantiating. The samplerate should reflect the one used in calculating
     the starts_ends.
 
-    The starts, ends and starts_ends can be retrieved at a different
-    samplerate by using the `with SequenceLabel.samplerate_as(new_samplerate)`.
-    While in the scope of the `with` context will act as if the samplerate is
-    set to `new_samplerate`, except `SequenceLabel.samplerate`, which will
-    always return the original samplerate.
+    Segments will get sorted based on `starts` (primary; `ends` secondary).
 
-    Supports normal slicing as in numpy, but the returned value will be another
-    instance of the SequenceLabels class.
+    Supports normal indexing and slicing, but the returned value will be another
+    instance of the SequenceLabels class (or the relevant starts_ends, labels
+    and orig_samplerate, when being called from a subclass)
 
-    This class is not a monolith, but should be able to work with normal
-    numpy tricks. Plus, you should extend it for specific data, etc.
-
-    Plus, there is nice printing.
-
-    TODO: [A] Check if something can be done about plotting it nicely too!
-    TODO: [ ] Export to ELAN
+    When iterated over, the returned values are a `zip` of `starts_ends` and
+    `labels` for each segment.
     """
-
     __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate')
+    """To save memory, maybe? I just wanted to learn about them.
+    Include at least ``__slots__ = ()`` if you want to keep the functionality in
+    a subclass.
+    """
 
     def __init__(self, starts_ends, labels, samplerate=1):
         """Initialize a SequenceLabels instance with starts_ends and labels"""
@@ -252,6 +247,11 @@ class SequenceLabels(object):
         s += "\n".join("{:<8.4f} - {:<8.4f} : {}".format(s, e, str(l))
                        for (s, e), l in self)
         return s
+
+    # TODO: [ ] Import from ELAN
+    # TODO: [ ] Export to ELAN
+    # TODO: [ ] Import from mpeg7
+    # TODO: [ ] Export to mpeg7
 
 
 class ContiguousSequenceLabels(SequenceLabels):
