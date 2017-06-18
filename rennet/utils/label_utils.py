@@ -144,7 +144,10 @@ class SequenceLabels(object):
         will be [[2., 10.]].
         """
         old_sr = self.samplerate
-        self._samplerate = old_sr if new_samplerate is None else new_samplerate
+        new_sr = old_sr if new_samplerate is None else new_samplerate
+        if new_sr <= 0: raise ValueError("new_samplerate <=0 not supported")
+
+        self._samplerate = new_sr
         try:
             yield
         finally:
