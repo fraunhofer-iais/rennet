@@ -268,8 +268,6 @@ class ContiguousSequenceLabels(SequenceLabels):
     def __init__(self, *args, **kwargs):
         super(ContiguousSequenceLabels, self).__init__(*args, **kwargs)
         # the starts_ends were sorted in __init__ on starts
-        assert np.all(np.diff(self.starts_ends[:, 0]) >
-                      0.), "There are multiple segments with the same starts"
         assert np.all(
             self.starts_ends[1:, 0] == self.starts_ends[:-1, 1]
         ), "All ends should be the starts of the next segment, except the last"
