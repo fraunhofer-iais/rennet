@@ -74,3 +74,15 @@ class TIMITSequenceLabels(lu.SequenceLabels):
             starts_ends,
             active_speakers,
             samplerate=samplerate)
+
+    def __getitem__(self, idx):
+        args = super(TIMITSequenceLabels, self).__getitem__(idx)
+        if self.__class__ is TIMITSequenceLabels:
+            return self.__class__(self.sourcefile, *args)
+        else:
+            return args
+            
+    def __str__(self):
+        s = "Source filepath:\n{}\n".format(self.sourcefile)
+        s += "\n" + super(TIMITSequenceLabels, self).__str__()
+        return s
