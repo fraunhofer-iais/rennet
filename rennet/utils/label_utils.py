@@ -41,6 +41,7 @@ class SequenceLabels(object):
         if len(starts_ends) != len(labels):
             raise AssertionError("starts_ends and labels mismatch in length")
 
+        labels = np.array(labels)
         starts_ends = np.array(starts_ends)
         if len(starts_ends.shape) != 2 or starts_ends.shape[-1] != 2:
             raise AssertionError(
@@ -65,11 +66,7 @@ class SequenceLabels(object):
 
         sort_idx = sort_idx[0, :]  # shape in dim-0 **should** always be 1
         self._starts_ends = starts_ends[sort_idx, ...]
-
-        if isinstance(labels, np.ndarray):
-            self.labels = labels[sort_idx, ...]
-        else:
-            self.labels = tuple(labels[i] for i in sort_idx)
+        self.labels = labels[sort_idx, ...]
 
         self._orig_samplerate = samplerate
         self._samplerate = samplerate
@@ -203,33 +200,35 @@ class SequenceLabels(object):
         # in the `(1/_orig_samplerate)` seconds finishing at an `end`
         bin_idx = np.digitize(ends, bins, right=True)
 
-        # lets construct labels for only the unique bin_idx
+        # construct labels for only the unique bin_idx, repackage when returning
         unique_bin_idx, bin_idx = np.unique(bin_idx, return_inverse=True)
 
-        unique_res_labels = [default_label] * len(unique_bin_idx)
+        unique_res_labels = np.empty(len(unique_bin_idx), dtype=np.object)
+        unique_res_labels.fill(default_label)
         for i, idx in enumerate(unique_bin_idx):
             if idx != 0 and idx != len(bins):  # if not outside bins
 
                 # labels for bin_idx == 1 are at labels_idx[0]
-                l = tuple(self.labels[j] for j in labels_idx[idx - 1])
+                l = labels_idx[idx - 1]
+                if len(l) == 1:
+                    unique_res_labels[i] = (self.labels[l], )
+                elif len(l) > 1:
+                    unique_res_labels[i] = tuple(self.labels[l])
+                else:
+                    unique_res_labels[i] = default_label
 
-                unique_res_labels[i] = l if l != tuple() else default_label
-
-        return [unique_res_labels[i] for i in bin_idx]
+        return unique_res_labels[bin_idx, ...]
 
     def __len__(self):
         return len(self.labels)
 
     def __getitem__(self, idx):
         se = self._starts_ends[idx, ...]
-        l = self.labels[idx]
+        l = self.labels[idx, ...]
 
         if len(se.shape) == 1:  # case with only one segment
             se = se[None, ...]
-            if isinstance(self.labels, np.ndarray):
-                l = l[None, ...]
-            else:
-                l = (l, )
+            l = l[None, ...]
 
         if self.__class__ is SequenceLabels:
             return self.__class__(se, l, self.orig_samplerate)
@@ -268,18 +267,11 @@ class ContiguousSequenceLabels(SequenceLabels):
     def __init__(self, *args, **kwargs):
         super(ContiguousSequenceLabels, self).__init__(*args, **kwargs)
         # the starts_ends were sorted in __init__ on starts
-        assert np.all(
-            self.starts_ends[1:, 0] == self.starts_ends[:-1, 1]
-        ), "All ends should be the starts of the next segment, except the last"
-
-        # convert labels to np.array
-        # this is a bit controversial, since the conversion may lead
-        # to some unexpected results. Unexpected for a n00b like me at least.
-        # eg. list of namedtuple get converted to array of tuples.
-        # user small, __slot__ classes in that case
-        self.labels = np.array(self.labels)
-        # IDEA: store only the unique values? min_start and ends?
-        # May be pointless here in python
+        if not np.all(self.starts_ends[1:, 0] == self.starts_ends[:-1, 1]):
+            msg = "All ends should be the starts of the next segment, except in the case of the last segment."
+            msg += "\nEvery time-step should belong to 1 and only 1 segment."
+            msg += "\nNo duplicate or missing segments allowed between min-start and max-end"
+            raise AssertionError(msg)
 
     def _infer_and_get_filled_default_labels(self, shape):
         if self.labels.dtype == np.object:
