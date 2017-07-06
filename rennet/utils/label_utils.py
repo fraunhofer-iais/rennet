@@ -211,9 +211,9 @@ class SequenceLabels(object):
                 # labels for bin_idx == 1 are at labels_idx[0]
                 l = labels_idx[idx - 1]
                 if len(l) == 1:
-                    unique_res_labels[i] = (self.labels[l], )
+                    unique_res_labels[i] = (self.labels[l[0]], )
                 elif len(l) > 1:
-                    unique_res_labels[i] = tuple(self.labels[l])
+                    unique_res_labels[i] = tuple(self.labels[list(l)])
                 else:
                     unique_res_labels[i] = default_label
 
