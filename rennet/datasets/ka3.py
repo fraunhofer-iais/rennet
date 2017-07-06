@@ -35,17 +35,26 @@ NS2_TAGS = {
 }
 
 MPEG7_TAGS = {
-    "audiosegment": ".//mpeg7:AudioSegment",
-    "timepoint": ".//mpeg7:MediaTimePoint",
-    "duration": ".//mpeg7:MediaDuration",
+    "audiosegment":
+    ".//mpeg7:AudioSegment",
+    "timepoint":
+    ".//mpeg7:MediaTimePoint",
+    "duration":
+    ".//mpeg7:MediaDuration",
     "descriptor":
     ".//mpeg7:AudioDescriptor[@xsi:type='ifinder:SpokenContentType']",
-    "speakerid": ".//ifinder:Identifier",
-    "transcription": ".//ifinder:SpokenUnitVector",
-    "confidence": ".//ifinder:ConfidenceVector",
-    "speakerinfo": ".//ifinder:Speaker",
-    "gender": "gender",
-    "givenname": ".//mpeg7:GivenName",
+    "speakerid":
+    ".//ifinder:Identifier",
+    "transcription":
+    ".//ifinder:SpokenUnitVector",
+    "confidence":
+    ".//ifinder:ConfidenceVector",
+    "speakerinfo":
+    ".//ifinder:Speaker",
+    "gender":
+    "gender",
+    "givenname":
+    ".//mpeg7:GivenName",
 }
 
 
@@ -124,8 +133,7 @@ def _parse_descriptor(descriptor, TAGS):
     return speakerid, gender, givenname, confidence, transcription
 
 
-# pylint: disable=too-many-locals
-def parse_mpeg7(filepath, use_tags="ns"):
+def parse_mpeg7(filepath, use_tags="ns"):  # pylint: disable=too-many-locals
     """ Parse MPEG7 speech annotations into lists of data
 
     """
@@ -182,7 +190,6 @@ def parse_mpeg7(filepath, use_tags="ns"):
             transcriptions)
 
 
-# pylint: enable=too-many-locals
 class Speaker(BaseSlotsOnlyClass):  #pylint: disable=too-few-public-methods
     __slots__ = ('speakerid', 'gender', 'givenname')
 
