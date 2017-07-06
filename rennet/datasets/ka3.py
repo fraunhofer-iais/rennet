@@ -190,7 +190,7 @@ def parse_mpeg7(filepath, use_tags="ns"):  # pylint: disable=too-many-locals
             transcriptions)
 
 
-class Speaker(BaseSlotsOnlyClass):  #pylint: disable=too-few-public-methods
+class Speaker(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
     __slots__ = ('speakerid', 'gender', 'givenname')
 
     def __init__(self, speakerid, gender, givenname):
@@ -199,7 +199,7 @@ class Speaker(BaseSlotsOnlyClass):  #pylint: disable=too-few-public-methods
         self.givenname = givenname
 
 
-class Transcription(BaseSlotsOnlyClass):  #pylint: disable=too-few-public-methods
+class Transcription(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
     __slots__ = ('speakerid', 'confidence', 'content')
 
     def __init__(self, speakerid, confidence, content):
@@ -213,7 +213,7 @@ class Annotations(lu.SequenceLabels):
     # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate')
     __slots__ = ('sourcefile', 'speakers')
 
-    def __init__(self, filepath, speakers, starts_ends, labels, samplerate=1):
+    def __init__(self, filepath, speakers, starts_ends, labels, samplerate=1):  # pylint: disable=too-many-arguments
         self.sourcefile = filepath
         self.speakers = speakers
         super(Annotations, self).__init__(starts_ends, labels, samplerate)
