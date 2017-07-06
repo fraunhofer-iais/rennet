@@ -5,13 +5,13 @@ Created: 29-08-2016
 Helpers for working with KA3 dataset
 """
 from __future__ import print_function, division
-from collections import namedtuple
 import xml.etree.ElementTree as et
 import numpy as np
 import warnings
 
 import rennet.utils.label_utils as lu
 from rennet.utils.np_utils import group_by_values
+from rennet.utils.py_utils import BaseSlotsOnlyClass
 
 MPEG7_NAMESPACES = {
     "ns": "http://www.iais.fraunhofer.de/ifinder",
@@ -183,11 +183,22 @@ def parse_mpeg7(filepath, use_tags="ns"):
 
 
 # pylint: enable=too-many-locals
+class Speaker(BaseSlotsOnlyClass):  #pylint: disable=too-few-public-methods
+    __slots__ = ('speakerid', 'gender', 'givenname')
 
-Speaker = namedtuple('Speaker', ['speakerid', 'gender', 'givenname'])
+    def __init__(self, speakerid, gender, givenname):
+        self.speakerid = speakerid
+        self.gender = gender
+        self.givenname = givenname
 
-Transcription = namedtuple('Transcription',
-                           ['speakerid', 'confidence', 'content'])
+
+class Transcription(BaseSlotsOnlyClass):  #pylint: disable=too-few-public-methods
+    __slots__ = ('speakerid', 'confidence', 'content')
+
+    def __init__(self, speakerid, confidence, content):
+        self.speakerid = speakerid
+        self.confidence = confidence
+        self.content = content
 
 
 class Annotations(lu.SequenceLabels):
@@ -195,14 +206,13 @@ class Annotations(lu.SequenceLabels):
     # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate')
     __slots__ = ('sourcefile', 'speakers')
 
-    def __init__(self, filepath, speakers, *args, **kwargs):
+    def __init__(self, filepath, speakers, starts_ends, labels, samplerate=1):
         self.sourcefile = filepath
         self.speakers = speakers
-        super(Annotations, self).__init__(*args, **kwargs)
+        super(Annotations, self).__init__(starts_ends, labels, samplerate)
 
-    # pylint: disable=too-many-locals
     @classmethod
-    def from_file(cls, filepath, use_tags="ns"):
+    def from_file(cls, filepath, use_tags="ns"):  # pylint: disable=too-many-locals
         se, sids, gen, gn, conf, trn = parse_mpeg7(filepath, use_tags)
 
         uniq_sids = sorted(set(sids))
@@ -219,13 +229,18 @@ class Annotations(lu.SequenceLabels):
             transcriptions.append(
                 Transcription(sids[i], float(conf[i]), trn[i]))
 
-        return cls(filepath,
-                   speakers,
-                   starts_ends,
-                   transcriptions,
-                   samplerate=1)
+        if len(starts_ends) == 0:
+            raise RuntimeError(
+                "No Annotations were found from file {}. Check use_tags parameter.".
+                format(filepath))
 
-    # pylint: enable=too-many-locals
+        return cls(
+            filepath,
+            tuple(speakers),
+            starts_ends,
+            transcriptions,
+            samplerate=1, )
+
     def idx_for_speaker(self, speaker):
         speakerid = speaker.speakerid
         for i, l in enumerate(self.labels):
@@ -238,6 +253,13 @@ class Annotations(lu.SequenceLabels):
         s += "\n".join(str(s) for s in self.speakers)
         s += "\n" + super(Annotations, self).__str__()
         return s
+
+    def __getitem__(self, idx):
+        args = super(Annotations, self).__getitem__(idx)
+        if self.__class__ is Annotations:
+            return self.__class__(self.sourcefile, self.speakers, *args)
+        else:
+            return args
 
 
 class ActiveSpeakers(lu.ContiguousSequenceLabels):
