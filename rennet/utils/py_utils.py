@@ -48,3 +48,19 @@ def cvsecs(time):
 
     else:
         return time
+
+
+class BaseSlotsOnlyClass(object):  #pylint: disable=too-few-public-methods
+    """ Slots only base class.
+
+    Implements creating repr automatically.
+    """
+    # TODO: [ ] Dox
+    # TODO: [ ] Tests!
+
+    __slots__ = ()
+
+    def __repr__(self):
+        a_v = ((att, getattr(self, att)) for att in self.__slots__)
+        r = ".".join((self.__module__.split(".")[-1], self.__class__.__name__))
+        return r + "({})".format(", ".join("{!s}={!r}".format(*av) for av in a_v))
