@@ -13,6 +13,10 @@ from rennet.utils.np_utils import group_by_values
 
 
 class TIMITSequenceLabels(lu.SequenceLabels):
+    # PARENT'S SLOTS
+    # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate')
+    __slots__ = ('sourcefile', )
+
     def __init__(self, filepath, *args, **kwargs):
         self.sourcefile = filepath
         super(TIMITSequenceLabels, self).__init__(*args, **kwargs)
@@ -81,7 +85,7 @@ class TIMITSequenceLabels(lu.SequenceLabels):
             return self.__class__(self.sourcefile, *args)
         else:
             return args
-            
+
     def __str__(self):
         s = "Source filepath:\n{}\n".format(self.sourcefile)
         s += "\n" + super(TIMITSequenceLabels, self).__str__()
