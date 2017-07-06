@@ -11,7 +11,6 @@ import warnings
 from functools import reduce
 
 import rennet.utils.label_utils as lu
-from rennet.utils.np_utils import group_by_values
 from rennet.utils.py_utils import BaseSlotsOnlyClass, lowest_common_multiple
 
 MPEG7_NAMESPACES = {
@@ -287,53 +286,62 @@ class ActiveSpeakers(lu.ContiguousSequenceLabels):
     # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate')
     __slots__ = ('sourcefile', 'speakers')
 
-    def __init__(self, filepath, speakers, *args, **kwargs):
+    def __init__(self, filepath, speakers, starts_ends, labels, samplerate=1):  # pylint: disable=too-many-arguments
         self.sourcefile = filepath
         self.speakers = speakers
-        super().__init__(*args, **kwargs)
+        super().__init__(starts_ends, labels, samplerate)
 
     @classmethod
-    def from_annotations(cls, ann, samplerate=100):  # default 100 for ka3
-        with ann.samplerate_as(samplerate):
-            se_ = ann.starts_ends
-            se = np.round(se_).astype(np.int)
+    def from_annotations(cls, ann):
+        starts_ends, labels_idx = ann._flattened_indices()  # pylint: disable=protected-access
 
-            # TODO: [A] better error handling
-            try:
-                np.testing.assert_almost_equal(se, se_)
-            except AssertionError:
-                warnings.warn(
-                    "Sample rate {} does not evenly divide all the starts and ends in the annotations from file at {}".
-                    format(samplerate, ann.sourcefile))
+        spks = np.array([s.speakerid for s in ann.speakers])
+        labels = np.zeros(shape=(len(starts_ends), len(spks)), dtype=np.int)
+        for i, lix in enumerate(labels_idx):
+            if len(lix) == 1:
+                labels[i] = (
+                    spks == ann.labels[lix[0]].speakerid).astype(np.int)
+            elif len(lix) > 1:
+                lspks = np.array([ann.labels[s].speakerid for s in lix])
+                labels[i] = (spks == lspks[:, None]).sum(axis=0)
 
-        n_speakers = len(ann.speakers)
-        total_duration = se[:, 1].max()
-        active_speakers = np.zeros(
-            shape=(total_duration, n_speakers), dtype=np.int)
-
-        for s, speaker in enumerate(ann.speakers):
-            for i in ann.idx_for_speaker(speaker):
-                start, end = se[i]
-                # NOTE: not setting to 1 straighaway to catch duplicates for speaker
-                active_speakers[start:end, s] += 1
-
-        # HACK: Some annotations (FISHER) have duplicates for the same speaker
-        if active_speakers.max() > 1:
+        if labels.max() > 1:
             warnings.warn(
                 "Some speakers may have duplicate annotations for file {}.\nDUPLICATES IGNORED".
                 format(ann.sourcefile))
-            active_speakers[active_speakers > 1] = 1
+            labels[labels > 1] = 1
 
-        starts_ends, active_speakers = group_by_values(active_speakers)
+        # IDEA: merge consecutive segments with the same label
+        # No practical impact expected, except probably in turn-taking calculations
+        # It may result in extra continuations than accurate
+        # Let's keep in mind though that this is being inferred from the annots,
+        # i.e. these zero-gap continuations were separately annotated, manually,
+        # and we should respect their segmentation
+        # The turn-taking calculator should keep this in mind
 
-        return cls(ann.sourcefile,
-                   ann.speakers,
-                   starts_ends,
-                   active_speakers,
-                   samplerate=samplerate)
+        return cls(
+            ann.sourcefile,
+            ann.speakers,
+            starts_ends,
+            labels,
+            samplerate=ann.samplerate, )
 
     @classmethod
-    def from_file(cls, filepath, use_tags="mpeg7"):
+    def from_file(cls, filepath, use_tags="ns"):
         # HACK: I don't know why super() does not work here
         ann = Annotations.from_file(filepath, use_tags)
-        return cls.from_annotations(ann, samplerate=100)
+        return cls.from_annotations(ann)
+
+    def __str__(self):
+        s = "Source filepath: {}".format(self.sourcefile)
+        s += "\nSpeakers: {}\n".format(len(self.speakers))
+        s += "\n".join(str(s) for s in self.speakers)
+        s += "\n" + super(ActiveSpeakers, self).__str__()
+        return s
+
+    def __getitem__(self, idx):
+        args = super(ActiveSpeakers, self).__getitem__(idx)
+        if self.__class__ is ActiveSpeakers:
+            return self.__class__(self.sourcefile, self.speakers, *args)
+        else:
+            return args
