@@ -8,10 +8,11 @@ from __future__ import print_function, division
 import xml.etree.ElementTree as et
 import numpy as np
 import warnings
+from functools import reduce
 
 import rennet.utils.label_utils as lu
 from rennet.utils.np_utils import group_by_values
-from rennet.utils.py_utils import BaseSlotsOnlyClass
+from rennet.utils.py_utils import BaseSlotsOnlyClass, lowest_common_multiple
 
 MPEG7_NAMESPACES = {
     "ns": "http://www.iais.fraunhofer.de/ifinder",
@@ -71,8 +72,7 @@ def _parse_timepoint(timepoint):
           int(minutes) * 60 +\
           int(sec)
 
-    return res, int(val) / int(
-        persec)  # need to send separately as the float sum is not great
+    return res * int(persec) + int(val), int(persec)
 
 
 def _parse_duration(duration):
@@ -91,15 +91,17 @@ def _parse_duration(duration):
           int(minutes) * 60 +\
           int(sec)
 
-    return res, int(val) / int(
+    return res * int(persec) + int(val), int(
         persec)  # need to send separately as the float sum is not great
 
 
 def _parse_timestring(timepoint, duration):
-    tp, tval = _parse_timepoint(timepoint)
-    dur, dval = _parse_duration(duration)
+    tpt, tps = _parse_timepoint(timepoint)
+    dur, dps = _parse_duration(duration)
 
-    return tp + tval, (tp + dur + (tval + dval))
+    persec = lowest_common_multiple(tps, dps)
+    tpt *= (persec // tps)
+    return tpt, tpt + dur * (persec // dps), persec
 
 
 def _parse_segment(segment, TAGS):
@@ -111,9 +113,9 @@ def _parse_segment(segment, TAGS):
         raise ValueError(
             "timepoint, duration or decriptor not found in segment")
 
-    start_end = _parse_timestring(timepoint, duration)
+    start_end_persec = _parse_timestring(timepoint, duration)
 
-    return start_end, descriptor
+    return start_end_persec, descriptor
 
 
 def _parse_descriptor(descriptor, TAGS):
@@ -131,6 +133,13 @@ def _parse_descriptor(descriptor, TAGS):
         raise ValueError("Some descriptor information is None / not found")
 
     return speakerid, gender, givenname, confidence, transcription
+
+
+def _sanitize_starts_ends(starts_ends, persecs):
+    """ Sanitize starts ends to be of the same samplerate (persec) """
+    persec = reduce(lowest_common_multiple, set(persecs))
+    return [(s * persec // p, e * persec // p)
+            for (s, e), p in zip(starts_ends, persecs)], persec
 
 
 def parse_mpeg7(filepath, use_tags="ns"):  # pylint: disable=too-many-locals
@@ -151,6 +160,7 @@ def parse_mpeg7(filepath, use_tags="ns"):  # pylint: disable=too-many-locals
         raise ValueError("No AudioSegment tags found")
 
     starts_ends = []
+    persecs = []
     speakerids = []
     genders = []
     givennames = []
@@ -158,7 +168,7 @@ def parse_mpeg7(filepath, use_tags="ns"):  # pylint: disable=too-many-locals
     transcriptions = []
     for i, s in enumerate(segments):
         try:
-            startend, descriptor = _parse_segment(s, TAGS)
+            start_end_persec, descriptor = _parse_segment(s, TAGS)
         except ValueError:
             print("Segment number :%d" % (i + 1))
             raise
@@ -167,13 +177,14 @@ def parse_mpeg7(filepath, use_tags="ns"):  # pylint: disable=too-many-locals
             # if there is not descriptor, there is no speech. Ignore!
             continue
 
-        if startend[1] <= startend[0]:  # (end - start) <= 0
+        if start_end_persec[1] <= start_end_persec[0]:  # (end - start) <= 0
             warnings.warn(
                 "(end - start) <= 0 ignored for annotation at {} with values {} in file {}".
-                format(i, startend, filepath))
+                format(i, start_end_persec, filepath))
             continue
 
-        starts_ends.append(startend)
+        starts_ends.append(start_end_persec[:-1])
+        persecs.append(start_end_persec[-1])
 
         try:
             si, g, gn, conf, tr = _parse_descriptor(descriptor, TAGS)
@@ -186,7 +197,9 @@ def parse_mpeg7(filepath, use_tags="ns"):  # pylint: disable=too-many-locals
         confidences.append(conf)
         transcriptions.append(tr)
 
-    return (starts_ends, speakerids, genders, givennames, confidences,
+    starts_ends, persecs = _sanitize_starts_ends(starts_ends, persecs)
+
+    return (starts_ends, persecs, speakerids, genders, givennames, confidences,
             transcriptions)
 
 
@@ -220,7 +233,7 @@ class Annotations(lu.SequenceLabels):
 
     @classmethod
     def from_file(cls, filepath, use_tags="ns"):  # pylint: disable=too-many-locals
-        se, sids, gen, gn, conf, trn = parse_mpeg7(filepath, use_tags)
+        se, sr, sids, gen, gn, conf, trn = parse_mpeg7(filepath, use_tags)
 
         uniq_sids = sorted(set(sids))
 
@@ -246,7 +259,7 @@ class Annotations(lu.SequenceLabels):
             tuple(speakers),
             starts_ends,
             transcriptions,
-            samplerate=1, )
+            samplerate=sr, )
 
     def idx_for_speaker(self, speaker):
         speakerid = speaker.speakerid
