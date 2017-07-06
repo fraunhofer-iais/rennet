@@ -8,6 +8,7 @@ import re
 from sys import getsizeof
 from numbers import Number
 from collections import Set, Mapping, deque
+from math import gcd
 
 
 def is_string(obj):
@@ -102,3 +103,8 @@ def getsize(obj_0):
             size += sum(inner(getattr(obj, s)) for s in obj.__slots__ if hasattr(obj, s))
         return size
     return inner(obj_0)
+
+
+def lowest_common_multiple(a, b):
+    # gcd expects integers, the whole thing is integers, returning integers
+    return abs(a * b) // gcd(a, b) if a and b else 0
