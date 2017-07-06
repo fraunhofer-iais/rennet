@@ -239,9 +239,8 @@ class SequenceLabels(object):
         return zip(self.starts_ends, self.labels)
 
     def __str__(self):
-        s = self.__class__.__name__ + " with sample rate: " + str(
-            self.samplerate)
-        s += "\n"
+        s = ".".join((self.__module__.split('.')[-1], self.__class__.__name__))
+        s += " with sample rate {}\n".format(self.samplerate)
         s += "{:8} - {:8} : {}\n".format("Start", "End", "Label")
         s += "\n".join("{:<8.4f} - {:<8.4f} : {}".format(s, e, str(l))
                        for (s, e), l in self)
