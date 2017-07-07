@@ -9,7 +9,6 @@ import numpy as np
 import warnings
 from os.path import abspath
 from csv import reader
-from collections import namedtuple
 import h5py as h
 
 import rennet.utils.label_utils as lu
@@ -113,7 +112,16 @@ class AllCallData(object):
             raise TypeError('Unsupported index {} for {}'.format(
                 idx, self.__class__.__name__))
 
-class FisherAnnotations(lu.SequenceLabels):
+
+class Transcription(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
+    __slots__ = ('speakerchannel', 'content')
+
+    def __init__(self, speakerchannel, content):
+        self.speakerchannel = speakerchannel  # 0 for A, 1 for B
+        self.content = content
+
+
+class Annotations(lu.SequenceLabels):
     """
     TODO: [ ] Add proper docs
 
@@ -127,14 +135,11 @@ class FisherAnnotations(lu.SequenceLabels):
     # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate')
     __slots__ = ('sourcefile', 'calldata')
 
-    FisherTranscription = namedtuple('FisherTranscription',
-                                     ['speakerchannel', 'content'])
-
     def __init__(self, filepath, calldata, *args, **kwargs):
         self.sourcefile = filepath
         self.calldata = calldata
 
-        super(FisherAnnotations, self).__init__(*args, **kwargs)
+        super(Annotations, self).__init__(*args, **kwargs)
 
     @property
     def callid(self):
@@ -146,6 +151,9 @@ class FisherAnnotations(lu.SequenceLabels):
 
     def find_and_set_calldata(self, allcalldata):
         try:
+            if isinstance(allcalldata, str):  # filename, probably
+                allcalldata = AllCallData.from_file(allcalldata)
+
             self.calldata = allcalldata[self.sourcefile]
         except KeyError:
             raise KeyError(
@@ -153,8 +161,8 @@ class FisherAnnotations(lu.SequenceLabels):
                 format(self.callid))
 
     @classmethod
-    def from_file(cls, filepath, allcalldata=None):
-        afp = os.path.abspath(filepath)
+    def from_file(cls, filepath, allcalldata=None, skip_content=False):
+        afp = abspath(filepath)
 
         se = []
         trans = []
@@ -171,11 +179,14 @@ class FisherAnnotations(lu.SequenceLabels):
                     se.append((float(s), float(e)))
 
                     spk = spk.strip()
-                    content = row[1].strip()
+                    if skip_content:
+                        content = ''
+                    else:
+                        content = row[1].strip()
                     if spk.upper() == 'A':
-                        trans.append(cls.FisherTranscription(0, content))
+                        trans.append(Transcription(0, content))
                     elif spk.upper() == 'B':
-                        trans.append(cls.FisherTranscription(1, content))
+                        trans.append(Transcription(1, content))
                     else:
                         raise ValueError(
                             "Speaker channel other than A and B ({}) in file\n{}".
@@ -183,6 +194,8 @@ class FisherAnnotations(lu.SequenceLabels):
 
         if allcalldata is None:
             calldata = None
+        elif isinstance(allcalldata, str):  # filepath, probably
+            calldata = AllCallData.from_file(allcalldata)[afp]
         else:
             calldata = allcalldata[afp]  # AllCallData can accept filename too!
 
@@ -191,11 +204,18 @@ class FisherAnnotations(lu.SequenceLabels):
     def __str__(self):
         s = "Source filepath:\n{}\n".format(self.sourcefile)
         s += "\nCalldata:\n{}\n".format(self.calldata)
-        s += "\n" + super(FisherAnnotations, self).__str__()
+        s += "\n" + super(Annotations, self).__str__()
         return s
 
+    def __getitem__(self, idx):
+        args = super(Annotations, self).__getitem__(idx)
+        if self.__class__ is Annotations:
+            return self.__class__(self.sourcefile, self.calldata, *args)
+        else:
+            return args
 
-class FisherActiveSpeakers(lu.ContiguousSequenceLabels):
+
+class ActiveSpeakers(lu.ContiguousSequenceLabels):
     # PARENT'S SLOTS
     # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate')
     __slots__ = ('sourcefile', 'calldata')
@@ -204,7 +224,7 @@ class FisherActiveSpeakers(lu.ContiguousSequenceLabels):
         self.sourcefile = filepath
         self.calldata = calldata
 
-        super(FisherActiveSpeakers, self).__init__(*args, **kwargs)
+        super(ActiveSpeakers, self).__init__(*args, **kwargs)
 
         # SequenceLabels makes labels into a list
         self.labels = np.array(self.labels)
@@ -219,6 +239,9 @@ class FisherActiveSpeakers(lu.ContiguousSequenceLabels):
 
     def find_and_set_calldata(self, allcalldata):
         try:
+            if isinstance(allcalldata, str):  # filename, probably
+                allcalldata = AllCallData.from_file(allcalldata)
+
             self.calldata = allcalldata[self.sourcefile]
         except KeyError:
             raise KeyError(
@@ -266,23 +289,31 @@ class FisherActiveSpeakers(lu.ContiguousSequenceLabels):
 
         starts_ends, active_speakers = nu.group_by_values(active_speakers)
 
-        return cls(ann.sourcefile,
-                   ann.calldata,
-                   starts_ends,
-                   active_speakers,
-                   samplerate=samplerate)
+        return cls(
+            ann.sourcefile,
+            ann.calldata,
+            starts_ends,
+            active_speakers,
+            samplerate=samplerate)
 
     @classmethod
     def from_file(cls, filepath, samplerate=100, allcalldata=None, warn=True):
-        ann = FisherAnnotations.from_file(filepath, allcalldata)
+        ann = Annotations.from_file(filepath, allcalldata, skip_content=True)
         # min time resolution 1ms, mostly
         return cls.from_annotations(ann, samplerate=samplerate, warn=warn)
 
     def __str__(self):
         s = "Source filepath:\n{}\n".format(self.sourcefile)
         s += "\nCalldata:\n{}\n".format(self.calldata)
-        s += "\n" + super(FisherActiveSpeakers, self).__str__()
+        s += "\n" + super(ActiveSpeakers, self).__str__()
         return s
+
+    def __getitem__(self, idx):
+        args = super(ActiveSpeakers, self).__getitem__(idx)
+        if self.__class__ is ActiveSpeakers:
+            return self.__class__(self.sourcefile, self.calldata, *args)
+        else:
+            return args
 
 
 class FisherH5ChunkingsReader(tu.BaseH5ChunkingsReader):
