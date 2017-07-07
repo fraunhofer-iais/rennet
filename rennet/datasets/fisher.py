@@ -5,14 +5,15 @@ Created: 01-02-2017
 Helpers for working with Fisher dataset
 """
 from __future__ import print_function, division
-import os
-from csv import reader
 import numpy as np
-from collections import namedtuple
 import warnings
+from os.path import abspath
+from csv import reader
+from collections import namedtuple
 import h5py as h
 
 import rennet.utils.label_utils as lu
+from rennet.utils.py_utils import BaseSlotsOnlyClass
 import rennet.utils.np_utils as nu
 import rennet.utils.training_utils as tu
 
@@ -20,38 +21,56 @@ samples_for_labelsat = lu.samples_for_labelsat
 times_for_labelsat = lu.times_for_labelsat
 
 
-class FisherAllCallData(object):
+class Speaker(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
+    __slots__ = ('pin', 'gender', 'dialect')
 
-    FisherChannelSpeaker = namedtuple(
-        'FisherChannelSpeaker', ['id', 'gender', 'dialect', 'phone_service'])
+    def __init__(self, pin, gender, dialect):
+        self.pin = pin
+        self.gender = gender
+        self.dialect = dialect
 
-    FisherCallData = namedtuple(
-        'FisherCallData',
-        [
-            'callid',
-            'topicid',
-            'signalgrade',
-            'convgrade',
-            'channelspeakers'  # List, on order [A, B]
-        ])
 
+class CallData(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
+    __slots__ = ('callid', 'topicid', 'signalgrade', 'convgrade',
+                 'channelspeakers')
+
+    def __init__(  # pylint: disable=too-many-arguments
+            self, callid, topicid, signalgrade, convgrade, channelspeakers):
+        self.callid = callid
+        self.topicid = topicid
+        self.signalgrade = signalgrade
+        self.convgrade = convgrade
+        self.channelspeakers = channelspeakers  # List, in order [A, B]
+
+    def __repr__(self):
+        r = super(CallData, self).__repr__()
+        # Make the list of Channel Speakers look good, maybe ... subjective
+        r = r.replace('[', '\n\t\t[').replace('), ', '), \n\t\t ')
+        return r
+
+
+callid_for_filename = lambda fn: fn.split('_')[-1].split('.')[0]
+
+groupid_for_callid = lambda callid: callid[:3]
+
+
+class AllCallData(object):
     def __init__(self, allcalldata):
         self.allcalldata = sorted(allcalldata, key=lambda c: c.callid)
         self._callid_idx = {
             callid: i
-            for i, callid in enumerate(c.callid for c in allcalldata)
+            for i, callid in enumerate(c.callid for c in self.allcalldata)
         }
 
-    def calldata_for_callid(self, callid):
-        return self.allcalldata[self._callid_idx[callid]]
+    def for_callid(self, callid):
+        return self[callid]
 
-    def calldata_for_filename(self, filename):
-        callid = os.path.basename(filename).split('_')[-1].split('.')[0]
-        return self.calldata_for_callid(callid)
+    def for_filename(self, filename):
+        return self[filename]
 
     @classmethod
     def from_file(cls, filepath):  # pylint: disable=too-many-locals
-        afp = os.path.abspath(filepath)
+        afp = abspath(filepath)
 
         allcalldata = []
         with open(afp, 'r') as f:
@@ -63,25 +82,36 @@ class FisherAllCallData(object):
                     continue
 
                 callid, _, topicid, siggrade, convgrade = row[:5]
-                apin, agendia, _, _, aphtype = row[5:-5]
-                bpin, bgendia, _, _, bphtype = row[-5:]
+                apin, agendia, _, _, _ = row[5:-5]
+                bpin, bgendia, _, _, _ = row[-5:]
 
                 agen, adia = agendia.split('.')
                 bgen, bdia = bgendia.split('.')
 
-                calldata = cls.FisherCallData(
+                calldata = CallData(
                     callid,
                     topicid,
                     float(siggrade),
                     float(convgrade),
-                    [
-                        cls.FisherChannelSpeaker(apin, agen, adia, aphtype),
-                        cls.FisherChannelSpeaker(bpin, bgen, bdia, bphtype),
-                    ], )
+                    [Speaker(apin, agen, adia), Speaker(bpin, bgen, bdia)], )
                 allcalldata.append(calldata)
 
         return cls(allcalldata)
 
+    def __getitem__(self, idx_or_callid_or_filename):
+        idx = idx_or_callid_or_filename
+        if isinstance(idx, str):  # callid or filename
+            if len(idx) > 5:  # not a Fisher Callid
+                # NOTE: Assuming, probably naively, that this a Fisher filename
+                idx = callid_for_filename(idx)
+            return self.allcalldata[self._callid_idx[idx]]
+        elif isinstance(idx, (slice, int)):
+            return self.allcalldata[idx]
+        elif any(isinstance(i, str) for i in idx):
+            return [self[i] for i in idx]
+        else:
+            raise TypeError('Unsupported index {} for {}'.format(
+                idx, self.__class__.__name__))
 
 class FisherAnnotations(lu.SequenceLabels):
     """
@@ -110,14 +140,13 @@ class FisherAnnotations(lu.SequenceLabels):
     def callid(self):
         if self.calldata is None:
             # filenames are fe_03_CALLID.*
-            return os.path.basename(self.sourcefile).split('_')[-1].split('.')[
-                0]
+            return callid_for_filename(self.sourcefile)
         else:
             return self.calldata.callid
 
     def find_and_set_calldata(self, allcalldata):
         try:
-            self.calldata = allcalldata.calldata_for_callid[self.callid]
+            self.calldata = allcalldata[self.sourcefile]
         except KeyError:
             raise KeyError(
                 "Call Data for callid {} not found in provided allcalldata".
@@ -155,7 +184,7 @@ class FisherAnnotations(lu.SequenceLabels):
         if allcalldata is None:
             calldata = None
         else:
-            calldata = allcalldata.calldata_for_filename(afp)
+            calldata = allcalldata[afp]  # AllCallData can accept filename too!
 
         return cls(afp, calldata, se, trans, samplerate=1)
 
@@ -184,14 +213,13 @@ class FisherActiveSpeakers(lu.ContiguousSequenceLabels):
     def callid(self):
         if self.calldata is None:
             # filenames are fe_03_CALLID.*
-            return os.path.basename(self.sourcefile).split('_')[-1].split('.')[
-                0]
+            return callid_for_filename(self.sourcefile)
         else:
             return self.calldata.callid
 
     def find_and_set_calldata(self, allcalldata):
         try:
-            self.calldata = allcalldata.calldata_for_callid[self.callid]
+            self.calldata = allcalldata[self.sourcefile]
         except KeyError:
             raise KeyError(
                 "Call Data for callid {} not found in provided allcalldata".
@@ -255,9 +283,6 @@ class FisherActiveSpeakers(lu.ContiguousSequenceLabels):
         s += "\nCalldata:\n{}\n".format(self.calldata)
         s += "\n" + super(FisherActiveSpeakers, self).__str__()
         return s
-
-
-fisher_groupid_for_callid = lambda callid: callid[:3]
 
 
 class FisherH5ChunkingsReader(tu.BaseH5ChunkingsReader):
@@ -428,9 +453,7 @@ class FisherH5ChunkingsReader(tu.BaseH5ChunkingsReader):
             if callids not in allcallids:
                 raise ValueError("CallID {} not in file".format(callids))
 
-            obj.grouped_callids = {
-                fisher_groupid_for_callid(callids): {callids}
-            }
+            obj.grouped_callids = {groupid_for_callid(callids): {callids}}
         else:
             if not set(callids).issubset(allcallids):
                 raise ValueError("Some CallIDs not in file")
@@ -438,7 +461,7 @@ class FisherH5ChunkingsReader(tu.BaseH5ChunkingsReader):
             grouped_callids = dict()
 
             for c in callids:
-                g = fisher_groupid_for_callid(c)
+                g = groupid_for_callid(c)
 
                 v = grouped_callids.get(g, set())
                 grouped_callids[g] = v.union({c})
@@ -473,13 +496,13 @@ class FisherH5ChunkingsReader(tu.BaseH5ChunkingsReader):
         if not isinstance(callids_at, np.ndarray):
             # HACK: single callid
             obj.grouped_callids = {
-                fisher_groupid_for_callid(callids_at): {callids_at}
+                groupid_for_callid(callids_at): {callids_at}
             }
         else:
             grouped_callids = dict()
 
             for c in callids_at:
-                g = fisher_groupid_for_callid(c)
+                g = groupid_for_callid(c)
 
                 v = grouped_callids.get(g, set())
                 grouped_callids[g] = v.union({c})
