@@ -13,6 +13,9 @@ from functools import reduce
 import rennet.utils.label_utils as lu
 from rennet.utils.py_utils import BaseSlotsOnlyClass, lowest_common_multiple
 
+samples_for_labelsat = lu.samples_for_labelsat
+times_for_labelsat = lu.times_for_labelsat
+
 MPEG7_NAMESPACES = {
     "ns": "http://www.iais.fraunhofer.de/ifinder",
     "ns2": "urn:mpeg:mpeg7:schema:2004",
