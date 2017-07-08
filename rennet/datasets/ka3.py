@@ -295,7 +295,7 @@ class ActiveSpeakers(lu.ContiguousSequenceLabels):
         super().__init__(starts_ends, labels, samplerate)
 
     @classmethod
-    def from_annotations(cls, ann):
+    def from_annotations(cls, ann, warn_duplicates=True):
         starts_ends, labels_idx = ann._flattened_indices()  # pylint: disable=protected-access
 
         spks = np.array([s.speakerid for s in ann.speakers])
@@ -309,10 +309,11 @@ class ActiveSpeakers(lu.ContiguousSequenceLabels):
                 labels[i] = (spks == lspks[:, None]).sum(axis=0)
 
         if labels.max() > 1:
-            warnings.warn(
-                "Some speakers may have duplicate annotations for file {}.\nDUPLICATES IGNORED".
-                format(ann.sourcefile))
             labels[labels > 1] = 1
+            if warn_duplicates:
+                warnings.warn(
+                    "Some speakers may have duplicate annotations for file {}.\nDUPLICATES IGNORED".
+                    format(ann.sourcefile))
 
         # IDEA: merge consecutive segments with the same label
         # No practical impact expected, except probably in turn-taking calculations
@@ -330,10 +331,9 @@ class ActiveSpeakers(lu.ContiguousSequenceLabels):
             samplerate=ann.samplerate, )
 
     @classmethod
-    def from_file(cls, filepath, use_tags="ns"):
-        # HACK: I don't know why super() does not work here
+    def from_file(cls, filepath, warn_duplicates=True, use_tags="ns"):
         ann = Annotations.from_file(filepath, use_tags)
-        return cls.from_annotations(ann)
+        return cls.from_annotations(ann, warn_duplicates)
 
     def __str__(self):
         s = "Source filepath: {}".format(self.sourcefile)
