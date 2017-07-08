@@ -49,8 +49,11 @@ class CallData(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
 
 
 callid_for_filename = lambda fn: fn.split('_')[-1].split('.')[0]
+# TODO: make proper function and raise errors?
 
 groupid_for_callid = lambda callid: callid[:3]
+
+# TODO: make proper function and raise errors?
 
 
 class AllCallData(object):
@@ -61,39 +64,66 @@ class AllCallData(object):
             for i, callid in enumerate(c.callid for c in self.allcalldata)
         }
 
-    def for_callid(self, callid):
-        return self[callid]
+    @staticmethod
+    def _read_calldata_from_row(row):
+        callid, _, topicid, siggrade, convgrade = row[:5]
+        apin, agendia, _, _, _ = row[5:-5]
+        bpin, bgendia, _, _, _ = row[-5:]
 
-    def for_filename(self, filename):
-        return self[filename]
+        return CallData(
+            callid,
+            topicid,
+            float(siggrade),
+            float(convgrade),
+            [
+                Speaker(apin, *agendia.split('.')),
+                Speaker(bpin, *bgendia.split('.')),
+            ], )
 
     @classmethod
-    def from_file(cls, filepath):  # pylint: disable=too-many-locals
-        afp = abspath(filepath)
+    def from_file_for_callid(cls, filepath, callid):
+        filepath = abspath(filepath)
+        calldata = None
+
+        with open(filepath, 'r') as f:
+            for i, row in enumerate(reader(f, delimiter=',')):
+                if i == 0 or row[0] != callid:
+                    # Header or not for callid
+                    continue
+
+                calldata = cls._read_calldata_from_row(row)
+                break
+
+        if calldata is None:
+            raise KeyError(
+                "Call Data for callid {} not found in provided filepath:\n{}".
+                format(callid, filepath))
+
+        return calldata
+
+    @classmethod
+    def from_file_for_filename(cls, filepath, filename):
+        fn = filename
+        try:
+            return cls.from_file_for_callid(filepath, callid_for_filename(fn))
+        except KeyError:
+            raise KeyError(
+                "Call Data for filename {} (assumed callid {}) not found in provided filepath:\n{}".
+                format(fn, callid_for_filename(fn), filepath))
+
+    @classmethod
+    def from_file(cls, filepath):
+        filepath = abspath(filepath)
 
         allcalldata = []
-        with open(afp, 'r') as f:
-            rdr = reader(f, delimiter=',')
+        with open(filepath, 'r') as f:
 
-            for i, row in enumerate(rdr):
+            for i, row in enumerate(reader(f, delimiter=',')):
                 if i == 0:
                     # Header
                     continue
 
-                callid, _, topicid, siggrade, convgrade = row[:5]
-                apin, agendia, _, _, _ = row[5:-5]
-                bpin, bgendia, _, _, _ = row[-5:]
-
-                agen, adia = agendia.split('.')
-                bgen, bdia = bgendia.split('.')
-
-                calldata = CallData(
-                    callid,
-                    topicid,
-                    float(siggrade),
-                    float(convgrade),
-                    [Speaker(apin, agen, adia), Speaker(bpin, bgen, bdia)], )
-                allcalldata.append(calldata)
+                allcalldata.append(cls._read_calldata_from_row(row))
 
         return cls(allcalldata)
 
@@ -103,7 +133,11 @@ class AllCallData(object):
             if len(idx) > 5:  # not a Fisher Callid
                 # NOTE: Assuming, probably naively, that this a Fisher filename
                 idx = callid_for_filename(idx)
-            return self.allcalldata[self._callid_idx[idx]]
+            try:
+                return self.allcalldata[self._callid_idx[idx]]
+            except KeyError:
+                raise KeyError("Call Data for callid {} not found".format(idx))
+
         elif isinstance(idx, (slice, int)):
             return self.allcalldata[idx]
         elif any(isinstance(i, str) for i in idx):
