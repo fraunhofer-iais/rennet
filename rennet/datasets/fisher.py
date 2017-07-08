@@ -197,45 +197,75 @@ class Annotations(lu.SequenceLabels):
             ) + "Provide either AllCallData instance or filepath to it")
 
     @classmethod
-    def from_file(cls, filepath, allcalldata=None, skip_content=False):
-        afp = abspath(filepath)
+    def from_file(cls, filepath, allcalldata=None):
+        filepath = abspath(filepath)
 
-        se = []
+        starts = []
+        ends = []
+        decimultiplier = []
         trans = []
 
-        with open(afp, 'r') as f:
-            rdr = reader(f, delimiter=':')
+        if allcalldata is None:
+            caldata = None
+        elif isinstance(allcalldata, AllCallData):
+            caldata = allcalldata[filepath]
+        elif isinstance(allcalldata, str):  # probably filepath to AllCallData
+            caldata = AllCallData.from_file_for_filename(allcalldata, filepath)
+        else:
+            raise TypeError("allcalldata of unexpected type: {}\n".format(
+                type(allcalldata)
+            ) + "Provide either AllCallData instance or filepath to it")
 
-            for row in rdr:
+        with open(filepath, 'r') as f:
+
+            for row in reader(f, delimiter=':'):
                 if len(row) == 0 or row[0][0] == '#':
                     # ignore empty lines or comments
                     continue
                 else:
                     s, e, spk = row[0].split(' ')
-                    se.append((float(s), float(e)))
+
+                    # NOTE: s, e are in seconds, but resolution goes to milliseconds.
+                    # Floats are a pain in the proverbials.
+                    # We infer the samplerate based on the ndigits after decimal,
+                    # and then set the final samplerate based on max of such ndigits for all.
+                    # The reolving is done below.
+                    # Biggest assumption is that s and e are in seconds.
+                    # Easy bad case is s and e ending with zeros after decimal.
+                    s = s.split('.')
+                    e = e.split('.')
+                    decimultiplier.append(tuple(map(len, (s[1], e[1]))))
+                    starts.append(tuple(map(int, s)))
+                    ends.append(tuple(map(int, e)))
 
                     spk = spk.strip()
-                    if skip_content:
-                        content = ''
-                    else:
-                        content = row[1].strip()
                     if spk.upper() == 'A':
-                        trans.append(Transcription(0, content))
+                        trans.append(Transcription(0, row[1].strip()))
                     elif spk.upper() == 'B':
-                        trans.append(Transcription(1, content))
+                        trans.append(Transcription(1, row[1].strip()))
                     else:
                         raise ValueError(
                             "Speaker channel other than A and B ({}) in file\n{}".
                             format(spk, filepath))
 
-        if allcalldata is None:
-            calldata = None
-        elif isinstance(allcalldata, str):  # filepath, probably
-            calldata = AllCallData.from_file(allcalldata)[afp]
-        else:
-            calldata = allcalldata[afp]  # AllCallData can accept filename too!
+        # resolve the final samplerate
+        # we don't have to do lowest_common_multiple cuz it is only powers of 10
+        starts = np.array(starts)
+        ends = np.array(ends)
+        decimultiplier = np.array(decimultiplier)
 
-        return cls(afp, calldata, se, trans, samplerate=1)
+        samplerate = 10**(np.max(decimultiplier))
+        decimultiplier = 10**(np.max(decimultiplier) - decimultiplier)
+
+        starts = starts[:, 0] * samplerate + starts[:, 1] * decimultiplier[:, 0]
+        ends = ends[:, 0] * samplerate + ends[:, 1] * decimultiplier[:, 1]
+
+        return cls(
+            filepath,
+            caldata,
+            np.stack((starts, ends), axis=1),
+            trans,
+            samplerate=samplerate, )
 
     def __str__(self):
         s = "Source filepath:\n{}\n".format(self.sourcefile)
@@ -285,58 +315,44 @@ class ActiveSpeakers(lu.ContiguousSequenceLabels):
             ) + "Provide either AllCallData instance or filepath to it")
 
     @classmethod
-    def from_annotations(cls, ann, samplerate=100,
-                         warn=True):  # min time resolution 1ms, mostly
-        """
-        TODO: [ ] Better handling of warnings?
-            The user should be aware that there is a problem,
-            and some implicit decisions were made
-            Hence `warn = True` by default
-        """
-        with ann.samplerate_as(samplerate):
-            _se = ann.starts_ends
-            se = np.round(_se).astype(np.int)
-
-        if warn:
-            try:
-                np.testing.assert_almost_equal(se, _se)
-            except AssertionError:
-                _w = "Sample rate {} does not evenly divide all the starts and ends for file:\n{}".format(
-                    samplerate, ann.sourcefile)
-                warnings.warn(_w)
+    def from_annotations(cls, ann, warn_duplicates=True):
+        starts_ends, labels_idx = ann._flattened_indices()  # pylint: disable=protected-access
 
         # make contigious array of shape (total_duration, n_speakers)
         # NOTE: n_speakers is 2 for all Fisher data
         n_speakers = 2
-        active_speakers = np.zeros(
-            shape=(se[:, 1].max(), n_speakers), dtype=np.int)
+        labels = np.zeros(shape=(len(starts_ends), n_speakers), dtype=np.int)
+        for i, lix in enumerate(labels_idx):
+            if len(lix) == 1:
+                labels[i, ann.labels[lix[0]].speakerchannel] += 1
+            elif len(lix) > 1:
+                # for loop outside cuz there may be duplicate annots for the same speaker
+                # inline for loop will lead to numpy not incrementing for duplicates
+                for ix in lix:
+                    labels[i, ann.labels[ix].speakerchannel] += 1
 
-        for (start, end), l in zip(se, ann.labels):
-            # NOTE: not setting to 1 straightaway to catch duplicates
-            active_speakers[start:end, l.speakerchannel] += 1
-
-        if active_speakers.max() > 1:
-            if warn:
-                _w = "Some speakers may have duplicate annotations for file:\n{}.\n!!! IGNORED !!!".format(
+        if labels.max() > 1:
+            labels[labels > 1] = 1
+            if warn_duplicates:
+                _w = "some speakers may have duplicate annotations for file:\n{}.\n!!! IGNORED !!!".format(
                     ann.sourcefile)
                 warnings.warn(_w)
 
-            active_speakers[active_speakers > 1] = 1
-
-        starts_ends, active_speakers = nu.group_by_values(active_speakers)
+        # IDEA: merge consecutive segments with the same label
+        # Check rennet.datasets.ka3.ActiveSpeakers.from_annotations for explanation on skipping this
+        # It will be nice if you make the update here to do something similar there as well
 
         return cls(
             ann.sourcefile,
             ann.calldata,
             starts_ends,
-            active_speakers,
-            samplerate=samplerate)
+            labels,
+            samplerate=ann.samplerate, )
 
     @classmethod
-    def from_file(cls, filepath, samplerate=100, allcalldata=None, warn=True):
-        ann = Annotations.from_file(filepath, allcalldata, skip_content=True)
-        # min time resolution 1ms, mostly
-        return cls.from_annotations(ann, samplerate=samplerate, warn=warn)
+    def from_file(cls, filepath, allcalldata=None, warn_duplicates=True):
+        ann = Annotations.from_file(filepath, allcalldata)
+        return cls.from_annotations(ann, warn_duplicates=warn_duplicates)
 
     def __str__(self):
         s = "Source filepath:\n{}\n".format(self.sourcefile)
