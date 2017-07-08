@@ -184,15 +184,17 @@ class Annotations(lu.SequenceLabels):
             return self.calldata.callid
 
     def find_and_set_calldata(self, allcalldata):
-        try:
-            if isinstance(allcalldata, str):  # filename, probably
-                allcalldata = AllCallData.from_file(allcalldata)
-
-            self.calldata = allcalldata[self.sourcefile]
-        except KeyError:
-            raise KeyError(
-                "Call Data for callid {} not found in provided allcalldata".
-                format(self.callid))
+        # IDEA: Since we know source's filepath, we may be able to guess allcalldata path
+        # Infer it for user? Serves purpose of 'find' properly then.
+        fn = self.sourcefile
+        if isinstance(allcalldata, AllCallData):
+            self.calldata = allcalldata[fn]
+        elif isinstance(allcalldata, str):  # filename, probably
+            self.calldata = AllCallData.from_file_for_filename(allcalldata, fn)
+        else:
+            raise TypeError("allcalldata of unexpected type: {}\n".format(
+                type(allcalldata)
+            ) + "Provide either AllCallData instance or filepath to it")
 
     @classmethod
     def from_file(cls, filepath, allcalldata=None, skip_content=False):
@@ -272,15 +274,15 @@ class ActiveSpeakers(lu.ContiguousSequenceLabels):
             return self.calldata.callid
 
     def find_and_set_calldata(self, allcalldata):
-        try:
-            if isinstance(allcalldata, str):  # filename, probably
-                allcalldata = AllCallData.from_file(allcalldata)
-
-            self.calldata = allcalldata[self.sourcefile]
-        except KeyError:
-            raise KeyError(
-                "Call Data for callid {} not found in provided allcalldata".
-                format(self.callid))
+        fn = self.sourcefile
+        if isinstance(allcalldata, AllCallData):
+            self.calldata = allcalldata[fn]
+        elif isinstance(allcalldata, str):  # filename, probably
+            self.calldata = AllCallData.from_file_for_filename(allcalldata, fn)
+        else:
+            raise TypeError("allcalldata of unexpected type: {}\n".format(
+                type(allcalldata)
+            ) + "Provide either AllCallData instance or filepath to it")
 
     @classmethod
     def from_annotations(cls, ann, samplerate=100,
