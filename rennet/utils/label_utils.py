@@ -98,9 +98,12 @@ class SequenceLabels(object):
         """ndarray: `starts_ends` of the `labels`, calculated with contextually
         the most recent non-`None` samplerate. See also `samplerate_as`.
         """
-        sr = self.samplerate  # contextually most recent and valid samplerate
-        osr = self.orig_samplerate
-        if sr >= osr and sr % osr == 0:
+        if self._samplerate == self._orig_samplerate:
+            return self._starts_ends
+
+        sr = self._samplerate  # contextually most recent and valid samplerate
+        osr = self._orig_samplerate
+        if sr > osr and sr % osr == 0:
             # avoid definitely floating a potential int
             # will still return float if any of the three is float
             # worth a try I guess
