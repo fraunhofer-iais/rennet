@@ -200,16 +200,21 @@ class SequenceLabels(object):
         """
         if not isinstance(ends, Iterable):
             ends = [ends]
-        ends = np.array(ends)
+        if not isinstance(ends, np.ndarray):
+            ends = np.array(ends)
 
         with self.samplerate_as(samplerate):
             bins, labels_idx = self._flattened_indices(return_bins=True)
 
-        bins = np.round(bins, rounded)  # floating point comparison issues
+        if ends.dtype != np.int or bins.dtype != np.int:
+            # floating point comparison issues
+            bins = np.round(bins, rounded)
+            ends = np.round(ends, rounded)
 
-        # include right edge, not left, because we only know about what happened
-        # in the `(1/_orig_samplerate)` seconds finishing at an `end`
-        bin_idx = np.digitize(ends, bins, right=True)
+        # We only know about what happened in the `(1/_orig_samplerate)` seconds finishing at an `end`
+        # Hence choose side='left'.
+        # ends outside bins will have value 0 or len(bins)
+        bin_idx = np.searchsorted(bins, ends, side='left')
 
         # construct labels for only the unique bin_idx, repackage when returning
         unique_bin_idx, bin_idx = np.unique(bin_idx, return_inverse=True)
@@ -222,11 +227,10 @@ class SequenceLabels(object):
                 # labels for bin_idx == 1 are at labels_idx[0]
                 l = labels_idx[idx - 1]
                 if len(l) == 1:
-                    unique_res_labels[i] = (self.labels[l[0]], )
+                    unique_res_labels[i] = (self.labels[l[0], ...], )
                 elif len(l) > 1:
-                    unique_res_labels[i] = tuple(self.labels[list(l)])
-                else:
-                    unique_res_labels[i] = default_label
+                    unique_res_labels[i] = tuple(self.labels[l, ...])
+                # else: it is prefilled with default_label
 
         return unique_res_labels[bin_idx, ...]
 
