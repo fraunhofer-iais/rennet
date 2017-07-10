@@ -287,79 +287,84 @@ class ContiguousSequenceLabels(SequenceLabels):
             msg += "\nNo duplicate or missing segments allowed between min-start and max-end"
             raise AssertionError(msg)
 
-    def _infer_and_get_filled_default_labels(self, shape):
-        if self.labels.dtype == np.object:
-            return np.array([None for _ in range(len(shape[0]))])
-        else:
-            return np.zeros(
-                shape=((shape[0], ) + self.labels.shape[1:]),
-                dtype=self.labels.dtype)
-
     def labels_at(self,
                   ends,
                   samplerate=None,
-                  default_label='auto',
+                  default_label='zeros',
                   rounded=10):
-        """ TODO: [ ] Proper Dox
+        """ Get labels at ends.
 
         if `samplerate` is `None`, it is assumed that `ends` are at the same
         `samplerate` as our contextually most recent one. See `samplerate_as`
+
+        TODO: [ ] Proper Dox
         """
         if not isinstance(ends, Iterable):
             ends = [ends]
-
-        ends = np.array(ends)
+        if not isinstance(ends, np.ndarray):
+            ends = np.array(ends)
 
         with self.samplerate_as(samplerate):
             se = self.starts_ends
+            bins = np.append(se[:, 0], se[-1, -1])
 
-        se = np.round(se, rounded)  # To avoid issues with floating points
+        if ends.dtype != np.int or bins.dtype != np.int:
+            # floating point comparison issues
+            bins = np.round(bins, rounded)
+            ends = np.round(ends, rounded)
 
-        # all ends that are within the segments
-        endings = se[:, 1]
-        maxend = endings.max()
-        minstart = se[:, 0].min()
-        endswithin = (ends > minstart) & (ends <= maxend)
+        # We only know about what happened in the `(1/_orig_samplerate)` seconds finishing at an `end`
+        # Hence choose side='left'.
+        # np.digitize is slower!!!
+        bin_idx = np.searchsorted(bins, ends, side='left')
 
-        # find indices of the labels for ends that are within the segments
-        within_labelidx = np.searchsorted(
-            endings, ends[endswithin], side='left')
+        # ends which are not within the bins will be either 0 or len(bins)
+        bin_idx_outside = (bin_idx == 0) | (bin_idx == len(bins))
 
-        if endswithin.sum() == len(ends):
-            # all ends are within
+        # label for bin_idx == 1 is at labels[0]
+        bin_idx -= 1
+        if np.any(bin_idx_outside):
+            # there are some ends outside the bins
+            if default_label == 'raise':
+                with self.samplerate_as(samplerate):
+                    msg = "Some ends are outside the segments and default_label has been chosen to be 'raise'. "+\
+                        "Choose an appropriate default_label, or ammend the provided ends to be in range ="+\
+                        " ({}, {}] at samplerate {}".format(bins[0], bins[-1], self.samplerate)
+                    raise KeyError(msg)
 
-            # pick the labels at those indices, and return
-            return self.labels[within_labelidx, ...]
+            bin_idx_within = np.invert(bin_idx_outside)
+            res = np.zeros(
+                shape=(len(bin_idx), ) + self.labels.shape[1:],
+                dtype=self.labels.dtype, )
+            res[bin_idx_within] = self.labels[bin_idx[bin_idx_within], ...]
 
-        elif default_label == 'auto':
-            # some ends are outside and a default label is not provided
+            if default_label == 'zeros':
+                # IDEA: be more smart about handling some of the custom default labels.
+                pass
+            elif default_label == 'ones':
+                res[bin_idx_outside] = 1
+            elif type(default_label) == res.dtype:
+                # IDEA: provide way to handle numpy.ndarray type of default_label
+                # if it has the right shape (and maybe type as well)
 
-            # a default label will be inferred from the existing self.labels
-            # We construct the numpy array with default label for all ends
-            res = self._infer_and_get_filled_default_labels(ends.shape)
+                # IDEA: provide way to fill with a default_label of different dtype
+                # perhaps by casting to np.object
+                # may require extra parameter like force_fill=True or something
 
-            # then fill it up with found labels where ends are within
-            res[endswithin] = self.labels[within_labelidx, ...]
+                # The user is probably asking to fill the array with default_label where ends are outside
+                res[bin_idx_outside] = default_label
+            else:
+                # IDEA: provide more options for default_label, like, Nones, etc.
+
+                # fallback case to handle a provided default_label
+                res = res.tolist()
+                for oi in np.where(bin_idx_outside)[0]:
+                    res[oi] = default_label
 
             return res
         else:
-            # provided default_label will be inserted for ends which are outside
-
-            label_idx = np.ones_like(ends, dtype=np.int) * -1
-            label_idx[endswithin] = within_labelidx
-
-            result = []
-            for li in label_idx:
-                if li < 0:  # default_label
-                    result.append(default_label)
-                else:
-                    try:
-                        result.append(self.labels[li, ...])
-                    except IndexError as e:
-                        print(li)
-                        raise e
-
-            return result
+            # all ends are within bins
+            return self.labels[bin_idx, ...]
 
     def __getitem__(self, idx):
         res = super(ContiguousSequenceLabels, self).__getitem__(idx)

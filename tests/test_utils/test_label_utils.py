@@ -532,7 +532,7 @@ def test_ContiSequenceLabels_labels_at_outside_with_auto_deflabel(
         shape=((len(ends), ) + s.labels.shape[1:]), dtype=s.labels.dtype)
 
     # when default_label is to be determined automatically
-    labels = s.labels_at(ends, default_label='auto')
+    labels = s.labels_at(ends, default_label='zeros')
 
     assert all([e == r for e, r in zip(zlabels, labels)]), list(
         zip(zlabels, labels))
@@ -601,7 +601,7 @@ def test_ContiSequenceLabels_labels_at_general_with_auto_deflabel(
         for k in ['seqlabelinst', 'ends', 'at_sr', 'target_labels']
     ]
 
-    labels = s.labels_at(la_ends, lasr, default_label='auto')
+    labels = s.labels_at(la_ends, lasr, default_label='zeros')
 
     assert all([e == r for e, r in zip(target_labels, labels)]), ", ".join(
         "({} {})".format(e, t) for e, t in zip(target_labels, labels))
