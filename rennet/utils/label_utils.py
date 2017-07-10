@@ -166,13 +166,7 @@ class SequenceLabels(object):
 
         se = self.starts_ends
 
-        if np.all(se[1:, 0] == se[:-1, 1]):  # already flat
-            bins = np.zeros(len(se) + 1, dtype=se.dtype)
-            bins[:-1] = se[:, 0]
-            bins[-1] = se[-1, 1]
-
-            labels_indices = [(i, ) for i in range(len(se))]
-        else:
+        if np.any(se[1:, 0] != se[:-1, 1]):  # not flat
             # `numpy.unique` also sorts the (flattened) array
             bins, sorting_indices = np.unique(se, return_inverse=True)
 
@@ -184,6 +178,12 @@ class SequenceLabels(object):
                 # `s` may also repeat, hence can't do fancy `numpy` w/ readability
                 for i in range(s, e):
                     labels_indices[i] += (j, )
+        else:  # already flat
+            bins = np.zeros(len(se) + 1, dtype=se.dtype)
+            bins[:-1] = se[:, 0]
+            bins[-1] = se[-1, 1]
+
+            labels_indices = [(i, ) for i in range(len(se))]
 
         if return_bins:
             # return as bins for `numpy.digitize`
