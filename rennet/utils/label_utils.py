@@ -319,7 +319,7 @@ class SequenceLabels(object):
         return len(self.labels)
 
     def __getitem__(self, idx):
-        se = self._starts_ends[idx, ...]
+        se = self.starts_ends[idx, ...]
         l = self.labels[idx, ...]
 
         if len(se.shape) == 1:  # case with only one segment
@@ -329,7 +329,7 @@ class SequenceLabels(object):
         if self.__class__ is SequenceLabels:
             return self.__class__(se, l, self.orig_samplerate)
         else:
-            return se, l, self.orig_samplerate
+            return se, l, self._samplerate
 
     def __iter__(self):
         return zip(self.starts_ends, self.labels)
