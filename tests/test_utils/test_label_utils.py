@@ -14,6 +14,55 @@ from rennet.utils import label_utils as lu
 
 # pylint: disable=redefined-outer-name
 
+def test_SequenceLabels_doesnt_init():
+    # Non-iterables
+    with pytest.raises(TypeError):
+        lu.SequenceLabels(0, 0, 1)
+
+    # iterables of mismatching length
+    with pytest.raises(AssertionError):
+        lu.SequenceLabels([0], [0, 1])
+
+    # starts_ends not like starts_ends
+    with pytest.raises(AssertionError):
+        lu.SequenceLabels([0], [[0, 1]])
+    with pytest.raises(AssertionError):
+        lu.SequenceLabels([[0, 1, 2]], [[0, 1]])
+
+    # ends before starts
+    with pytest.raises(ValueError):
+        lu.SequenceLabels([[1, 0]], [[0, 1]])
+
+    # bad samplerate
+    with pytest.raises(ValueError):
+        lu.SequenceLabels([[0, 1]], [[0, 1]], 0)
+    with pytest.raises(ValueError):
+        lu.SequenceLabels([[0, 1]], [[0, 1]], -1)
+
+def test_ContiguousSequenceLabels_doesnt_init():
+    # Non-iterables
+    with pytest.raises(TypeError):
+        lu.ContiguousSequenceLabels(0, 0, 1)
+
+    # iterables of mismatching length
+    with pytest.raises(AssertionError):
+        lu.ContiguousSequenceLabels([0], [0, 1])
+
+    # starts_ends not like starts_ends
+    with pytest.raises(AssertionError):
+        lu.ContiguousSequenceLabels([0], [[0, 1]])
+    with pytest.raises(AssertionError):
+        lu.ContiguousSequenceLabels([[0, 1, 2]], [[0, 1]])
+
+    # ends before starts
+    with pytest.raises(ValueError):
+        lu.ContiguousSequenceLabels([[1, 0]], [[0, 1]])
+
+    # bad samplerate
+    with pytest.raises(ValueError):
+        lu.ContiguousSequenceLabels([[0, 1]], [[0, 1]], 0)
+    with pytest.raises(ValueError):
+        lu.ContiguousSequenceLabels([[0, 1]], [[0, 1]], -1)
 
 @pytest.fixture(scope='module')
 def base_contiguous_small_seqdata():
@@ -115,6 +164,17 @@ def test_SequenceLabels_initializes(init_small_seqdata):
     assert s.min_start == init_small_seqdata['minstart']
     assert s.max_end == init_small_seqdata['maxend']
     assert all([e == r for e, r in zip(l, s.labels)]), list(zip(l, s.labels))
+    assert len(s) == len(l)
+
+    for ose, ol, (sse, sl) in zip(se[-2:, ...], l[-2:], s[-2:]):
+        assert all(x == y for x, y in zip(ose, sse))
+        assert ol == sl
+
+    for sse, sl in s[0]:
+        assert all(x == y for x, y in zip(se[0, ...], sse))
+        assert sl == l[0]
+
+    print(s)
 
 
 def test_ContiguousSequenceLabels_init_conti_fail_nonconti(init_small_seqdata):
@@ -135,6 +195,13 @@ def test_ContiguousSequenceLabels_init_conti_fail_nonconti(init_small_seqdata):
         assert s.max_end == init_small_seqdata['maxend']
         assert all([e == r
                     for e, r in zip(l, s.labels)]), list(zip(l, s.labels))
+        assert len(s) == len(l)
+
+        for ose, ol, (sse, sl) in zip(se[-2:, ...], l[-2:], s[-2:]):
+            assert all(x == y for x, y in zip(ose, sse))
+            assert ol == sl
+
+        print(s)
     else:
         with pytest.raises(AssertionError):
             lu.ContiguousSequenceLabels(se, l, samplerate=sr)
@@ -446,6 +513,7 @@ def test_SequenceLabels_labels_at_general(
     assert all([e == r for e, r in zip(target_labels, labels)]), ", ".join(
         "({} {})".format(e, t) for e, t in zip(target_labels, labels))
 
+    assert s.labels_at(la_ends[0], lasr, None)[-1] == labels[0]
 
 @pytest.fixture(
     scope='module',
@@ -554,6 +622,9 @@ def test_ContiSequenceLabels_labels_at_outside_with_deflabel(
     assert all([e == r
                 for e, r in zip(tlabels, labels)]), list(zip(tlabels, labels))
 
+    with pytest.raises(KeyError):
+        s.labels_at(ends, default_label='raise')
+
 
 def test_ContiSequenceLabels_labels_at_outside_with_auto_deflabel(
         ContiSequenceLabels_small_seqdata_labels_at_outside):
@@ -638,6 +709,8 @@ def test_ContiSequenceLabels_labels_at_general_with_auto_deflabel(
 
     assert all([e == r for e, r in zip(target_labels, labels)]), ", ".join(
         "({} {})".format(e, t) for e, t in zip(target_labels, labels))
+
+    assert s.labels_at(la_ends[0], lasr, default_label='zeros')[-1] == target_labels[0]
 
 
 @pytest.fixture(
