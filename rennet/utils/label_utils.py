@@ -27,7 +27,7 @@ class SequenceLabels(object):
     `labels` for each segment.
     """
     __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate',
-                 '_minstart_at_orig_sr', '_maxend_at_orig_sr')
+                 '_minstart_at_orig_sr', )
 
     # To save memory, maybe? I just wanted to learn about them.
     # NOTE: Add at least ``__slots__ = ()`` at the top if you want to keep the functionality in a subclass.
@@ -72,7 +72,6 @@ class SequenceLabels(object):
         self._samplerate = samplerate
 
         self._minstart_at_orig_sr = self._starts_ends[0, 0]  # min-start
-        self._maxend_at_orig_sr = self._starts_ends[-1, -1]  # max-end
 
     @property
     def samplerate(self):
@@ -150,10 +149,7 @@ class SequenceLabels(object):
         Effectively, the end time-point of the last label, when all are sorted
         based on starts as primary key, and ends as secondary key.
         """
-        return self._convert_samplerate(
-            self._maxend_at_orig_sr,
-            from_samplerate=self._orig_samplerate,
-            to_samplerate=self._samplerate, )
+        return self.starts_ends[-1, -1]
 
     @property
     def starts_ends(self):
@@ -341,7 +337,7 @@ class ContiguousSequenceLabels(SequenceLabels):
 
     # PARENT'S SLOTS
     # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate',
-    #              '_minstart_at_orig_sr', '_maxend_at_orig_sr')
+    #              '_minstart_at_orig_sr', )
     __slots__ = ()
 
     def __init__(self, *args, **kwargs):
