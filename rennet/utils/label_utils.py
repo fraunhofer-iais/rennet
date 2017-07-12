@@ -71,7 +71,7 @@ class SequenceLabels(object):
         self._orig_samplerate = samplerate
         self._samplerate = samplerate
 
-        self._minstart_at_orig_sr = self._starts_ends[0, 0]  # min-start
+        self._minstart_at_orig_sr = self._starts_ends.item(0)  # min-start
 
     @property
     def samplerate(self):
@@ -118,7 +118,8 @@ class SequenceLabels(object):
             raise ValueError(
                 "samplerates <=0 not supported: from_samplerate= {}, to_samplerate= {}".
                 format(from_samplerate, to_samplerate))
-        if to_samplerate == from_samplerate:
+
+        if to_samplerate == from_samplerate or (not isinstance(value, np.ndarray) and value == 0):
             return value
 
         if to_samplerate > from_samplerate and to_samplerate % from_samplerate == 0:
@@ -149,7 +150,7 @@ class SequenceLabels(object):
         Effectively, the end time-point of the last label, when all are sorted
         based on starts as primary key, and ends as secondary key.
         """
-        return self.starts_ends[-1, -1]
+        return self.starts_ends.item(-1)
 
     @property
     def starts_ends(self):
@@ -159,8 +160,9 @@ class SequenceLabels(object):
         self._starts_ends is stored at self._orig_samplerate and never modified.
         """
         starts_ends = self._starts_ends
-        if self._minstart_at_orig_sr != starts_ends[0, 0]:
-            starts_ends -= (starts_ends[0, 0] - self._minstart_at_orig_sr)
+        ominstart = starts_ends.item(0)
+        if self._minstart_at_orig_sr != ominstart:
+            starts_ends = starts_ends - (ominstart - self._minstart_at_orig_sr)
 
         return self._convert_samplerate(
             starts_ends,
