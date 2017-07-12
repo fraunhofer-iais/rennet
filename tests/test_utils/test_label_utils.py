@@ -47,13 +47,8 @@ def base_noncontiguous_small_seqdata():
     labels_at_secs_nonconti = [
         (0.5, (1, )),
         (1., (1, )),
-        (3.4, (
-            0,
-            2, )),
-        (4.8, (
-            0,
-            2,
-            1, )),
+        (3.4, (0, 2, )),
+        (4.8, (0, 2, 1, )),
         (5.5, (1, )),
         (6, (1, )),
     ]
@@ -79,6 +74,8 @@ def base_small_seqdata(request):
         'labels': labels,
         'isconti': isconti,
         'labels_at': la,
+        'minstart': min(starts_secs),
+        'maxend': max(ends_secs),
     }
 
 
@@ -88,8 +85,10 @@ def base_small_seqdata(request):
     ids=lambda x: "SR={}".format(x))  # pylint: disable=unnecessary-lambda
 def init_small_seqdata(request, base_small_seqdata):
     sr = request.param
-    se = (base_small_seqdata['starts_ends'] *
-          (sr / base_small_seqdata['samplerate']))
+    _srmult = (sr / base_small_seqdata['samplerate'])
+    se = base_small_seqdata['starts_ends'] * _srmult
+    minstart = base_small_seqdata['minstart'] * _srmult
+    maxend = base_small_seqdata['maxend'] * _srmult
 
     return {
         'starts_ends': se,
@@ -97,6 +96,8 @@ def init_small_seqdata(request, base_small_seqdata):
         'labels': base_small_seqdata['labels'],
         'isconti': base_small_seqdata['isconti'],
         'labels_at': base_small_seqdata['labels_at'],
+        'minstart': minstart,
+        'maxend': maxend,
     }
 
 
@@ -111,6 +112,8 @@ def test_SequenceLabels_initializes(init_small_seqdata):
     npt.assert_equal(s.starts_ends, se)
     assert s.samplerate == sr
     assert s.orig_samplerate == sr
+    assert s.min_start == init_small_seqdata['minstart']
+    assert s.max_end == init_small_seqdata['maxend']
     assert all([e == r for e, r in zip(l, s.labels)]), list(zip(l, s.labels))
 
 
@@ -128,8 +131,10 @@ def test_ContiguousSequenceLabels_init_conti_fail_nonconti(init_small_seqdata):
         npt.assert_equal(s.starts_ends, se)
         assert s.samplerate == sr
         assert s.orig_samplerate == sr
-        assert all(
-            [e == r for e, r in zip(l, s.labels)]), list(zip(l, s.labels))
+        assert s.min_start == init_small_seqdata['minstart']
+        assert s.max_end == init_small_seqdata['maxend']
+        assert all([e == r
+                    for e, r in zip(l, s.labels)]), list(zip(l, s.labels))
     else:
         with pytest.raises(AssertionError):
             lu.ContiguousSequenceLabels(se, l, samplerate=sr)
@@ -156,6 +161,8 @@ def seqlabelinst_small_seqdata(request, init_small_seqdata):
         'seqlabelinst': s,
         'orig_sr': sr,
         'orig_se': se,
+        'minstart': init_small_seqdata['minstart'],
+        'maxend': init_small_seqdata['maxend'],
     }
 
 
@@ -169,32 +176,58 @@ def se_to_sr_small_seqdata_SequenceLabels(request, seqlabelinst_small_seqdata):
     s = seqlabelinst_small_seqdata['seqlabelinst']
     sr = seqlabelinst_small_seqdata['orig_sr']
     se = seqlabelinst_small_seqdata['orig_se']
+    minstart = seqlabelinst_small_seqdata['minstart']
+    maxend = seqlabelinst_small_seqdata['maxend']
 
     to_sr = request.param
-    target_se = se * (to_sr / sr)
+    _srmult = to_sr / sr
+    target_se = se * _srmult
+    target_minstart = minstart * _srmult
+    target_maxend = maxend * _srmult
 
     return {
         'seqlabelinst': s,
         'orig_sr': sr,
         'target_sr': to_sr,
-        'target_se': target_se
+        'target_se': target_se,
+        't_minstart': target_minstart,
+        't_maxend': target_maxend,
     }
 
 
 def test_se_to_sr_SeqLabels(se_to_sr_small_seqdata_SequenceLabels):
-    s, osr, tsr, tse = [
+    s, osr, tsr, tse, tms, tme = [
         se_to_sr_small_seqdata_SequenceLabels[k]
-        for k in ['seqlabelinst', 'orig_sr', 'target_sr', 'target_se']
+        for k in [
+            'seqlabelinst',
+            'orig_sr',
+            'target_sr',
+            'target_se',
+            't_minstart',
+            't_maxend',
+        ]
     ]
 
     with s.samplerate_as(tsr):
         rse = s.starts_ends
         rsr = s.samplerate
         rosr = s.orig_samplerate
+        rms = s.min_start
+        rme = s.max_end
 
     assert rosr == osr
     assert rsr == tsr
+    assert rms == tms
+    assert rme == tme
     npt.assert_equal(rse, tse)
+
+    with pytest.raises(ValueError):
+        with s.samplerate_as(-1 * tsr):
+            pass
+
+    with pytest.raises(ValueError):
+        with s.samplerate_as(0):
+            pass
 
 
 @pytest.fixture(
@@ -294,8 +327,8 @@ def test_SequenceLabels_labels_at_allwithin(
 
     labels = s.labels_at(la_ends, samplerate=lasr)
 
-    assert all([e == r for e, r in zip(target_labels, labels)]), list(
-        zip(target_labels, labels))
+    assert all([e == r for e, r in zip(target_labels, labels)
+                ]), list(zip(target_labels, labels))
 
 
 @pytest.fixture(
@@ -344,8 +377,8 @@ def test_SequenceLabels_labels_at_outside(
     # not passing default label == passing None
     labels = s.labels_at(ends, default_label=deflabel)
 
-    assert all([e == r for e, r in zip(tlabels, labels)]), list(
-        zip(tlabels, labels))
+    assert all([e == r
+                for e, r in zip(tlabels, labels)]), list(zip(tlabels, labels))
 
 
 @pytest.fixture(
@@ -419,8 +452,8 @@ def test_SequenceLabels_labels_at_general(
     params=[1., 3., 3, 101, 1000, 8000, 16000],  # samplerate for labels_at
     ids=lambda x: "laSR={}".format(x)  #pylint: disable=unnecessary-lambda
 )
-def ContiSequenceLabels_small_seqdata_labels_at_allwithin(request,
-                                                          init_small_seqdata):
+def ContiSequenceLabels_small_seqdata_labels_at_allwithin(
+        request, init_small_seqdata):
     """ fixture with labels_at at different samplerates
 
     And of course instance of SequenceLabels class that handles both
@@ -463,8 +496,8 @@ def test_ContiSequenceLabels_labels_at_allwithin(
 
     labels = s.labels_at(la_ends, samplerate=lasr)
 
-    assert all([e == r for e, r in zip(target_labels, labels)]), list(
-        zip(target_labels, labels))
+    assert all([e == r for e, r in zip(target_labels, labels)
+                ]), list(zip(target_labels, labels))
 
 
 @pytest.fixture(
@@ -472,8 +505,8 @@ def test_ContiSequenceLabels_labels_at_allwithin(
     params=[None, [], -1, [-1]],  # expected default labels
     ids=lambda x: "laSR={}".format(x)  #pylint: disable=unnecessary-lambda
 )
-def ContiSequenceLabels_small_seqdata_labels_at_outside(request,
-                                                        init_small_seqdata):
+def ContiSequenceLabels_small_seqdata_labels_at_outside(
+        request, init_small_seqdata):
     """ fixture with labels_at at different samplerates
 
     And of course instance of SequenceLabels class that handles both
@@ -518,8 +551,8 @@ def test_ContiSequenceLabels_labels_at_outside_with_deflabel(
     # when default_label is passed
     labels = s.labels_at(ends, default_label=deflabel)
 
-    assert all([e == r for e, r in zip(tlabels, labels)]), list(
-        zip(tlabels, labels))
+    assert all([e == r
+                for e, r in zip(tlabels, labels)]), list(zip(tlabels, labels))
 
 
 def test_ContiSequenceLabels_labels_at_outside_with_auto_deflabel(
@@ -534,8 +567,8 @@ def test_ContiSequenceLabels_labels_at_outside_with_auto_deflabel(
     # when default_label is to be determined automatically
     labels = s.labels_at(ends, default_label='zeros')
 
-    assert all([e == r for e, r in zip(zlabels, labels)]), list(
-        zip(zlabels, labels))
+    assert all([e == r
+                for e, r in zip(zlabels, labels)]), list(zip(zlabels, labels))
 
 
 @pytest.fixture(
@@ -543,8 +576,8 @@ def test_ContiSequenceLabels_labels_at_outside_with_auto_deflabel(
     params=[1., 3., 3, 101, 1000, 8000, 16000],  # samplerate for labels_at
     ids=lambda x: "laSR={}".format(x)  #pylint: disable=unnecessary-lambda
 )
-def ContiSequenceLabels_small_seqdata_labels_at_general(request,
-                                                        init_small_seqdata):
+def ContiSequenceLabels_small_seqdata_labels_at_general(
+        request, init_small_seqdata):
     """ fixture with labels_at at different samplerates for general case
 
     General case where ends can be outside the starts_ends as well

@@ -26,11 +26,11 @@ class SequenceLabels(object):
     When iterated over, the returned values are a `zip` of `starts_ends` and
     `labels` for each segment.
     """
-    __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate')
-    """To save memory, maybe? I just wanted to learn about them.
-    Include at least ``__slots__ = ()`` if you want to keep the functionality in
-    a subclass.
-    """
+    __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate',
+                 '_minstart_at_orig_sr', '_maxend_at_orig_sr')
+
+    # To save memory, maybe? I just wanted to learn about them.
+    # NOTE: Add at least ``__slots__ = ()`` at the top if you want to keep the functionality in a subclass.
 
     def __init__(self, starts_ends, labels, samplerate=1):
         """Initialize a SequenceLabels instance with starts_ends and labels"""
@@ -71,6 +71,9 @@ class SequenceLabels(object):
         self._orig_samplerate = samplerate
         self._samplerate = samplerate
 
+        self._minstart_at_orig_sr = self._starts_ends[0, 0]  # min-start
+        self._maxend_at_orig_sr = self._starts_ends[-1, -1]  # max-end
+
     @property
     def samplerate(self):
         """float or int: The current samplerate of `starts_ends`.
@@ -93,23 +96,80 @@ class SequenceLabels(object):
         """
         return self._orig_samplerate
 
+    @staticmethod
+    def _convert_samplerate(value, from_samplerate, to_samplerate):
+        """ Convert a value from_samplerate to_samplerate
+
+        Tries to keep the return value int when possible and foreseen.
+
+        Parameters
+        ----------
+        value: ndarray or float or int
+            The value whose samplerate has to be changed.
+        from_samplerate: float or int, > 0
+            The samplerate of value.
+        to_samplerate: float or int, > 0
+            The samplerate the value is to be converted to.
+
+        Raises
+        ------
+        ValueError: When from_samplerate <= 0 or to_samplerate <= 0
+        """
+        if to_samplerate <= 0 or from_samplerate <= 0:
+            raise ValueError(
+                "samplerates <=0 not supported: from_samplerate= {}, to_samplerate= {}".
+                format(from_samplerate, to_samplerate))
+        if to_samplerate == from_samplerate:
+            return value
+
+        if to_samplerate > from_samplerate and to_samplerate % from_samplerate == 0:
+            # avoid definitely floating a potential int
+            # will still return float if any of the three is float
+            # worth a try I guess
+            return value * (to_samplerate // from_samplerate)
+        else:
+            return value * (to_samplerate / from_samplerate)
+
+    @property
+    def min_start(self):
+        """ float or int: Minimum start of starts_ends at the current samplerate.
+
+        Effectively, the start time-point of the first label, when all are sorted
+        based on starts as primary key, and ends as secondary key.
+        """
+        # self._minstart_at_orig_sr is always at self._orig_samplerate
+        return self._convert_samplerate(
+            self._minstart_at_orig_sr,
+            from_samplerate=self._orig_samplerate,
+            to_samplerate=self._samplerate, )
+
+    @property
+    def max_end(self):
+        """ float or int: Maximum end of starts_ends at the current samplerate.
+
+        Effectively, the end time-point of the last label, when all are sorted
+        based on starts as primary key, and ends as secondary key.
+        """
+        return self._convert_samplerate(
+            self._maxend_at_orig_sr,
+            from_samplerate=self._orig_samplerate,
+            to_samplerate=self._samplerate, )
+
     @property
     def starts_ends(self):
         """ndarray: `starts_ends` of the `labels`, calculated with contextually
         the most recent non-`None` samplerate. See also `samplerate_as`.
-        """
-        if self._samplerate == self._orig_samplerate:
-            return self._starts_ends
 
-        sr = self._samplerate  # contextually most recent and valid samplerate
-        osr = self._orig_samplerate
-        if sr > osr and sr % osr == 0:
-            # avoid definitely floating a potential int
-            # will still return float if any of the three is float
-            # worth a try I guess
-            return self._starts_ends * (sr // osr)
-        else:
-            return self._starts_ends * (sr / osr)
+        self._starts_ends is stored at self._orig_samplerate and never modified.
+        """
+        starts_ends = self._starts_ends
+        if self._minstart_at_orig_sr != starts_ends[0, 0]:
+            starts_ends -= (starts_ends[0, 0] - self._minstart_at_orig_sr)
+
+        return self._convert_samplerate(
+            starts_ends,
+            from_samplerate=self._orig_samplerate,
+            to_samplerate=self._samplerate, )
 
     @contextmanager
     def samplerate_as(self, new_samplerate):
@@ -146,7 +206,7 @@ class SequenceLabels(object):
         when calculated in context of `new_samplerate = 2`, the `starts_ends`
         will be [[2., 10.]].
         """
-        old_sr = self.samplerate
+        old_sr = self._samplerate
         new_sr = old_sr if new_samplerate is None else new_samplerate
         if new_sr <= 0: raise ValueError("new_samplerate <=0 not supported")
 
@@ -275,7 +335,8 @@ class ContiguousSequenceLabels(SequenceLabels):
     """
 
     # PARENT'S SLOTS
-    # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate')
+    # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate',
+    #              '_minstart_at_orig_sr', '_maxend_at_orig_sr')
     __slots__ = ()
 
     def __init__(self, *args, **kwargs):
