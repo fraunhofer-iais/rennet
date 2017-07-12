@@ -238,19 +238,24 @@ class SequenceLabels(object):
                 # `s` may also repeat, hence can't do fancy `numpy` w/ readability
                 for i in range(s, e):
                     labels_indices[i] += (j, )
+
+            if return_bins:
+                # return as bins for `numpy.digitize`
+                return bins, labels_indices
+            else:
+                # return as `starts_ends` for `ContiguousSequenceLabels`
+                return np.stack((bins[:-1], bins[1:]), axis=1), labels_indices
+
         else:  # already flat
-            bins = np.zeros(len(se) + 1, dtype=se.dtype)
-            bins[:-1] = se[:, 0]
-            bins[-1] = se[-1, 1]
-
             labels_indices = [(i, ) for i in range(len(se))]
+            if return_bins:
+                bins = np.zeros(len(se) + 1, dtype=se.dtype)
+                bins[:-1] = se[:, 0]
+                bins[-1] = se[-1, -1]
 
-        if return_bins:
-            # return as bins for `numpy.digitize`
-            return bins, labels_indices
-        else:
-            # return as `starts_ends` for `ContiguousSequenceLabels`
-            return np.stack((bins[:-1], bins[1:]), axis=1), labels_indices
+                return bins, labels_indices
+            else:
+                return se, labels_indices
 
     def labels_at(self, ends, samplerate=None, default_label=(), rounded=10):
         """ TODO: [ ] Proper Dox
