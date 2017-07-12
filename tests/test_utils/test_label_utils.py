@@ -710,6 +710,185 @@ def test_ContiSequenceLabels_labels_at_general_with_deflabel(
         "({} {})".format(e, t) for e, t in zip(target_labels, labels))
 
 
+@pytest.fixture(
+    scope='module',
+    params=[0, 1., 3., 100, 101],  # start_as
+    ids=lambda x: "startas={}".format(x)  #pylint: disable=unnecessary-lambda
+)
+def shifted_start_same_sr_small_seqdata(request, seqlabelinst_small_seqdata):
+    """ Fixture to test min_start, max_end and starts_ends with start_as at same sr"""
+    s = seqlabelinst_small_seqdata['seqlabelinst']
+    ms = seqlabelinst_small_seqdata['minstart']
+    me = seqlabelinst_small_seqdata['maxend']
+    sr = seqlabelinst_small_seqdata['orig_sr']
+    se = seqlabelinst_small_seqdata['orig_se']
+
+    new_start = request.param
+    tms = new_start - ms
+    tme = me + tms
+    tse = se + tms
+    tsr = sr
+
+    return {
+        'seqlabelinst': s,
+        'orig_sr': sr,
+        'orig_se': se,
+        't_sr': tsr,
+        't_se': tse,
+        't_ms': tms,
+        't_me': tme,
+    }
+
+
+def test_shifted_start_same_sr(shifted_start_same_sr_small_seqdata):
+    s, osr, tsr, tse, tms, tme = [
+        shifted_start_same_sr_small_seqdata[k]
+        for k in [
+            'seqlabelinst',
+            'orig_sr',
+            't_sr',
+            't_se',
+            't_ms',
+            't_me',
+        ]
+    ]
+
+    # Assume samplerate to be orig when param not set
+    with s.min_start_as(tms):
+        assert s.orig_samplerate == osr
+        assert s.samplerate == osr
+        assert s.min_start == tms
+        assert s.max_end == tme
+        npt.assert_array_equal(s.starts_ends, tse)
+
+    with s.min_start_as(tms, samplerate=tsr):
+        assert s.orig_samplerate == osr
+        assert s.samplerate == tsr
+        assert s.min_start == tms
+        assert s.max_end == tme
+        npt.assert_array_equal(s.starts_ends, tse)
+
+    # raise error for negative samplerate
+    with pytest.raises(ValueError):
+        with s.min_start_as(tms, -1 * tsr):
+            pass
+
+    # raise error for zero samplerate
+    with pytest.raises(ValueError):
+        with s.min_start_as(tms, 0):
+            pass
+
+
+@pytest.fixture(
+    scope='module',
+    params=[1., 3., 3, 100, 101],  # to_samplerate
+    ids=lambda x: "toSR={}".format(x)  #pylint: disable=unnecessary-lambda
+)
+def shifted_start_param_sr_small_seqdata(request,
+                                         shifted_start_same_sr_small_seqdata):
+    """ Fixture to test starts_ends are calculated correctly in contextual sr """
+    s = shifted_start_same_sr_small_seqdata['seqlabelinst']
+    sr = shifted_start_same_sr_small_seqdata['orig_sr']
+    minstart = shifted_start_same_sr_small_seqdata['t_ms']
+    maxend = shifted_start_same_sr_small_seqdata['t_me']
+    se = shifted_start_same_sr_small_seqdata['t_se']
+    ose = shifted_start_same_sr_small_seqdata['orig_se']
+
+    to_sr = request.param
+    _srmult = to_sr / sr
+    target_se = se * _srmult
+    target_minstart = minstart * _srmult
+    target_maxend = maxend * _srmult
+
+    return {
+        'seqlabelinst': s,
+        'orig_sr': sr,
+        't_sr': to_sr,
+        't_se': target_se,
+        't_ms': target_minstart,
+        't_me': target_maxend,
+        'o_se': ose,
+        'o_ms': ose[:, 0].min(),
+        'o_me': ose[:, 1].max(),
+    }
+
+
+@pytest.mark.shifting
+def test_shifted_start_param_sr(  # pylint: disable=too-many-statements
+        shifted_start_param_sr_small_seqdata):
+    s, osr, tsr, tse, tms, tme, ose, oms, ome = [
+        shifted_start_param_sr_small_seqdata[k]
+        for k in [
+            'seqlabelinst',
+            'orig_sr',
+            't_sr',
+            't_se',
+            't_ms',
+            't_me',
+            'o_se',
+            'o_ms',
+            'o_me',
+        ]
+    ]
+
+    assert s.orig_samplerate == osr
+    assert s.samplerate == osr
+    assert s.min_start == oms
+    assert s.max_end == ome
+    npt.assert_array_equal(s.starts_ends, ose)
+
+    with s.min_start_as(tms, samplerate=tsr):
+        assert s.orig_samplerate == osr
+        assert s.samplerate == tsr
+        npt.assert_almost_equal(s.min_start, tms)
+        npt.assert_almost_equal(s.max_end, tme)
+        npt.assert_almost_equal(s.starts_ends, tse)
+
+    with s.samplerate_as(tsr):
+        with s.min_start_as(tms):
+            assert s.orig_samplerate == osr
+            assert s.samplerate == tsr
+            npt.assert_almost_equal(s.min_start, tms)
+            npt.assert_almost_equal(s.max_end, tme)
+            npt.assert_almost_equal(s.starts_ends, tse)
+
+    with s.samplerate_as(tsr):
+        assert s.orig_samplerate == osr
+        assert s.samplerate == tsr
+        with s.min_start_as(tms, tsr):
+            assert s.orig_samplerate == osr
+            assert s.samplerate == tsr
+            npt.assert_almost_equal(s.min_start, tms)
+            npt.assert_almost_equal(s.max_end, tme)
+            npt.assert_almost_equal(s.starts_ends, tse)
+
+    with s.samplerate_as(None):
+        assert s.orig_samplerate == osr
+        assert s.samplerate == osr
+        assert s.min_start == oms
+        assert s.max_end == ome
+        npt.assert_almost_equal(s.starts_ends, ose)
+        with s.min_start_as(tms, tsr):
+            assert s.orig_samplerate == osr
+            assert s.samplerate == tsr
+            npt.assert_almost_equal(s.min_start, tms)
+            npt.assert_almost_equal(s.max_end, tme)
+            npt.assert_almost_equal(s.starts_ends, tse)
+
+    with s.samplerate_as(osr):
+        assert s.orig_samplerate == osr
+        assert s.samplerate == osr
+        assert s.min_start == oms
+        assert s.max_end == ome
+        npt.assert_almost_equal(s.starts_ends, ose)
+        with s.min_start_as(tms, tsr):
+            assert s.orig_samplerate == osr
+            assert s.samplerate == tsr
+            npt.assert_almost_equal(s.min_start, tms)
+            npt.assert_almost_equal(s.max_end, tme)
+            npt.assert_almost_equal(s.starts_ends, tse)
+
+
 # TODO: Test for multi-dimensional labels
 # TODO: Test ContiguousSequenceLabels for differet dtype labels
 # TODO: Test for non-numerical labels

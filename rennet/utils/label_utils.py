@@ -212,6 +212,29 @@ class SequenceLabels(object):
         finally:
             self._samplerate = old_sr
 
+    @contextmanager
+    def min_start_as(self, new_start, samplerate=None):
+        old_start = self._minstart_at_orig_sr
+        with self.samplerate_as(samplerate):
+            # context needed to handle provided samplerate
+            # self._samplerate will then have the valid samplerate
+            # e.g. if provided value for samplerate is None then
+            # self._samplerate will be the contextually most recently valid one
+
+            # the _minstart_at_orig_sr is always at self._orig_samplerate
+            self._minstart_at_orig_sr = self._convert_samplerate(
+                new_start,
+                from_samplerate=self._samplerate,
+                to_samplerate=self._orig_samplerate, )
+            try:
+                yield
+            finally:
+                self._minstart_at_orig_sr = old_start
+
+    # NOTE: A context manager like max_end_as has been avoided due to complications
+    # resulting from shifting both the start and end, which will definitely lead to change
+    # in samplerate (and I don't want to implement), or, needs me to do my PhD first.
+
     def _flattened_indices(self, return_bins=False):
         """Calculate indices of the labels that form the flattened labels.
 
