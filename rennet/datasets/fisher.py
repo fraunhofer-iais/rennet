@@ -166,7 +166,8 @@ class Annotations(lu.SequenceLabels):
     """
 
     # PARENT'S SLOTS
-    # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate')
+    # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate',
+    #              '_minstart_at_orig_sr', )
     __slots__ = ('sourcefile', 'calldata')
 
     def __init__(self, filepath, calldata, *args, **kwargs):
@@ -283,7 +284,8 @@ class Annotations(lu.SequenceLabels):
 
 class ActiveSpeakers(lu.ContiguousSequenceLabels):
     # PARENT'S SLOTS
-    # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate')
+    # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate',
+    #              '_minstart_at_orig_sr', )
     __slots__ = ('sourcefile', 'calldata')
 
     def __init__(self, filepath, calldata, *args, **kwargs):

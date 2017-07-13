@@ -21,7 +21,7 @@ class SequenceLabels(object):
 
     Supports normal indexing and slicing, but the returned value will be another
     instance of the SequenceLabels class (or the relevant starts_ends, labels
-    and orig_samplerate, when being called from a subclass)
+    and current samplerate, when being called from a subclass)
 
     When iterated over, the returned values are a `zip` of `starts_ends` and
     `labels` for each segment.
@@ -54,7 +54,7 @@ class SequenceLabels(object):
             raise ValueError("samplerate <= 0 not supported")
         else:
             if np.any(starts_ends[:, 1] - starts_ends[:, 0] <= 0):
-                raise ValueError("(ends - starts) should be > 0 for all pairs")
+                raise ValueError("(end - start) should be > 0 for all pairs")
             # sort primarily by starts, and secondarily by ends
             sort_idx = np.lexsort(np.split(starts_ends[..., ::-1].T, 2))
 
@@ -119,7 +119,8 @@ class SequenceLabels(object):
                 "samplerates <=0 not supported: from_samplerate= {}, to_samplerate= {}".
                 format(from_samplerate, to_samplerate))
 
-        if to_samplerate == from_samplerate or (not isinstance(value, np.ndarray) and value == 0):
+        if to_samplerate == from_samplerate or (
+                not isinstance(value, np.ndarray) and value == 0):
             return value
 
         if to_samplerate > from_samplerate and to_samplerate % from_samplerate == 0:
@@ -182,9 +183,8 @@ class SequenceLabels(object):
 
         Note
         ----
-        EXCEPT for one for indexing/slicing, all methods honour the contextually
-        most recent and valid samplerate in their calculations. New instances
-        created on indexing/slicing are always created with the original samplerate.
+        All methods honour the contextually most recent and valid samplerate in their calculations.
+        New instances created on indexing/slicing are also created with the recent samplerate.
 
         Parameters
         ----------
@@ -216,6 +216,49 @@ class SequenceLabels(object):
 
     @contextmanager
     def min_start_as(self, new_start, samplerate=None):
+        """Temporarily shift all `starts_ends` to start at `new_start`.
+
+        To be used with a `with` clause, and supports nesting of such clauses.
+        Within a nested `with` clause, the `min_start` from the most recent
+        clause will be used.
+
+        This can be used to get `starts_ends` as if they started from a different
+        `min_start` than the original.
+
+        If `samplerate` is `None`, then it is assumed that the samplerate of
+        `new_start` is the same as the contextually most recently valid one.
+
+        If a `samplerate` is provided, the `starts_ends` are calculated based on
+        this samplerate and the shifting is done thereafter. It is equivalent to
+        applying the `samplerate` in a `with i.samplerate_as(samplerate):` clause
+        and then doing the shifting to `new_start`.
+
+        Note
+        ----
+        All methods honour the contextually most recent `min_start` in their calculations.
+        New instances created on indexing/slicing are also created with the recent `min_start`.
+
+        Parameters
+        ----------
+        new_start : float or int
+            The new min_start with which `starts_ends` will be shifted to while
+            within the `with` clause.
+
+        samplerate: float or int or None
+            The samplerate of new_start. If `None` (default), it is assumed that
+            `new_start` at the contextually most recent samplerate.
+
+        Raises
+        ------
+        ValueError
+            If `samplerate` <= 0
+
+        Example
+        -------
+        For example, for segment with `starts_ends` [[1., 5.]] at samplerate 1,
+        when calculated in context of `new_start = 2`, the `starts_ends`
+        will be [[2., 6.]].
+        """
         old_start = self._minstart_at_orig_sr
         with self.samplerate_as(samplerate):
             # context needed to handle provided samplerate
@@ -234,14 +277,20 @@ class SequenceLabels(object):
                 self._minstart_at_orig_sr = old_start
 
     # NOTE: A context manager like max_end_as has been avoided due to complications
-    # resulting from shifting both the start and end, which will definitely lead to change
-    # in samplerate (and I don't want to implement), or, needs me to do my PhD first.
+    # resulting from shifting both the start and end at the same time,
+    # which will definitely lead to change in samplerate (and I don't want to implement it), or
+    # needs me to do my PhD first.
 
     def _flattened_indices(self, return_bins=False):
         """Calculate indices of the labels that form the flattened labels.
 
         Flattened means, there is 1 and only 1 "label" for each time-step within
-        the min-start and max-end.
+        the min-start and max-end. No less, no more.
+
+        That is, all time-steps between min-start and max-end are accounted for,
+        even if with an empty `tuple()`.
+
+        Returns empty `tuple()` for start-end pairs for which no labels can be inferred.
         """
         # TODO: Proper dox; add params and returns
 

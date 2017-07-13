@@ -225,7 +225,8 @@ class Transcription(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-metho
 
 class Annotations(lu.SequenceLabels):
     # PARENT'S SLOTS
-    # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate')
+    # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate',
+    #              '_minstart_at_orig_sr', )
     __slots__ = ('sourcefile', 'speakers')
 
     def __init__(self, filepath, speakers, starts_ends, labels, samplerate=1):  # pylint: disable=too-many-arguments
@@ -286,7 +287,8 @@ class Annotations(lu.SequenceLabels):
 
 class ActiveSpeakers(lu.ContiguousSequenceLabels):
     # PARENT'S SLOTS
-    # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate')
+    # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate',
+    #              '_minstart_at_orig_sr', )
     __slots__ = ('sourcefile', 'speakers')
 
     def __init__(self, filepath, speakers, starts_ends, labels, samplerate=1):  # pylint: disable=too-many-arguments
