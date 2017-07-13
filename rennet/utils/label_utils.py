@@ -8,6 +8,7 @@ from __future__ import print_function, division
 import numpy as np
 from collections import Iterable
 from contextlib import contextmanager
+from itertools import groupby
 
 
 class SequenceLabels(object):
@@ -364,6 +365,92 @@ class SequenceLabels(object):
 
         return unique_res_labels[bin_idx, ...]
 
+    @classmethod
+    def from_dense_labels(  # pylint: disable=too-many-arguments
+            cls,
+            labels,
+            groupby_keyfn=None,
+            keep='both',
+            min_start=0,
+            samplerate=1,
+            **kwargs):
+        """ Create SequenceLabels instance from dense list of labels.
+
+        Parameters
+        ----------
+        labels: array_like
+            Dense labels.
+        groupby_keyfn: key function
+            The key function that itertools.groupby will use to make groups.
+            See example below.
+        keep: 'both', 'keys', 'labels'
+            - 'keys': keep only the result of groupby_keyfn(label) in final labels.
+            - 'labels': keep only list of consecutive labels that have the same groupby_keyfn(label) result.
+            - 'both': keep both in a tuple.
+        min_start: int or float
+            The start of the first segmentation. By default zero.
+            The value should be at the same samplerate as provided samplerate.
+        samplerate: int
+            samplerate at which the labels were taken.
+            That is, how many labels occur in 1 second.
+            The start time can be changed by setting the min_start.
+
+        Examples
+        --------
+        >>> labels = [[0.2, 0.8], [0.3, 0.7], [0.51, 0.49], [0.55, 0.45], [0.40, 0.60]]
+        >>> sr = 2000
+        >>> ms = 0.016 * sr  # 32
+        >>> key = np.argmax
+        >>> s = SequenceLabels.from_dense_labels(labels, key, keep='keys', min_start=ms, samplerate=sr)
+        >>> list(s)
+        [(array([ 32.,  34.]), 1), (array([ 34.,  36.]), 0), (array([ 36.,  37.]), 1)]
+        >>>
+        >>> list(SequenceLabels.from_dense_labels(labels, key, keep='labels', min_start=ms, samplerate=sr))
+        [(array([ 32.,  34.]), ([0.2, 0.8], [0.3, 0.7])),
+         (array([ 34.,  36.]), ([0.51, 0.49], [0.55, 0.45])),
+         (array([ 36.,  37.]), ([0.4, 0.6],))]
+        >>>
+        >>> list(SequenceLabels.from_dense_labels(labels, key, keep='both', min_start=ms, samplerate=sr))
+        [(array([ 32.,  34.]), array([1, ([0.2, 0.8], [0.3, 0.7])], dtype=object)),
+         (array([ 34.,  36.]), array([0, ([0.51, 0.49], [0.55, 0.45])], dtype=object)),
+         (array([ 36.,  37.]), array([1, ([0.4, 0.6],)], dtype=object))]
+        """
+        keep = str(keep).lower()
+        if keep not in ['both', 'keys', 'labels']:
+            raise ValueError("Unsupported value for keep {:r}. ".format(keep) +\
+                             "Accepted values {'both', 'keys', 'labels'}.")
+
+        if not isinstance(samplerate, int):
+            raise TypeError('samplerate should be of type int, not {}'.format(
+                type(samplerate)))
+        if samplerate <= 0:
+            raise ValueError(
+                'samplerate should be >= 0, not {}'.format(samplerate))
+
+        keylabels = []
+        bins = [0]
+        for k, it in groupby(labels, groupby_keyfn):
+            lit = tuple(it)
+            keylabels.append((k, lit))
+            bins.append(bins[-1] + len(lit))
+
+        bins = np.array(bins) + min_start
+        se = np.stack((bins[:-1], bins[1:]), axis=1)
+
+        if keep == 'both':
+            keylabels = np.array(keylabels, dtype=np.object)
+        else:
+            label_keys, label_list = list(zip(*keylabels))
+            if keep == 'keys':
+                keylabels = label_keys
+            elif keep == 'labels':
+                keylabels = label_list
+
+        if cls == SequenceLabels:
+            return cls(se, keylabels, samplerate)
+        else:
+            return se, keylabels, samplerate, kwargs
+
     def __len__(self):
         return len(self.labels)
 
@@ -496,6 +583,63 @@ class ContiguousSequenceLabels(SequenceLabels):
         else:
             # all ends are within bins
             return self.labels[bin_idx, ...]
+
+    @classmethod
+    def from_dense_labels(  # pylint: disable=too-many-arguments
+            cls,
+            labels,
+            groupby_keyfn=None,
+            keep='both',
+            min_start=0,
+            samplerate=1,
+            **kwargs):
+        """ Create SequenceLabels instance from dense list of labels.
+
+        Parameters
+        ----------
+        labels: array_like
+            Dense labels.
+        groupby_keyfn: key function
+            The key function that itertools.groupby will use to make groups.
+            See example below.
+        keep: 'both', 'keys', 'labels'
+            - 'keys': keep only the result of groupby_keyfn(label) in final labels.
+            - 'labels': keep only list of consecutive labels that have the same groupby_keyfn(label) result.
+            - 'both': keep both in a tuple.
+        min_start: int or float
+            The start of the first segmentation. By default zero.
+            The value should be at the same samplerate as provided samplerate.
+        samplerate: int
+            samplerate at which the labels were taken.
+            That is, how many labels occur in 1 second.
+            The start time can be changed by setting the min_start.
+
+        Examples
+        --------
+        >>> labels = [[0.2, 0.8], [0.3, 0.7], [0.51, 0.49], [0.55, 0.45], [0.40, 0.60]]
+        >>> sr = 2000
+        >>> ms = 0.016 * sr  # 32
+        >>> key = np.argmax
+        >>> s = SequenceLabels.from_dense_labels(labels, key, keep='keys', min_start=ms, samplerate=sr)
+        >>> list(s)
+        [(array([ 32.,  34.]), 1), (array([ 34.,  36.]), 0), (array([ 36.,  37.]), 1)]
+        >>>
+        >>> list(SequenceLabels.from_dense_labels(labels, key, keep='labels', min_start=ms, samplerate=sr))
+        [(array([ 32.,  34.]), ([0.2, 0.8], [0.3, 0.7])),
+         (array([ 34.,  36.]), ([0.51, 0.49], [0.55, 0.45])),
+         (array([ 36.,  37.]), ([0.4, 0.6],))]
+        >>>
+        >>> list(SequenceLabels.from_dense_labels(labels, key, keep='both', min_start=ms, samplerate=sr))
+        [(array([ 32.,  34.]), array([1, ([0.2, 0.8], [0.3, 0.7])], dtype=object)),
+         (array([ 34.,  36.]), array([0, ([0.51, 0.49], [0.55, 0.45])], dtype=object)),
+         (array([ 36.,  37.]), array([1, ([0.4, 0.6],)], dtype=object))]
+        """
+        params = super(ContiguousSequenceLabels, cls).from_dense_labels(
+            labels, groupby_keyfn, keep, min_start, samplerate, **kwargs)
+        if cls == ContiguousSequenceLabels:
+            return cls(*params[:-1])
+        else:
+            return params
 
     def __getitem__(self, idx):
         res = super(ContiguousSequenceLabels, self).__getitem__(idx)

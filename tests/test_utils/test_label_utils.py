@@ -14,6 +14,7 @@ from rennet.utils import label_utils as lu
 
 # pylint: disable=redefined-outer-name
 
+
 def test_SequenceLabels_doesnt_init():
     # Non-iterables
     with pytest.raises(TypeError):
@@ -39,6 +40,7 @@ def test_SequenceLabels_doesnt_init():
     with pytest.raises(ValueError):
         lu.SequenceLabels([[0, 1]], [[0, 1]], -1)
 
+
 def test_ContiguousSequenceLabels_doesnt_init():
     # Non-iterables
     with pytest.raises(TypeError):
@@ -63,6 +65,7 @@ def test_ContiguousSequenceLabels_doesnt_init():
         lu.ContiguousSequenceLabels([[0, 1]], [[0, 1]], 0)
     with pytest.raises(ValueError):
         lu.ContiguousSequenceLabels([[0, 1]], [[0, 1]], -1)
+
 
 @pytest.fixture(scope='module')
 def base_contiguous_small_seqdata():
@@ -517,6 +520,7 @@ def test_SequenceLabels_labels_at_general(
 
     assert s.labels_at(la_ends[0], lasr, None)[-1] == labels[0]
 
+
 @pytest.fixture(
     scope='module',
     params=[1., 3., 3, 101, 1000, 8000, 16000],  # samplerate for labels_at
@@ -714,7 +718,8 @@ def test_ContiSequenceLabels_labels_at_general_with_auto_deflabel(
     assert all([e == r for e, r in zip(target_labels, labels)]), ", ".join(
         "({} {})".format(e, t) for e, t in zip(target_labels, labels))
 
-    assert s.labels_at(la_ends[0], lasr, default_label='zeros')[-1] == target_labels[0]
+    assert s.labels_at(
+        la_ends[0], lasr, default_label='zeros')[-1] == target_labels[0]
 
 
 @pytest.fixture(
@@ -890,7 +895,6 @@ def shifted_start_param_sr_small_seqdata(request,
     }
 
 
-@pytest.mark.shifting
 def test_shifted_start_param_sr(  # pylint: disable=too-many-statements
         shifted_start_param_sr_small_seqdata):
     s, osr, tsr, tse, tms, tme, ose, oms, ome = [
@@ -964,6 +968,80 @@ def test_shifted_start_param_sr(  # pylint: disable=too-many-statements
             npt.assert_almost_equal(s.min_start, tms)
             npt.assert_almost_equal(s.max_end, tme)
             npt.assert_almost_equal(s.starts_ends, tse)
+
+
+@pytest.fixture(
+    scope='module', )
+def from_dense_labels_start_and_sr_small_seqdata(
+        shifted_start_param_sr_small_seqdata):
+    """ Fixture for testing from_dense_labels with different start and samplerates"""
+    s = shifted_start_param_sr_small_seqdata['seqlabelinst']
+    tsr = shifted_start_param_sr_small_seqdata['t_sr']
+    if tsr < 100:
+        tsr = int(tsr * 1000)
+    else:
+        tsr = int(tsr)
+
+    tms = shifted_start_param_sr_small_seqdata['t_ms']
+
+    with s.min_start_as(tms, tsr):
+        if s.__class__ is lu.SequenceLabels:
+            se, li = s._flattened_indices()  # pylint: disable=protected-access
+            l = []
+            for i in li:
+                if len(i) > 0:
+                    l.append(tuple(s.labels[i, ...]))
+                else:
+                    l.append(i)
+        else:
+            se, l = s.starts_ends, s.labels
+
+        with s.min_start_as(0):
+            ends = np.arange(s.max_end)
+            labels = s.labels_at(ends)
+
+    return {
+        'labels': labels,
+        't_sr': tsr,
+        't_se': se,
+        't_lb': l,
+        't_ms': tms,
+    }
+
+
+@pytest.mark.dense
+def test_from_dense_SeqLabels(from_dense_labels_start_and_sr_small_seqdata):
+    labels, tsr, tse, tlb, tms = [
+        from_dense_labels_start_and_sr_small_seqdata[k]
+        for k in ['labels', 't_sr', 't_se', 't_lb', 't_ms']
+    ]
+
+    s = lu.SequenceLabels.from_dense_labels(
+        labels, samplerate=tsr, min_start=tms, keep='keys')
+
+    npt.assert_allclose(s.starts_ends, tse, atol=1e-12, rtol=1)
+    npt.assert_array_equal(s.labels, tlb)
+
+    with pytest.raises(ValueError):
+        s = lu.SequenceLabels.from_dense_labels(labels, keep=9)
+
+
+@pytest.mark.dense
+def test_from_dense_ContiSeqLabels(
+        from_dense_labels_start_and_sr_small_seqdata):
+    labels, tsr, tse, tlb, tms = [
+        from_dense_labels_start_and_sr_small_seqdata[k]
+        for k in ['labels', 't_sr', 't_se', 't_lb', 't_ms']
+    ]
+
+    s = lu.ContiguousSequenceLabels.from_dense_labels(
+        labels, samplerate=tsr, min_start=tms, keep='keys')
+
+    npt.assert_allclose(s.starts_ends, tse, atol=1e-12, rtol=1)
+    npt.assert_array_equal(s.labels, tlb)
+
+    with pytest.raises(ValueError):
+        s = lu.ContiguousSequenceLabels.from_dense_labels(labels, keep=9)
 
 
 # TODO: Test for multi-dimensional labels
