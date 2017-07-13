@@ -5,13 +5,16 @@ Created: 29-08-2016
 Helpers for working with KA3 dataset
 """
 from __future__ import print_function, division
-from collections import namedtuple
 import xml.etree.ElementTree as et
 import numpy as np
 import warnings
+from functools import reduce
 
 import rennet.utils.label_utils as lu
-from rennet.utils.np_utils import group_by_values
+from rennet.utils.py_utils import BaseSlotsOnlyClass, lowest_common_multiple
+
+samples_for_labelsat = lu.samples_for_labelsat
+times_for_labelsat = lu.times_for_labelsat
 
 MPEG7_NAMESPACES = {
     "ns": "http://www.iais.fraunhofer.de/ifinder",
@@ -35,17 +38,26 @@ NS2_TAGS = {
 }
 
 MPEG7_TAGS = {
-    "audiosegment": ".//mpeg7:AudioSegment",
-    "timepoint": ".//mpeg7:MediaTimePoint",
-    "duration": ".//mpeg7:MediaDuration",
+    "audiosegment":
+    ".//mpeg7:AudioSegment",
+    "timepoint":
+    ".//mpeg7:MediaTimePoint",
+    "duration":
+    ".//mpeg7:MediaDuration",
     "descriptor":
     ".//mpeg7:AudioDescriptor[@xsi:type='ifinder:SpokenContentType']",
-    "speakerid": ".//ifinder:Identifier",
-    "transcription": ".//ifinder:SpokenUnitVector",
-    "confidence": ".//ifinder:ConfidenceVector",
-    "speakerinfo": ".//ifinder:Speaker",
-    "gender": "gender",
-    "givenname": ".//mpeg7:GivenName",
+    "speakerid":
+    ".//ifinder:Identifier",
+    "transcription":
+    ".//ifinder:SpokenUnitVector",
+    "confidence":
+    ".//ifinder:ConfidenceVector",
+    "speakerinfo":
+    ".//ifinder:Speaker",
+    "gender":
+    "gender",
+    "givenname":
+    ".//mpeg7:GivenName",
 }
 
 
@@ -62,8 +74,7 @@ def _parse_timepoint(timepoint):
           int(minutes) * 60 +\
           int(sec)
 
-    return res, int(val) / int(
-        persec)  # need to send separately as the float sum is not great
+    return res * int(persec) + int(val), int(persec)
 
 
 def _parse_duration(duration):
@@ -82,15 +93,17 @@ def _parse_duration(duration):
           int(minutes) * 60 +\
           int(sec)
 
-    return res, int(val) / int(
+    return res * int(persec) + int(val), int(
         persec)  # need to send separately as the float sum is not great
 
 
 def _parse_timestring(timepoint, duration):
-    tp, tval = _parse_timepoint(timepoint)
-    dur, dval = _parse_duration(duration)
+    tpt, tps = _parse_timepoint(timepoint)
+    dur, dps = _parse_duration(duration)
 
-    return tp + tval, (tp + dur + (tval + dval))
+    persec = lowest_common_multiple(tps, dps)
+    tpt *= (persec // tps)
+    return tpt, tpt + dur * (persec // dps), persec
 
 
 def _parse_segment(segment, TAGS):
@@ -102,9 +115,9 @@ def _parse_segment(segment, TAGS):
         raise ValueError(
             "timepoint, duration or decriptor not found in segment")
 
-    start_end = _parse_timestring(timepoint, duration)
+    start_end_persec = _parse_timestring(timepoint, duration)
 
-    return start_end, descriptor
+    return start_end_persec, descriptor
 
 
 def _parse_descriptor(descriptor, TAGS):
@@ -124,8 +137,14 @@ def _parse_descriptor(descriptor, TAGS):
     return speakerid, gender, givenname, confidence, transcription
 
 
-# pylint: disable=too-many-locals
-def parse_mpeg7(filepath, use_tags="ns"):
+def _sanitize_starts_ends(starts_ends, persecs):
+    """ Sanitize starts ends to be of the same samplerate (persec) """
+    persec = reduce(lowest_common_multiple, set(persecs))
+    return [(s * persec // p, e * persec // p)
+            for (s, e), p in zip(starts_ends, persecs)], persec
+
+
+def parse_mpeg7(filepath, use_tags="ns"):  # pylint: disable=too-many-locals
     """ Parse MPEG7 speech annotations into lists of data
 
     """
@@ -143,6 +162,7 @@ def parse_mpeg7(filepath, use_tags="ns"):
         raise ValueError("No AudioSegment tags found")
 
     starts_ends = []
+    persecs = []
     speakerids = []
     genders = []
     givennames = []
@@ -150,7 +170,7 @@ def parse_mpeg7(filepath, use_tags="ns"):
     transcriptions = []
     for i, s in enumerate(segments):
         try:
-            startend, descriptor = _parse_segment(s, TAGS)
+            start_end_persec, descriptor = _parse_segment(s, TAGS)
         except ValueError:
             print("Segment number :%d" % (i + 1))
             raise
@@ -159,13 +179,14 @@ def parse_mpeg7(filepath, use_tags="ns"):
             # if there is not descriptor, there is no speech. Ignore!
             continue
 
-        if startend[1] <= startend[0]:  # (end - start) <= 0
+        if start_end_persec[1] <= start_end_persec[0]:  # (end - start) <= 0
             warnings.warn(
                 "(end - start) <= 0 ignored for annotation at {} with values {} in file {}".
-                format(i, startend, filepath))
+                format(i, start_end_persec, filepath))
             continue
 
-        starts_ends.append(startend)
+        starts_ends.append(start_end_persec[:-1])
+        persecs.append(start_end_persec[-1])
 
         try:
             si, g, gn, conf, tr = _parse_descriptor(descriptor, TAGS)
@@ -178,32 +199,44 @@ def parse_mpeg7(filepath, use_tags="ns"):
         confidences.append(conf)
         transcriptions.append(tr)
 
-    return (starts_ends, speakerids, genders, givennames, confidences,
+    starts_ends, persecs = _sanitize_starts_ends(starts_ends, persecs)
+
+    return (starts_ends, persecs, speakerids, genders, givennames, confidences,
             transcriptions)
 
 
-# pylint: enable=too-many-locals
+class Speaker(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
+    __slots__ = ('speakerid', 'gender', 'givenname')
 
-Speaker = namedtuple('Speaker', ['speakerid', 'gender', 'givenname'])
+    def __init__(self, speakerid, gender, givenname):
+        self.speakerid = speakerid
+        self.gender = gender
+        self.givenname = givenname
 
-Transcription = namedtuple('Transcription',
-                           ['speakerid', 'confidence', 'content'])
+
+class Transcription(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
+    __slots__ = ('speakerid', 'confidence', 'content')
+
+    def __init__(self, speakerid, confidence, content):
+        self.speakerid = speakerid
+        self.confidence = confidence
+        self.content = content
 
 
 class Annotations(lu.SequenceLabels):
     # PARENT'S SLOTS
-    # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate')
+    # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate',
+    #              '_minstart_at_orig_sr', )
     __slots__ = ('sourcefile', 'speakers')
 
-    def __init__(self, filepath, speakers, *args, **kwargs):
+    def __init__(self, filepath, speakers, starts_ends, labels, samplerate=1):  # pylint: disable=too-many-arguments
         self.sourcefile = filepath
         self.speakers = speakers
-        super(Annotations, self).__init__(*args, **kwargs)
+        super(Annotations, self).__init__(starts_ends, labels, samplerate)
 
-    # pylint: disable=too-many-locals
     @classmethod
-    def from_file(cls, filepath, use_tags="ns"):
-        se, sids, gen, gn, conf, trn = parse_mpeg7(filepath, use_tags)
+    def from_file(cls, filepath, use_tags="ns"):  # pylint: disable=too-many-locals
+        se, sr, sids, gen, gn, conf, trn = parse_mpeg7(filepath, use_tags)
 
         uniq_sids = sorted(set(sids))
 
@@ -219,13 +252,18 @@ class Annotations(lu.SequenceLabels):
             transcriptions.append(
                 Transcription(sids[i], float(conf[i]), trn[i]))
 
-        return cls(filepath,
-                   speakers,
-                   starts_ends,
-                   transcriptions,
-                   samplerate=1)
+        if len(starts_ends) == 0:
+            raise RuntimeError(
+                "No Annotations were found from file {}. Check use_tags parameter.".
+                format(filepath))
 
-    # pylint: enable=too-many-locals
+        return cls(
+            filepath,
+            tuple(speakers),
+            starts_ends,
+            transcriptions,
+            samplerate=sr, )
+
     def idx_for_speaker(self, speaker):
         speakerid = speaker.speakerid
         for i, l in enumerate(self.labels):
@@ -239,59 +277,76 @@ class Annotations(lu.SequenceLabels):
         s += "\n" + super(Annotations, self).__str__()
         return s
 
+    def __getitem__(self, idx):
+        args = super(Annotations, self).__getitem__(idx)
+        if self.__class__ is Annotations:
+            return self.__class__(self.sourcefile, self.speakers, *args)
+        else:
+            return args
+
 
 class ActiveSpeakers(lu.ContiguousSequenceLabels):
     # PARENT'S SLOTS
-    # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate')
+    # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate',
+    #              '_minstart_at_orig_sr', )
     __slots__ = ('sourcefile', 'speakers')
 
-    def __init__(self, filepath, speakers, *args, **kwargs):
+    def __init__(self, filepath, speakers, starts_ends, labels, samplerate=1):  # pylint: disable=too-many-arguments
         self.sourcefile = filepath
         self.speakers = speakers
-        super().__init__(*args, **kwargs)
+        super().__init__(starts_ends, labels, samplerate)
 
     @classmethod
-    def from_annotations(cls, ann, samplerate=100):  # default 100 for ka3
-        with ann.samplerate_as(samplerate):
-            se_ = ann.starts_ends
-            se = np.round(se_).astype(np.int)
+    def from_annotations(cls, ann, warn_duplicates=True):
+        starts_ends, labels_idx = ann._flattened_indices()  # pylint: disable=protected-access
 
-            # TODO: [A] better error handling
-            try:
-                np.testing.assert_almost_equal(se, se_)
-            except AssertionError:
+        spks = np.array([s.speakerid for s in ann.speakers])
+        labels = np.zeros(shape=(len(starts_ends), len(spks)), dtype=np.int)
+        for i, lix in enumerate(labels_idx):
+            if len(lix) == 1:
+                labels[i] = (
+                    spks == ann.labels[lix[0]].speakerid).astype(np.int)
+            elif len(lix) > 1:
+                lspks = np.array([ann.labels[s].speakerid for s in lix])
+                labels[i] = (spks == lspks[:, None]).sum(axis=0)
+
+        if labels.max() > 1:
+            labels[labels > 1] = 1
+            if warn_duplicates:
                 warnings.warn(
-                    "Sample rate {} does not evenly divide all the starts and ends in the annotations from file at {}".
-                    format(samplerate, ann.sourcefile))
+                    "Some speakers may have duplicate annotations for file {}.\nDUPLICATES IGNORED".
+                    format(ann.sourcefile))
 
-        n_speakers = len(ann.speakers)
-        total_duration = se[:, 1].max()
-        active_speakers = np.zeros(
-            shape=(total_duration, n_speakers), dtype=np.int)
+        # IDEA: merge consecutive segments with the same label
+        # No practical impact expected, except probably in turn-taking calculations
+        # It may result in extra continuations than accurate
+        # Let's keep in mind though that this is being inferred from the annots,
+        # i.e. these zero-gap continuations were separately annotated, manually,
+        # and we should respect their segmentation
+        # The turn-taking calculator should keep this in mind
 
-        for s, speaker in enumerate(ann.speakers):
-            for i in ann.idx_for_speaker(speaker):
-                start, end = se[i]
-                # NOTE: not setting to 1 straighaway to catch duplicates for speaker
-                active_speakers[start:end, s] += 1
-
-        # HACK: Some annotations (FISHER) have duplicates for the same speaker
-        if active_speakers.max() > 1:
-            warnings.warn(
-                "Some speakers may have duplicate annotations for file {}.\nDUPLICATES IGNORED".
-                format(ann.sourcefile))
-            active_speakers[active_speakers > 1] = 1
-
-        starts_ends, active_speakers = group_by_values(active_speakers)
-
-        return cls(ann.sourcefile,
-                   ann.speakers,
-                   starts_ends,
-                   active_speakers,
-                   samplerate=samplerate)
+        return cls(
+            ann.sourcefile,
+            ann.speakers,
+            starts_ends,
+            labels,
+            samplerate=ann.samplerate, )
 
     @classmethod
-    def from_file(cls, filepath, use_tags="mpeg7"):
-        # HACK: I don't know why super() does not work here
+    def from_file(cls, filepath, warn_duplicates=True, use_tags="ns"):
         ann = Annotations.from_file(filepath, use_tags)
-        return cls.from_annotations(ann, samplerate=100)
+        return cls.from_annotations(ann, warn_duplicates)
+
+    def __str__(self):
+        s = "Source filepath: {}".format(self.sourcefile)
+        s += "\nSpeakers: {}\n".format(len(self.speakers))
+        s += "\n".join(str(s) for s in self.speakers)
+        s += "\n" + super(ActiveSpeakers, self).__str__()
+        return s
+
+    def __getitem__(self, idx):
+        args = super(ActiveSpeakers, self).__getitem__(idx)
+        if self.__class__ is ActiveSpeakers:
+            return self.__class__(self.sourcefile, self.speakers, *args)
+        else:
+            return args

@@ -5,14 +5,14 @@ Created: 01-02-2017
 Helpers for working with Fisher dataset
 """
 from __future__ import print_function, division
-import os
-from csv import reader
 import numpy as np
-from collections import namedtuple
 import warnings
+from os.path import abspath
+from csv import reader
 import h5py as h
 
 import rennet.utils.label_utils as lu
+from rennet.utils.py_utils import BaseSlotsOnlyClass
 import rennet.utils.np_utils as nu
 import rennet.utils.training_utils as tu
 
@@ -20,70 +20,142 @@ samples_for_labelsat = lu.samples_for_labelsat
 times_for_labelsat = lu.times_for_labelsat
 
 
-class FisherAllCallData(object):
+class Speaker(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
+    __slots__ = ('pin', 'gender', 'dialect')
 
-    FisherChannelSpeaker = namedtuple(
-        'FisherChannelSpeaker', ['id', 'gender', 'dialect', 'phone_service'])
+    def __init__(self, pin, gender, dialect):
+        self.pin = pin
+        self.gender = gender
+        self.dialect = dialect
 
-    FisherCallData = namedtuple(
-        'FisherCallData',
-        [
-            'callid',
-            'topicid',
-            'signalgrade',
-            'convgrade',
-            'channelspeakers'  # List, on order [A, B]
-        ])
 
+class CallData(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
+    __slots__ = ('callid', 'topicid', 'signalgrade', 'convgrade',
+                 'channelspeakers')
+
+    def __init__(  # pylint: disable=too-many-arguments
+            self, callid, topicid, signalgrade, convgrade, channelspeakers):
+        self.callid = callid
+        self.topicid = topicid
+        self.signalgrade = signalgrade
+        self.convgrade = convgrade
+        self.channelspeakers = channelspeakers  # List, in order [A, B]
+
+    def __repr__(self):
+        r = super(CallData, self).__repr__()
+        # Make the list of Channel Speakers look good, maybe ... subjective
+        r = r.replace('[', '\n\t\t[').replace('), ', '), \n\t\t ')
+        return r
+
+
+callid_for_filename = lambda fn: fn.split('_')[-1].split('.')[0]
+# TODO: make proper function and raise errors?
+
+groupid_for_callid = lambda callid: callid[:3]
+
+# TODO: make proper function and raise errors?
+
+
+class AllCallData(object):
     def __init__(self, allcalldata):
         self.allcalldata = sorted(allcalldata, key=lambda c: c.callid)
         self._callid_idx = {
             callid: i
-            for i, callid in enumerate(c.callid for c in allcalldata)
+            for i, callid in enumerate(c.callid for c in self.allcalldata)
         }
 
-    def calldata_for_callid(self, callid):
-        return self.allcalldata[self._callid_idx[callid]]
+    @staticmethod
+    def _read_calldata_from_row(row):
+        callid, _, topicid, siggrade, convgrade = row[:5]
+        apin, agendia, _, _, _ = row[5:-5]
+        bpin, bgendia, _, _, _ = row[-5:]
 
-    def calldata_for_filename(self, filename):
-        callid = os.path.basename(filename).split('_')[-1].split('.')[0]
-        return self.calldata_for_callid(callid)
+        return CallData(
+            callid,
+            topicid,
+            float(siggrade),
+            float(convgrade),
+            [
+                Speaker(apin, *agendia.split('.')),
+                Speaker(bpin, *bgendia.split('.')),
+            ], )
 
     @classmethod
-    def from_file(cls, filepath):  # pylint: disable=too-many-locals
-        afp = os.path.abspath(filepath)
+    def from_file_for_callid(cls, filepath, callid):
+        filepath = abspath(filepath)
+        calldata = None
+
+        with open(filepath, 'r') as f:
+            for i, row in enumerate(reader(f, delimiter=',')):
+                if i == 0 or row[0] != callid:
+                    # Header or not for callid
+                    continue
+
+                calldata = cls._read_calldata_from_row(row)
+                break
+
+        if calldata is None:
+            raise KeyError(
+                "Call Data for callid {} not found in provided filepath:\n{}".
+                format(callid, filepath))
+
+        return calldata
+
+    @classmethod
+    def from_file_for_filename(cls, filepath, filename):
+        fn = filename
+        try:
+            return cls.from_file_for_callid(filepath, callid_for_filename(fn))
+        except KeyError:
+            raise KeyError(
+                "Call Data for filename {} (assumed callid {}) not found in provided filepath:\n{}".
+                format(fn, callid_for_filename(fn), filepath))
+
+    @classmethod
+    def from_file(cls, filepath):
+        filepath = abspath(filepath)
 
         allcalldata = []
-        with open(afp, 'r') as f:
-            rdr = reader(f, delimiter=',')
+        with open(filepath, 'r') as f:
 
-            for i, row in enumerate(rdr):
+            for i, row in enumerate(reader(f, delimiter=',')):
                 if i == 0:
                     # Header
                     continue
 
-                callid, _, topicid, siggrade, convgrade = row[:5]
-                apin, agendia, _, _, aphtype = row[5:-5]
-                bpin, bgendia, _, _, bphtype = row[-5:]
-
-                agen, adia = agendia.split('.')
-                bgen, bdia = bgendia.split('.')
-
-                calldata = cls.FisherCallData(
-                    callid,
-                    topicid,
-                    float(siggrade),
-                    float(convgrade),
-                    [
-                        cls.FisherChannelSpeaker(apin, agen, adia, aphtype),
-                        cls.FisherChannelSpeaker(bpin, bgen, bdia, bphtype),
-                    ], )
-                allcalldata.append(calldata)
+                allcalldata.append(cls._read_calldata_from_row(row))
 
         return cls(allcalldata)
 
+    def __getitem__(self, idx_or_callid_or_filename):
+        idx = idx_or_callid_or_filename
+        if isinstance(idx, str):  # callid or filename
+            if len(idx) > 5:  # not a Fisher Callid
+                # NOTE: Assuming, probably naively, that this a Fisher filename
+                idx = callid_for_filename(idx)
+            try:
+                return self.allcalldata[self._callid_idx[idx]]
+            except KeyError:
+                raise KeyError("Call Data for callid {} not found".format(idx))
 
-class FisherAnnotations(lu.SequenceLabels):
+        elif isinstance(idx, (slice, int)):
+            return self.allcalldata[idx]
+        elif any(isinstance(i, str) for i in idx):
+            return [self[i] for i in idx]
+        else:
+            raise TypeError('Unsupported index {} for {}'.format(
+                idx, self.__class__.__name__))
+
+
+class Transcription(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
+    __slots__ = ('speakerchannel', 'content')
+
+    def __init__(self, speakerchannel, content):
+        self.speakerchannel = speakerchannel  # 0 for A, 1 for B
+        self.content = content
+
+
+class Annotations(lu.SequenceLabels):
     """
     TODO: [ ] Add proper docs
 
@@ -94,88 +166,133 @@ class FisherAnnotations(lu.SequenceLabels):
     """
 
     # PARENT'S SLOTS
-    # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate')
+    # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate',
+    #              '_minstart_at_orig_sr', )
     __slots__ = ('sourcefile', 'calldata')
-
-    FisherTranscription = namedtuple('FisherTranscription',
-                                     ['speakerchannel', 'content'])
 
     def __init__(self, filepath, calldata, *args, **kwargs):
         self.sourcefile = filepath
         self.calldata = calldata
 
-        super(FisherAnnotations, self).__init__(*args, **kwargs)
+        super(Annotations, self).__init__(*args, **kwargs)
 
     @property
     def callid(self):
         if self.calldata is None:
             # filenames are fe_03_CALLID.*
-            return os.path.basename(self.sourcefile).split('_')[-1].split('.')[
-                0]
+            return callid_for_filename(self.sourcefile)
         else:
             return self.calldata.callid
 
     def find_and_set_calldata(self, allcalldata):
-        try:
-            self.calldata = allcalldata.calldata_for_callid[self.callid]
-        except KeyError:
-            raise KeyError(
-                "Call Data for callid {} not found in provided allcalldata".
-                format(self.callid))
+        # IDEA: Since we know source's filepath, we may be able to guess allcalldata path
+        # Infer it for user? Serves purpose of 'find' properly then.
+        fn = self.sourcefile
+        if isinstance(allcalldata, AllCallData):
+            self.calldata = allcalldata[fn]
+        elif isinstance(allcalldata, str):  # filename, probably
+            self.calldata = AllCallData.from_file_for_filename(allcalldata, fn)
+        else:
+            raise TypeError("allcalldata of unexpected type: {}\n".format(
+                type(allcalldata)
+            ) + "Provide either AllCallData instance or filepath to it")
 
     @classmethod
     def from_file(cls, filepath, allcalldata=None):
-        afp = os.path.abspath(filepath)
+        filepath = abspath(filepath)
 
-        se = []
+        starts = []
+        ends = []
+        decimultiplier = []
         trans = []
 
-        with open(afp, 'r') as f:
-            rdr = reader(f, delimiter=':')
+        if allcalldata is None:
+            caldata = None
+        elif isinstance(allcalldata, AllCallData):
+            caldata = allcalldata[filepath]
+        elif isinstance(allcalldata, str):  # probably filepath to AllCallData
+            caldata = AllCallData.from_file_for_filename(allcalldata, filepath)
+        else:
+            raise TypeError("allcalldata of unexpected type: {}\n".format(
+                type(allcalldata)
+            ) + "Provide either AllCallData instance or filepath to it")
 
-            for row in rdr:
+        with open(filepath, 'r') as f:
+
+            for row in reader(f, delimiter=':'):
                 if len(row) == 0 or row[0][0] == '#':
                     # ignore empty lines or comments
                     continue
                 else:
                     s, e, spk = row[0].split(' ')
-                    se.append((float(s), float(e)))
+
+                    # NOTE: s, e are in seconds, but resolution goes to milliseconds.
+                    # Floats are a pain in the proverbials.
+                    # We infer the samplerate based on the ndigits after decimal,
+                    # and then set the final samplerate based on max of such ndigits for all.
+                    # The reolving is done below.
+                    # Biggest assumption is that s and e are in seconds.
+                    # Easy bad case is s and e ending with zeros after decimal.
+                    s = s.split('.')
+                    e = e.split('.')
+                    decimultiplier.append(tuple(map(len, (s[1], e[1]))))
+                    starts.append(tuple(map(int, s)))
+                    ends.append(tuple(map(int, e)))
 
                     spk = spk.strip()
-                    content = row[1].strip()
                     if spk.upper() == 'A':
-                        trans.append(cls.FisherTranscription(0, content))
+                        trans.append(Transcription(0, row[1].strip()))
                     elif spk.upper() == 'B':
-                        trans.append(cls.FisherTranscription(1, content))
+                        trans.append(Transcription(1, row[1].strip()))
                     else:
                         raise ValueError(
                             "Speaker channel other than A and B ({}) in file\n{}".
                             format(spk, filepath))
 
-        if allcalldata is None:
-            calldata = None
-        else:
-            calldata = allcalldata.calldata_for_filename(afp)
+        # resolve the final samplerate
+        # we don't have to do lowest_common_multiple cuz it is only powers of 10
+        starts = np.array(starts)
+        ends = np.array(ends)
+        decimultiplier = np.array(decimultiplier)
 
-        return cls(afp, calldata, se, trans, samplerate=1)
+        samplerate = 10**(np.max(decimultiplier))
+        decimultiplier = 10**(np.max(decimultiplier) - decimultiplier)
+
+        starts = starts[:, 0] * samplerate + starts[:, 1] * decimultiplier[:, 0]
+        ends = ends[:, 0] * samplerate + ends[:, 1] * decimultiplier[:, 1]
+
+        return cls(
+            filepath,
+            caldata,
+            np.stack((starts, ends), axis=1),
+            trans,
+            samplerate=samplerate, )
 
     def __str__(self):
         s = "Source filepath:\n{}\n".format(self.sourcefile)
         s += "\nCalldata:\n{}\n".format(self.calldata)
-        s += "\n" + super(FisherAnnotations, self).__str__()
+        s += "\n" + super(Annotations, self).__str__()
         return s
 
+    def __getitem__(self, idx):
+        args = super(Annotations, self).__getitem__(idx)
+        if self.__class__ is Annotations:
+            return self.__class__(self.sourcefile, self.calldata, *args)
+        else:
+            return args
 
-class FisherActiveSpeakers(lu.ContiguousSequenceLabels):
+
+class ActiveSpeakers(lu.ContiguousSequenceLabels):
     # PARENT'S SLOTS
-    # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate')
+    # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate',
+    #              '_minstart_at_orig_sr', )
     __slots__ = ('sourcefile', 'calldata')
 
     def __init__(self, filepath, calldata, *args, **kwargs):
         self.sourcefile = filepath
         self.calldata = calldata
 
-        super(FisherActiveSpeakers, self).__init__(*args, **kwargs)
+        super(ActiveSpeakers, self).__init__(*args, **kwargs)
 
         # SequenceLabels makes labels into a list
         self.labels = np.array(self.labels)
@@ -184,80 +301,73 @@ class FisherActiveSpeakers(lu.ContiguousSequenceLabels):
     def callid(self):
         if self.calldata is None:
             # filenames are fe_03_CALLID.*
-            return os.path.basename(self.sourcefile).split('_')[-1].split('.')[
-                0]
+            return callid_for_filename(self.sourcefile)
         else:
             return self.calldata.callid
 
     def find_and_set_calldata(self, allcalldata):
-        try:
-            self.calldata = allcalldata.calldata_for_callid[self.callid]
-        except KeyError:
-            raise KeyError(
-                "Call Data for callid {} not found in provided allcalldata".
-                format(self.callid))
+        fn = self.sourcefile
+        if isinstance(allcalldata, AllCallData):
+            self.calldata = allcalldata[fn]
+        elif isinstance(allcalldata, str):  # filename, probably
+            self.calldata = AllCallData.from_file_for_filename(allcalldata, fn)
+        else:
+            raise TypeError("allcalldata of unexpected type: {}\n".format(
+                type(allcalldata)
+            ) + "Provide either AllCallData instance or filepath to it")
 
     @classmethod
-    def from_annotations(cls, ann, samplerate=100,
-                         warn=True):  # min time resolution 1ms, mostly
-        """
-        TODO: [ ] Better handling of warnings?
-            The user should be aware that there is a problem,
-            and some implicit decisions were made
-            Hence `warn = True` by default
-        """
-        with ann.samplerate_as(samplerate):
-            _se = ann.starts_ends
-            se = np.round(_se).astype(np.int)
-
-        if warn:
-            try:
-                np.testing.assert_almost_equal(se, _se)
-            except AssertionError:
-                _w = "Sample rate {} does not evenly divide all the starts and ends for file:\n{}".format(
-                    samplerate, ann.sourcefile)
-                warnings.warn(_w)
+    def from_annotations(cls, ann, warn_duplicates=True):
+        starts_ends, labels_idx = ann._flattened_indices()  # pylint: disable=protected-access
 
         # make contigious array of shape (total_duration, n_speakers)
         # NOTE: n_speakers is 2 for all Fisher data
         n_speakers = 2
-        active_speakers = np.zeros(
-            shape=(se[:, 1].max(), n_speakers), dtype=np.int)
+        labels = np.zeros(shape=(len(starts_ends), n_speakers), dtype=np.int)
+        for i, lix in enumerate(labels_idx):
+            if len(lix) == 1:
+                labels[i, ann.labels[lix[0]].speakerchannel] += 1
+            elif len(lix) > 1:
+                # for loop outside cuz there may be duplicate annots for the same speaker
+                # inline for loop will lead to numpy not incrementing for duplicates
+                for ix in lix:
+                    labels[i, ann.labels[ix].speakerchannel] += 1
 
-        for (start, end), l in zip(se, ann.labels):
-            # NOTE: not setting to 1 straightaway to catch duplicates
-            active_speakers[start:end, l.speakerchannel] += 1
-
-        if active_speakers.max() > 1:
-            if warn:
-                _w = "Some speakers may have duplicate annotations for file:\n{}.\n!!! IGNORED !!!".format(
+        if labels.max() > 1:
+            labels[labels > 1] = 1
+            if warn_duplicates:
+                _w = "some speakers may have duplicate annotations for file:\n{}.\n!!! IGNORED !!!".format(
                     ann.sourcefile)
                 warnings.warn(_w)
 
-            active_speakers[active_speakers > 1] = 1
+        # IDEA: merge consecutive segments with the same label
+        # Check rennet.datasets.ka3.ActiveSpeakers.from_annotations for explanation on skipping this
+        # It will be nice if you make the update here to do something similar there as well
 
-        starts_ends, active_speakers = nu.group_by_values(active_speakers)
-
-        return cls(ann.sourcefile,
-                   ann.calldata,
-                   starts_ends,
-                   active_speakers,
-                   samplerate=samplerate)
+        return cls(
+            ann.sourcefile,
+            ann.calldata,
+            starts_ends,
+            labels,
+            samplerate=ann.samplerate, )
 
     @classmethod
-    def from_file(cls, filepath, samplerate=100, allcalldata=None, warn=True):
-        ann = FisherAnnotations.from_file(filepath, allcalldata)
-        # min time resolution 1ms, mostly
-        return cls.from_annotations(ann, samplerate=samplerate, warn=warn)
+    def from_file(cls, filepath, allcalldata=None, warn_duplicates=True):
+        ann = Annotations.from_file(filepath, allcalldata)
+        return cls.from_annotations(ann, warn_duplicates=warn_duplicates)
 
     def __str__(self):
         s = "Source filepath:\n{}\n".format(self.sourcefile)
         s += "\nCalldata:\n{}\n".format(self.calldata)
-        s += "\n" + super(FisherActiveSpeakers, self).__str__()
+        s += "\n" + super(ActiveSpeakers, self).__str__()
         return s
 
-
-fisher_groupid_for_callid = lambda callid: callid[:3]
+    def __getitem__(self, idx):
+        args = super(ActiveSpeakers, self).__getitem__(idx)
+        if self.__class__ is ActiveSpeakers:
+            return self.__class__(self.sourcefile, self.calldata, *args)
+        else:
+            return args
 
 
 class FisherH5ChunkingsReader(tu.BaseH5ChunkingsReader):
@@ -428,9 +538,7 @@ class FisherH5ChunkingsReader(tu.BaseH5ChunkingsReader):
             if callids not in allcallids:
                 raise ValueError("CallID {} not in file".format(callids))
 
-            obj.grouped_callids = {
-                fisher_groupid_for_callid(callids): {callids}
-            }
+            obj.grouped_callids = {groupid_for_callid(callids): {callids}}
         else:
             if not set(callids).issubset(allcallids):
                 raise ValueError("Some CallIDs not in file")
@@ -438,7 +546,7 @@ class FisherH5ChunkingsReader(tu.BaseH5ChunkingsReader):
             grouped_callids = dict()
 
             for c in callids:
-                g = fisher_groupid_for_callid(c)
+                g = groupid_for_callid(c)
 
                 v = grouped_callids.get(g, set())
                 grouped_callids[g] = v.union({c})
@@ -473,13 +581,13 @@ class FisherH5ChunkingsReader(tu.BaseH5ChunkingsReader):
         if not isinstance(callids_at, np.ndarray):
             # HACK: single callid
             obj.grouped_callids = {
-                fisher_groupid_for_callid(callids_at): {callids_at}
+                groupid_for_callid(callids_at): {callids_at}
             }
         else:
             grouped_callids = dict()
 
             for c in callids_at:
-                g = fisher_groupid_for_callid(c)
+                g = groupid_for_callid(c)
 
                 v = grouped_callids.get(g, set())
                 grouped_callids[g] = v.union({c})

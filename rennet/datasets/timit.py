@@ -12,10 +12,15 @@ import rennet.utils.label_utils as lu
 from rennet.utils.np_utils import group_by_values
 
 
-class TIMITSequenceLabels(lu.SequenceLabels):
+class Annotations(lu.SequenceLabels):
+    # PARENT'S SLOTS
+    # __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate',
+    #              '_minstart_at_orig_sr', )
+    __slots__ = ('sourcefile', )
+
     def __init__(self, filepath, *args, **kwargs):
         self.sourcefile = filepath
-        super(TIMITSequenceLabels, self).__init__(*args, **kwargs)
+        super(Annotations, self).__init__(*args, **kwargs)
 
     @classmethod
     def from_file(cls, filepath, delimiter=' ', samplerate=16000):
@@ -74,3 +79,15 @@ class TIMITSequenceLabels(lu.SequenceLabels):
             starts_ends,
             active_speakers,
             samplerate=samplerate)
+
+    def __getitem__(self, idx):
+        args = super(Annotations, self).__getitem__(idx)
+        if self.__class__ is Annotations:
+            return self.__class__(self.sourcefile, *args)
+        else:
+            return args
+
+    def __str__(self):
+        s = "Source filepath:\n{}\n".format(self.sourcefile)
+        s += "\n" + super(Annotations, self).__str__()
+        return s

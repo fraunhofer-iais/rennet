@@ -26,6 +26,21 @@ def arrays_do_share_data(arr1, arr2):
     return base_array_of(arr1) is base_array_of(arr2)
 
 
+def totuples(arr):
+    """ Convert a `numpy.ndarray` to tuple of tuples of tuples of ...
+
+    Complete HACK to mimic `numpy.ndarray.tolist`, but instead to get hashable
+    `tuple(tuple(tuple(...)))`.
+
+    Reference
+        - https://stackoverflow.com/a/10016613
+    """
+    try:
+        return tuple(totuples(_a) for _a in arr)
+    except TypeError:
+        return arr
+
+
 def strided_view(arr, win_shape, step_shape):
     """ Create strided view of `arr` without copying
 
