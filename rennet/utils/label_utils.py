@@ -292,10 +292,10 @@ class SequenceLabels(object):
             bins = np.round(bins, rounded)
             ends = np.round(ends, rounded)
 
-        # We only know about what happened in the `(1/_orig_samplerate)` seconds finishing at an `end`
-        # Hence choose side='left'.
+        # We only know about what happened in the `(1/_orig_samplerate)` seconds starting at an `end`
+        # Hence choose side='right'.
         # ends outside bins will have value 0 or len(bins)
-        bin_idx = np.searchsorted(bins, ends, side='left')
+        bin_idx = np.searchsorted(bins, ends, side='right')
 
         # construct labels for only the unique bin_idx, repackage when returning
         unique_bin_idx, bin_idx = np.unique(bin_idx, return_inverse=True)
@@ -395,10 +395,10 @@ class ContiguousSequenceLabels(SequenceLabels):
             bins = np.round(bins, rounded)
             ends = np.round(ends, rounded)
 
-        # We only know about what happened in the `(1/_orig_samplerate)` seconds finishing at an `end`
-        # Hence choose side='left'.
+        # We only know about what happened in the `(1/_orig_samplerate)` seconds starting at an `end`
+        # Hence choose side='right'.
         # np.digitize is slower!!!
-        bin_idx = np.searchsorted(bins, ends, side='left')
+        bin_idx = np.searchsorted(bins, ends, side='right')
 
         # ends which are not within the bins will be either 0 or len(bins)
         bin_idx_outside = (bin_idx == 0) | (bin_idx == len(bins))

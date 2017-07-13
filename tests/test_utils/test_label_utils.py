@@ -73,12 +73,12 @@ def base_contiguous_small_seqdata():
 
     labels_at_secs = [
         (0.5, 1),
-        (1., 1),
+        (1., 0),
         (1.4, 0),
         (3.8, 2),
         (5.5, 1),
         (5.9999375, 1),
-        (6, 1),
+        # (6, 1),
     ]
 
     iscontiguous = True
@@ -95,11 +95,11 @@ def base_noncontiguous_small_seqdata():
 
     labels_at_secs_nonconti = [
         (0.5, (1, )),
-        (1., (1, )),
+        (1., (0, )),
         (3.4, (0, 2, )),
-        (4.8, (0, 2, 1, )),
+        (4.8, (2, 1, )),
         (5.5, (1, )),
-        (6, (1, )),
+        # (6, (1, )),
     ]
 
     iscontiguous = False
@@ -418,11 +418,13 @@ def SequenceLabels_small_seqdata_labels_at_outside(request,
 
     sminstart = s.starts_ends[:, 0].min()
     smaxend = s.starts_ends[:, 1].max()
-    la_ends = [sminstart - (1 / sr), sminstart, smaxend + (1 / sr)]
-    # Yes, there is no label for sminstart. So the default_label is expected
+    la_ends = [sminstart - (1 / sr), smaxend, smaxend + (1 / sr)]
+    # Yes, there is no label for smaxend. So the default_label is expected
     # Why? We are looking at the label for the segment between
-    # (x - (1/samplerate)) and (x) when finding labels_at
-    # and we don't have any info about the label before sminstart
+    # (x) and (x + (1/samplerate)) when finding labels_at
+    # and we don't have any info about the label after smaxend
+    # It's like array indexing (there is no element at len(arr)),
+    # or 24-hr clocks (there is 24:00:00 for a date)
 
     la_labels = [request.param for _ in range(len(la_ends))]
 
@@ -471,8 +473,8 @@ def SequenceLabels_small_seqdata_labels_at_general(request,
     la_sr = request.param
     with s.samplerate_as(la_sr):
         _se = s.starts_ends
-        mins = _se[:, 0].min()
-        maxe = _se[:, 1].max() + (1 / la_sr)
+        mins = _se[:, 0].min() - (1 / la_sr)
+        maxe = _se[:, 1].max()
 
     la_ends, la_labels = [], []
     if not init_small_seqdata['isconti']:
@@ -593,11 +595,13 @@ def ContiSequenceLabels_small_seqdata_labels_at_outside(
 
     sminstart = s.starts_ends[:, 0].min()
     smaxend = s.starts_ends[:, 1].max()
-    la_ends = [sminstart - (1 / sr), sminstart, smaxend + (1 / sr)]
-    # Yes, there is no label for sminstart. So the default_label is expected
+    la_ends = [sminstart - (1 / sr), smaxend, smaxend + (1 / sr)]
+    # Yes, there is no label for smaxend. So the default_label is expected
     # Why? We are looking at the label for the segment between
-    # (x - (1/samplerate)) and (x) when finding labels_at
-    # and we don't have any info about the label before sminstart
+    # (x) and (x + (1/samplerate)) when finding labels_at
+    # and we don't have any info about the label after smaxend
+    # It's like array indexing (there is no element at len(arr)),
+    # or 24-hr clocks (there is 24:00:00 for a date)
 
     la_labels = [request.param for _ in range(len(la_ends))]
 
@@ -670,8 +674,8 @@ def ContiSequenceLabels_small_seqdata_labels_at_general(
     la_sr = request.param
     with s.samplerate_as(la_sr):
         _se = s.starts_ends
-        mins = _se[:, 0].min()
-        maxe = _se[:, 1].max() + (1 / la_sr)
+        mins = _se[:, 0].min() - (1 / la_sr)
+        maxe = _se[:, 1].max()
 
     la_ends, la_labels = [], []
     if not init_small_seqdata['isconti']:
@@ -741,8 +745,8 @@ def ContiSequenceLabels_small_seqdata_labels_at_general_with_deflabel(
     la_sr = 1.0
     with s.samplerate_as(la_sr):
         _se = s.starts_ends
-        mins = _se[:, 0].min()
-        maxe = _se[:, 1].max() + (1 / la_sr)
+        mins = _se[:, 0].min() - (1 / la_sr)
+        maxe = _se[:, 1].max()
 
     la_ends, la_labels = [], []
     if not init_small_seqdata['isconti']:
