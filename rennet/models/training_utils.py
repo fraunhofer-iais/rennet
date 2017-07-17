@@ -9,7 +9,7 @@ import numpy as np
 import keras.callbacks as kc
 
 import rennet.utils.np_utils as npu
-import rennet.utils.plotting_utils as pu
+# import rennet.utils.plotting_utils as pu
 
 to_categorical = npu.to_categorical
 
@@ -19,11 +19,13 @@ normalize_confusion_matrix = npu.normalize_confusion_matrix
 
 print_normalized_confusion = npu.print_normalized_confusion
 
+"""
 plot_speclike = pu.plot_speclike
 
 plot_normalized_confusion_matrix = pu.plot_normalized_confusion_matrix
 
 plot_confusion_precision_recall = pu.plot_confusion_precision_recall
+"""
 
 
 class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attributes
@@ -105,7 +107,7 @@ class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attrib
     def plot_last_normalized_confusions(  # pylint: disable=too-many-arguments
             self,
             perfigsize=(4, 4),
-            cmap=pu.plt.cm.Blues,
+            cmap=None, #pu.plt.cm.Blues,
             fontcolor='red',
             fontsize=16,
             figtitle='Last Confusion Matrix',
@@ -113,6 +115,7 @@ class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attrib
             show=True,
             *args,
             **kwargs):
+        """
         plot_confusion_precision_recall(
             self.confrec[-1, ...],
             self.confprec[-1, ...],
@@ -125,6 +128,8 @@ class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attrib
             cmap=cmap,
             *args,
             **kwargs)
+        """
+        pass
 
     def plot_last_pred_classes(  # pylint: disable=too-many-arguments
             self,
@@ -140,6 +145,7 @@ class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attrib
         if hop_sec is None:
             hop_sec = self.hop_sec
 
+        """
         plot_speclike(
             [self.last_pred_classes, np.argmax(self.true_label, axis=-1)],
             figsize=figsize,
@@ -147,6 +153,7 @@ class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attrib
             sr=sr,
             hop_sec=hop_sec,
             show=show)
+        """
 
     def linestyle_for_true_pred(self, true, pred):
         if true == pred:
@@ -175,6 +182,7 @@ class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attrib
         # because doing custom setting of color and linestyle
         # There might be a way to pass a function to matplotlib, but...Lazy!
         # Plus, it is easy!
+        """
         fig, ax = pu.plt.subplots(2, 1, figsize=figsize)
 
         fig.suptitle(fig_title)
@@ -194,3 +202,4 @@ class ConfusionHistory(kc.Callback):  # pylint: disable=too-many-instance-attrib
             ax[i].legend()
             ax[i].set_title(titles[i])
             ax[i].grid()
+        """
