@@ -58,6 +58,20 @@ class CallLogAmper(fe.FisherPerSamplePrepper):
 
         return ndata
 
+class CallLogFBanker(fe.FisherPerSamplePrepper):
+    def prep_data(self, data, chunking):
+        mean, std = self.read_call_mean_std(chunking)
+        data = lr.feature.melspectrogram(S=data, sr=8000, n_mels=64)
+        if self.mean_it:
+            ndata = lr.logamplitude(data, ref=mean)
+        else:
+            ndata = data
+
+        if self.std_it:
+            ndata = lr.logamplitude(data, ref=std)
+
+        return ndata
+        
 
 class SequenceLogAmper(CallLogAmper):
     def __init__(self, filepath, ctxframes=10, steps_per_chunk=1, **kwargs):
@@ -106,6 +120,9 @@ class SequenceLogAmper(CallLogAmper):
             yield d[ss], l[ss]
             start += stepsize
 
+            
+class SequenceLogFBanker(CallLogFBanker, SequenceLogAmper):
+    pass
 
 def only_splw_2(labels):
     lsums = labels.sum(axis=0)
@@ -151,6 +168,27 @@ class FisherSeqSkippingLogAmperDP(fe.FisherH5ChunkingsReader, SequenceLogAmper,
                 else:
                     yield data, labels, splw
 
+                    
+class FisherSeqSkippingLogFBankerDP(fe.FisherH5ChunkingsReader, SequenceLogFBanker,
+                                  BaseInputsProvider):
+    def __init__(self, filepath, splwfn=ones, **kwargs):
+        super(FisherSeqSkippingLogAmperDP, self).__init__(filepath, **kwargs)
+
+        self.splwfn = splwfn
+
+    def flow_for_epoch_at(self, at):
+        gen = super(FisherSeqSkippingLogAmperDP, self).flow_for_epoch_at(at)
+
+        for x in gen:
+            for data, labels in x:
+
+                splw = self.splwfn(labels)
+                if splw is None:
+                    continue
+                else:
+                    yield data, labels, splw
+
+                    
 
 class ChattyConfHist(ConfusionHistory):
     def __init__(self, *args, **kwargs):
@@ -158,10 +196,10 @@ class ChattyConfHist(ConfusionHistory):
             self._curr_e = 0
 
     def on_batch_end(self, b, l=None):
-        if b % 400 == 0:
+        if b % 800 == 0:
             super(ChattyConfHist, self).on_epoch_end(b, l)
             self._set_conf_prec_rec()
-            print("b-{:4} P(REC)".format(b), "  ".join(
+            print("b-{:6} P(REC)".format(b), "  ".join(
                 "{:6.2f} ({:6.2f})".format(p, r)
                 for r, p in zip(self.confrec[-1, ...].diagonal() * 100,
                                 self.confprec[-1, ...].diagonal() * 100)))
@@ -181,7 +219,7 @@ class ChattyConfHist(ConfusionHistory):
         self._set_conf_prec_rec()
 
         print()
-        print("e-{:4} P(REC)".format(e), "  ".join(
+        print("e-{:6} P(REC)".format(e), "  ".join(
             "{:6.2f} ({:6.2f})".format(p, r)
             for r, p in zip(self.confrec[-1, ...].diagonal() * 100,
                             self.confprec[-1, ...].diagonal() * 100)))
