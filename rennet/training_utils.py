@@ -124,7 +124,7 @@ class SequenceLogAmper(CallLogAmper):
             start += stepsize
 
             
-class SequenceLogFBanker(CallLogFBanker, SequenceLogAmper):
+class SequenceLogFBanker(SequenceLogAmper, CallLogFBanker):
     pass
 
 def only_splw_2(labels):
