@@ -61,7 +61,10 @@ class CallLogAmper(fe.FisherPerSamplePrepper):
 class CallLogFBanker(fe.FisherPerSamplePrepper):
     def prep_data(self, data, chunking):
         mean, std = self.read_call_mean_std(chunking)
-        data = lr.feature.melspectrogram(S=data, sr=8000, n_mels=64)
+        nmels = 64
+        data = lr.feature.melspectrogram(S=data.T, sr=8000, n_mels=nmels).T
+        mean = lr.feature.melspectrogram(S=mean.T, sr=8000, n_mels=nmels).T
+        std = lr.feature.melspectrogram(S=std.T, sr=8000, n_mels=nmels).T
         if self.mean_it:
             ndata = lr.logamplitude(data, ref=mean)
         else:
@@ -168,16 +171,16 @@ class FisherSeqSkippingLogAmperDP(fe.FisherH5ChunkingsReader, SequenceLogAmper,
                 else:
                     yield data, labels, splw
 
-                    
+
 class FisherSeqSkippingLogFBankerDP(fe.FisherH5ChunkingsReader, SequenceLogFBanker,
                                   BaseInputsProvider):
     def __init__(self, filepath, splwfn=ones, **kwargs):
-        super(FisherSeqSkippingLogAmperDP, self).__init__(filepath, **kwargs)
+        super(FisherSeqSkippingLogFBankerDP, self).__init__(filepath, **kwargs)
 
         self.splwfn = splwfn
 
     def flow_for_epoch_at(self, at):
-        gen = super(FisherSeqSkippingLogAmperDP, self).flow_for_epoch_at(at)
+        gen = super(FisherSeqSkippingLogFBankerDP, self).flow_for_epoch_at(at)
 
         for x in gen:
             for data, labels in x:
