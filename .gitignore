@@ -87,9 +87,6 @@ docs/_build/
 .ipynb_checkpoints
 
 # ########################################################################### #
-/data/working
-/data/raw
-/outputs/**
 
 # temporary org files
 **/.#*.org
