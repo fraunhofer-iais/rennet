@@ -172,19 +172,19 @@ def _apply_rolling(func, arr, win_len, step_len=1, axis=0, *args, **kwargs):
 
 
 def rolling_mean(arr, win_len, axis=0, *args, **kwargs):
-    return _apply_rolling(np.mean, arr, win_len, axis, *args, **kwargs)
+    return _apply_rolling(np.mean, arr, win_len, axis=axis, *args, **kwargs)
 
 
 def rolling_sum(arr, win_len, axis=0, *args, **kwargs):
-    return _apply_rolling(np.sum, arr, win_len, axis, *args, **kwargs)
+    return _apply_rolling(np.sum, arr, win_len, axis=axis, *args, **kwargs)
 
 
 def rolling_max(arr, win_len, axis=0, *args, **kwargs):
-    return _apply_rolling(np.max, arr, win_len, axis, *args, **kwargs)
+    return _apply_rolling(np.max, arr, win_len, axis=axis, *args, **kwargs)
 
 
 def rolling_min(arr, win_len, axis=0, *args, **kwargs):
-    return _apply_rolling(np.min, arr, win_len, axis, *args, **kwargs)
+    return _apply_rolling(np.min, arr, win_len, axis=axis, *args, **kwargs)
 
 
 def group_by_values(values):
