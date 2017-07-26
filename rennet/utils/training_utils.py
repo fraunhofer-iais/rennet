@@ -191,6 +191,7 @@ class BaseInputsProvider(BaseH5ChunkingsReader, BaseH5ChunkPrepper):  # pylint: 
                 self.chunk_shuffle_seeds = np.reshape(
                     self.chunk_shuffle_seeds, (self.nepochs, self.nchunks))
 
+    @threadsafe_generator
     def flow(self, indefinitely=False, sleepsec_after_epoch=0):
         self.setup_shuffling_seeds()
         for e in range(self.nepochs):

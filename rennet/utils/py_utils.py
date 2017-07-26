@@ -14,6 +14,8 @@ try:
 except ImportError:  # python2.7
     from fractions import gcd
 
+from threading import Lock
+
 
 def is_string(obj):
     """ Returns true if s is string or string-like object,
@@ -118,3 +120,26 @@ def getsize(obj_0):
 def lowest_common_multiple(a, b):
     # gcd expects integers, the whole thing is integers, returning integers
     return abs(a * b) // gcd(a, b) if a and b else 0
+
+
+class ThreadSafeIterator(object):
+    def __init__(self, iterator):
+        self.iterator = iterator
+        self.lock = Lock()
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        with self.lock:
+            return next(self.iterator)
+
+    def __next__(self):
+        return self.next()
+
+
+def threadsafe_generator(f):
+    def g(*a, **k):
+        return ThreadSafeIterator(f(*a, **k))
+
+    return g
