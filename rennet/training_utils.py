@@ -58,8 +58,9 @@ class CallLogAmper(fe.FisherPerSamplePrepper):
 
         return ndata
 
-class CallLogFBanker(fe.FisherPerSamplePrepper):
-    def prep_data(self, data, chunking):
+
+class CallLogFBanker(CallLogAmper):
+    def prep_data(self, data, chunking, *args, **kwargs):
         mean, std = self.read_call_mean_std(chunking)
         nmels = 64
         data = lr.feature.melspectrogram(S=data.T, sr=8000, n_mels=nmels).T
