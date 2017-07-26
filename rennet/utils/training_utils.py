@@ -11,6 +11,9 @@ import numpy.random as nr
 import h5py as h
 import time
 
+from rennet.utils.py_utils import threadsafe_generator
+
+
 """ Basic namedtuple for Chunking information.
 But it is perfectly acceptable to just pass a custom Chunking class.
 Just meet the following expectations:
@@ -45,8 +48,8 @@ class BaseH5ChunkingsReader(object):
         we have the final list of all the datasets to be read from the file.
         """
 
-        raise NotImplementedError("Not implemented in base class {}".format(
-            self.__class__.__name__))
+        raise NotImplementedError(
+            "Not implemented in base class {}".format(self.__class__.__name__))
 
     @property
     def chunkings(self):
@@ -59,8 +62,8 @@ class BaseH5ChunkingsReader(object):
         we have the final list of all the datasets to be read from the file.
         """
 
-        raise NotImplementedError("Not implemented in base class {}".format(
-            self.__class__.__name__))
+        raise NotImplementedError(
+            "Not implemented in base class {}".format(self.__class__.__name__))
 
     @property
     def nchunks(self):
@@ -94,16 +97,16 @@ class BaseH5ChunkPrepper(object):
 
         Here to enforce API.
          """
-        raise NotImplementedError("Not implemented in base class {}".format(
-            self.__class__.__name__))
+        raise NotImplementedError(
+            "Not implemented in base class {}".format(self.__class__.__name__))
 
     def prep_label(self, label):
         """ Do anything additional to the read label like normalize, reshape, etc.
 
         Here to enforce API.
          """
-        raise NotImplementedError("Not implemented in base class {}".format(
-            self.__class__.__name__))
+        raise NotImplementedError(
+            "Not implemented in base class {}".format(self.__class__.__name__))
 
     def get_prepped_data_label(self, chunking):
         """ Get the prepped data and label chunks.
@@ -126,8 +129,7 @@ class BaseH5ChunkPrepper(object):
         else:
             raise ValueError(
                 "shuffle_seed should either be None (no shuffling) or an integer"
-                " {} was given {}".format(shuffle_seed, type(shuffle_seed))
-            )
+                " {} was given {}".format(shuffle_seed, type(shuffle_seed)))
 
     def get_prepped_inputs(self, chunking, shuffle_seed=None, **kwargs):  # pylint: disable=unused-argument
         """ The method that will be called by DataProvider (below).
@@ -140,8 +142,8 @@ class BaseH5ChunkPrepper(object):
 
         # NOTE: since the same shufflng seed is used for all arrays,
         # The correspondence will be preserved
-        return (self.maybe_shuffle(data, shuffle_seed),
-                self.maybe_shuffle(label, shuffle_seed))
+        return (self.maybe_shuffle(data, shuffle_seed), self.maybe_shuffle(
+            label, shuffle_seed))
 
 
 class BaseInputsProvider(BaseH5ChunkingsReader, BaseH5ChunkPrepper):  # pylint: disable=abstract-method
