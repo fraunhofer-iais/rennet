@@ -8,7 +8,11 @@ import re
 from sys import getsizeof
 from numbers import Number
 from collections import Set, Mapping, deque
-from math import gcd
+try:
+    # FIXME: proper handling for py2
+    from math import gcd
+except ImportError:  # python2.7
+    from fractions import gcd
 
 
 def is_string(obj):
