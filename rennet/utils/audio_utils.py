@@ -8,11 +8,11 @@ from __future__ import print_function, division
 import os
 import warnings
 from collections import namedtuple
-
 from tempfile import NamedTemporaryFile
 import subprocess as sp
-
 from pydub import AudioSegment  # external dependency
+import numpy as np
+import librosa as lr
 
 from rennet.utils.py_utils import cvsecs
 
@@ -484,9 +484,14 @@ def convert_to_standard(filepath,
     tofilepath = os.path.join(todir, tofilename)
     s = AudioIO.from_file(filepath)
     f = s.export_standard(  # pylint: disable=no-member
-        tofilepath, samplerate=samplerate, channels=channels, fmt=tofmt)
+        tofilepath,
+        samplerate=samplerate,
+        channels=channels,
+        fmt=tofmt)
     f.close()
-    return [tofilename, ]
+    return [
+        tofilename,
+    ]
 
 
 def convert_to_standard_split(filepath, todir, tofmt="wav", samplerate=16000):
@@ -506,3 +511,60 @@ def convert_to_standard_split(filepath, todir, tofmt="wav", samplerate=16000):
         f.close()
 
     return tofilenames
+
+
+def powspectrogram(y, n_fft, hop_len, win_len=None, window='hann'):
+    return np.abs(
+        lr.stft(
+            y,
+            n_fft=n_fft,
+            hop_length=hop_len,
+            win_length=win_len,
+            window=window,
+            center=False)).T**2.0
+
+
+def melspectrogram(  # pylint: disable=too-many-arguments
+        powspec=None,
+        sr=8000,
+        y=None,
+        n_fft=256,
+        hop_len=80,
+        win_len=None,
+        window='hann',
+        n_mels=64,
+        **kwargs):
+    if powspec is None:
+        powspec = powspectrogram(
+            y, n_fft, hop_len, win_len=win_len, window=window).T
+
+    mel_basis = lr.filters.mel(sr, n_fft, n_mels=n_mels, **kwargs)
+
+    return np.dot(mel_basis, powspec).T
+
+
+def logmelspectrogram(  # pylint: disable=too-many-arguments
+        melspec=None,
+        amin=1e-8,
+        y=None,
+        powspec=None,
+        sr=8000,
+        n_fft=256,
+        hop_len=80,
+        win_len=None,
+        window='hann',
+        n_mels=64,
+        **kwargs):
+    if melspec is None:
+        melspec = melspectrogram(
+            y=y,
+            powspec=powspec,
+            sr=sr,
+            n_fft=n_fft,
+            hop_len=hop_len,
+            win_len=win_len,
+            window=window,
+            n_mels=n_mels,
+            **kwargs)
+
+    return np.log10(np.maximum(amin, melspec))  # pylint: disable=no-member

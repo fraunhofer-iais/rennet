@@ -370,14 +370,14 @@ class ActiveSpeakers(lu.ContiguousSequenceLabels):
             return args
 
 
-class FisherH5ChunkingsReader(tu.BaseH5ChunkingsReader):
+class H5ChunkingsReader(tu.BaseH5ChunkingsReader):
     def __init__(self,
                  filepath,
                  audios_root='audios',
                  labels_root='labels',
                  **kwargs):
 
-        super(FisherH5ChunkingsReader, self).__init__(filepath, **kwargs)
+        super(H5ChunkingsReader, self).__init__(filepath, **kwargs)
 
         self.audios_root = audios_root
         self.labels_root = labels_root
@@ -456,10 +456,11 @@ class FisherH5ChunkingsReader(tu.BaseH5ChunkingsReader):
                      audios_root='audios',
                      labels_root='labels',
                      **kwargs):
-        obj = cls(filepath,
-                  audios_root=audios_root,
-                  labels_root=labels_root,
-                  **kwargs)
+        obj = cls(
+            filepath,
+            audios_root=audios_root,
+            labels_root=labels_root,
+            **kwargs)
 
         if groupids == 'all':
             return obj
@@ -486,10 +487,11 @@ class FisherH5ChunkingsReader(tu.BaseH5ChunkingsReader):
                         audios_root='audios',
                         labels_root='labels',
                         **kwargs):
-        obj = cls(filepath,
-                  audios_root=audios_root,
-                  labels_root=labels_root,
-                  **kwargs)
+        obj = cls(
+            filepath,
+            audios_root=audios_root,
+            labels_root=labels_root,
+            **kwargs)
 
         if at == np.s_[:]:
             return obj
@@ -525,10 +527,11 @@ class FisherH5ChunkingsReader(tu.BaseH5ChunkingsReader):
                     labels_root='labels',
                     **kwargs):
         # FIXME: figure out proper way to kwargs
-        obj = cls(filepath,
-                  audios_root=audios_root,
-                  labels_root=labels_root,
-                  **kwargs)
+        obj = cls(
+            filepath,
+            audios_root=audios_root,
+            labels_root=labels_root,
+            **kwargs)
 
         if callids == 'all':
             return obj
@@ -562,10 +565,11 @@ class FisherH5ChunkingsReader(tu.BaseH5ChunkingsReader):
                        audios_root='audios',
                        labels_root='labels',
                        **kwargs):
-        obj = cls(filepath,
-                  audios_root=audios_root,
-                  labels_root=labels_root,
-                  **kwargs)
+        obj = cls(
+            filepath,
+            audios_root=audios_root,
+            labels_root=labels_root,
+            **kwargs)
 
         if at == np.s_[:]:
             return obj
@@ -597,7 +601,7 @@ class FisherH5ChunkingsReader(tu.BaseH5ChunkingsReader):
         return obj
 
 
-class FisherPerSamplePrepper(tu.BaseH5ChunkPrepper):
+class PerSamplePrepper(tu.BaseH5ChunkPrepper):
     """ Prep Fisher data, where each vector is an individual sample. No Context is added.
     - The data is normalized, if set to True, on a per-chunk basis
     - The label is normalized to nclasses to_categorical form, which can also be set
@@ -611,7 +615,7 @@ class FisherPerSamplePrepper(tu.BaseH5ChunkPrepper):
             nclasses=3,
             to_categorical=True,
             **kwargs):
-        super(FisherPerSamplePrepper, self).__init__(filepath, **kwargs)
+        super(PerSamplePrepper, self).__init__(filepath, **kwargs)
         self.mean_it = mean_it
         self.std_it = std_it
         self.nclasses = nclasses
@@ -628,7 +632,7 @@ class FisherPerSamplePrepper(tu.BaseH5ChunkPrepper):
 
         return ndata
 
-    def prep_data(self, data):
+    def prep_data(self, data, *args, **kwargs):
         return self.normalize_data(data)
 
     def normalize_label(self, label):
@@ -638,11 +642,11 @@ class FisherPerSamplePrepper(tu.BaseH5ChunkPrepper):
         else:
             return l
 
-    def prep_label(self, label):
+    def prep_label(self, label, *args, **kwargs):
         return self.normalize_label(label)
 
 
-class FisherPerSampleDataProvider(FisherH5ChunkingsReader,
-                                  FisherPerSamplePrepper,
+class PerSampleDataProvider(H5ChunkingsReader,
+                                  PerSamplePrepper,
                                   tu.BaseInputsProvider):
     pass
