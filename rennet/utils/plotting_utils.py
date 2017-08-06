@@ -109,7 +109,7 @@ def plot_speclike(  # pylint: disable=too-many-arguments
         show_time=False,
         sr=16000,
         hop_sec=0.05,
-        cmap=plt.cm.viridis,
+        cmap='viridis',
         show=True):
     assert all(
         o.shape[0] == orderedlist[0].shape[0]
@@ -134,7 +134,7 @@ def plot_speclike(  # pylint: disable=too-many-arguments
 def plot_normalized_confusion_matrix(  # pylint: disable=too-many-arguments
         confusion_matrix,
         figsize=(4, 4),
-        cmap=plt.cm.Blues,
+        cmap='Blues',
         fontcolor='red',
         fontsize=16,
         figtitle='Confusion Matrix',
@@ -163,7 +163,7 @@ def plot_confusion_precision_recall(  # pylint: disable=too-many-arguments
         conf_precision,
         conf_recall,
         perfigsize=(4, 4),
-        cmap=plt.cm.Blues,
+        cmap='Blues',
         fontcolor='red',
         fontsize=16,
         figtitle='Confusion Matrix',
