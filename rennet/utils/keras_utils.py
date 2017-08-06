@@ -1,5 +1,5 @@
 """
-@mosjust
+@mosjuste
 Created: 05-08-2017
 
 Keras Utilities
@@ -7,7 +7,7 @@ Keras Utilities
 from __future__ import print_function, division
 import numpy as np
 from os.path import join as pjoin
-from keras.callbacks import Callback
+from keras.callbacks import Callback, ModelCheckpoint, TensorBoard
 from h5py import File as hFile
 
 from rennet.utils.np_utils import (
@@ -15,6 +15,7 @@ from rennet.utils.np_utils import (
     normalize_confusion_matrix, printoptions, print_prec_rec)
 
 
+# CALLBACKS ####################################################### CALLBACKS #
 class ChattyConfusionHistory(Callback):
     """ Callback to store and pretty-print confusion matrix per epoch.
 
@@ -122,7 +123,6 @@ class ChattyConfusionHistory(Callback):
         print(self.prefixtr.format('INITIAL'))
         print_prec_rec(*res[-2:], onlydiag=True)
 
-
     def on_train_end(self, *args, **kwargs):  # pylint: disable=unused-argument
         res = self._predict_calculate()
 
@@ -159,3 +159,33 @@ class ChattyConfusionHistory(Callback):
             for n in ['preds', 'confs', 'precs', 'recs']
         ]
         self._maybe_export(res, paths)
+
+
+model_checkpoint_pattern = 'w.{epoch:03d}-{val_loss:.3f}-{val_categorical_accuracy:.3f}.h5'
+
+
+def create_callbacks(inputs_provider,
+                     activity_dir,
+                     epochs_per_pass,
+                     checkpoints_pattern=model_checkpoint_pattern,
+                     **kwargs):
+    return [
+        ModelCheckpoint(
+            checkpoints_pattern,
+            save_best_only=False,
+            save_weights_only=False,
+            period=1,
+            verbose=0, ),
+        TensorBoard(
+            log_dir=activity_dir,
+            histogram_freq=
+            1,  # FIXME: may not work with validation data as generator
+            write_images=True,
+            write_graph=False, ),
+        ChattyConfusionHistory(
+            inputs_provider,
+            epochs_per_pass=epochs_per_pass,
+            export_dir=activity_dir,
+            **kwargs),
+        # IDEA: A predictions saver at the end of training?
+    ]
