@@ -10,6 +10,8 @@ from math import ceil
 import numpy as np
 from librosa.display import specshow
 
+from rennet.utils.np_utils import normalize_confusion_matrices
+
 
 def plot_multi(  # pylint: disable=too-many-arguments, too-many-locals, too-many-branches
         x_list,
@@ -184,3 +186,42 @@ def plot_confusion_precision_recall(  # pylint: disable=too-many-arguments
         cmap=cmap,
         *args,
         **kwargs)
+
+
+def plot_confusion_history(  # pylint: disable=too-many-arguments, too-many-locals
+        confusion_matrices,
+        figsize=(20, 8),
+        fig_title="Confusions History",
+        marker='|',
+        colors_for_true=('grey', 'yellowgreen', 'lightcoral'),
+        linestyles_for_TP=('-'),
+        linestyles_for_FP=(':', '--', '-.'), ):
+    prec_rec = normalize_confusion_matrices(confusion_matrices)
+
+    fig, ax = plt.subplots(2, 1, figsize=figsize)
+
+    fig.suptitle(fig_title)
+    axtitles = ('Precision', 'Recall')
+
+    cyclic = lambda l, i: l[i % len(l)]
+
+    color = lambda t: cyclic(colors_for_true, t)
+
+    linestyles = [linestyles_for_FP, linestyles_for_TP]
+    line = lambda t, p: cyclic(linestyles[t == p], [p, t][t == p])
+
+    true_nc, pred_nc = prec_rec[0].shape[-2:]
+    for i, con in enumerate(prec_rec):
+        for t in range(true_nc):
+            for p in range(pred_nc):
+                ax[i].plot(
+                    con[:, t, p],
+                    color=color(t),
+                    linestyle=line(t, p),
+                    label="{}_{}".format(t, p),
+                    marker=marker, )
+                ax[i].set_ylim([0, 1])
+
+        ax[i].legend()
+        ax[i].set_title(axtitles[i])
+        ax[i].grid()
