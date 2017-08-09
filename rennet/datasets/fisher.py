@@ -14,7 +14,7 @@ import h5py as h
 import rennet.utils.label_utils as lu
 from rennet.utils.py_utils import BaseSlotsOnlyClass
 import rennet.utils.np_utils as nu
-import rennet.utils.training_utils as tu
+import rennet.utils.h5_utils as hu
 
 samples_for_labelsat = lu.samples_for_labelsat
 times_for_labelsat = lu.times_for_labelsat
@@ -370,36 +370,25 @@ class ActiveSpeakers(lu.ContiguousSequenceLabels):
             return args
 
 
-class H5ChunkingsReader(tu.BaseH5ChunkingsReader):
+# INPUTS PROVIDERS ######################################### INPUTS PROVIDERS #
+
+
+class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
     def __init__(self,
                  filepath,
                  audios_root='audios',
                  labels_root='labels',
                  **kwargs):
 
-        super(H5ChunkingsReader, self).__init__(filepath, **kwargs)
-
         self.audios_root = audios_root
         self.labels_root = labels_root
 
-        self.grouped_callids = self._read_all_grouped_callids()
+        self._grouped_callids = None
 
         self._totlen = None
         self._chunkings = None
 
-    @property
-    def totlen(self):
-        if self._totlen is None:
-            self._read_chunkings()
-
-        return self._totlen
-
-    @property
-    def chunkings(self):
-        if self._chunkings is None:
-            self._read_chunkings()
-
-        return self._chunkings
+        super(H5ChunkingsReader, self).__init__(filepath, **kwargs)
 
     def _read_all_grouped_callids(self):
         grouped_callids = dict()
@@ -413,6 +402,23 @@ class H5ChunkingsReader(tu.BaseH5ChunkingsReader):
                 grouped_callids[g] = set(root[g].keys())  # callids
 
         return grouped_callids
+
+    @property
+    def grouped_callids(self):
+        if self._grouped_callids is None:
+            self._grouped_callids = self._read_all_grouped_callids()
+        return self._grouped_callids
+
+    @grouped_callids.setter
+    def grouped_callids(self, value):
+        self._grouped_callids = value
+
+    @property
+    def totlen(self):
+        if self._totlen is None:
+            self._read_chunkings()
+
+        return self._totlen
 
     def _read_chunkings(self):
         # NOTE: We use the chunking info from the audios
@@ -439,7 +445,7 @@ class H5ChunkingsReader(tu.BaseH5ChunkingsReader):
                     total_len += totlen
 
                     chunkings.extend(
-                        tu.Chunking(
+                        hu.Chunking(
                             datapath=ad.name,
                             dataslice=np.s_[s:e, ...],
                             labelpath=ld.name,
@@ -448,6 +454,13 @@ class H5ChunkingsReader(tu.BaseH5ChunkingsReader):
 
         self._totlen = total_len
         self._chunkings = chunkings
+
+    @property
+    def chunkings(self):
+        if self._chunkings is None:
+            self._read_chunkings()
+
+        return self._chunkings
 
     @classmethod
     def for_groupids(cls,
@@ -601,52 +614,74 @@ class H5ChunkingsReader(tu.BaseH5ChunkingsReader):
         return obj
 
 
-class PerSamplePrepper(tu.BaseH5ChunkPrepper):
-    """ Prep Fisher data, where each vector is an individual sample. No Context is added.
-    - The data is normalized, if set to True, on a per-chunk basis
-    - The label is normalized to nclasses to_categorical form, which can also be set
-    """
+class FramewiseNActiveSpeakersPrepper(hu.AsIsChunkPrepper):
+    def prep_label(self, label, **kwargs):
+        return nu.to_categorical(np.clip(label.sum(axis=1), 0, 2), nclasses=3)
 
+
+class UnnormedFramewiseInputsProvider(  # pylint: disable=too-many-ancestors
+        H5ChunkingsReader,
+        FramewiseNActiveSpeakersPrepper,
+        hu.BaseClassSubsamplingSteppedInputsProvider, ):
     def __init__(  # pylint: disable=too-many-arguments
             self,
             filepath,
-            mean_it=True,
-            std_it=True,
             nclasses=3,
-            to_categorical=True,
+            classkeyfn=np.argmax,  # for categorical labels
+            class_subsample_to_ratios=1.,  # float, tuple or dict, default keeps all
+            steps_per_chunk=1,
+            shuffle_seed=None,
+            npasses=1,
+            audios_root='audios',
+            labels_root='labels',
             **kwargs):
-        super(PerSamplePrepper, self).__init__(filepath, **kwargs)
-        self.mean_it = mean_it
-        self.std_it = std_it
-        self.nclasses = nclasses
-        self.to_categorical = to_categorical
 
-    def normalize_data(self, data):
-        if self.mean_it:
-            ndata = (data - data.mean(axis=0))
-        else:
-            ndata = data
-
-        if self.std_it:
-            ndata = ndata / data.std(axis=0)
-
-        return ndata
-
-    def prep_data(self, data, *args, **kwargs):
-        return self.normalize_data(data)
-
-    def normalize_label(self, label):
-        l = label.sum(axis=1).clip(min=0, max=self.nclasses - 1)
-        if self.to_categorical:
-            return nu.to_categorical(l, nclasses=self.nclasses, warn=False)
-        else:
-            return l
-
-    def prep_label(self, label, *args, **kwargs):
-        return self.normalize_label(label)
+        # Mainly here for documentation and auto-completion
+        sup = super(UnnormedFramewiseInputsProvider, self)
+        sup.__init__(
+            filepath,
+            audios_root=audios_root,
+            labels_root=labels_root,
+            nclasses=nclasses,
+            classkeyfn=classkeyfn,
+            class_subsample_to_ratios=class_subsample_to_ratios,
+            steps_per_chunk=steps_per_chunk,
+            shuffle_seed=shuffle_seed,
+            npasses=npasses,
+            **kwargs)
 
 
-class PerSampleDataProvider(H5ChunkingsReader,
-                                  PerSamplePrepper,
-                                  tu.BaseInputsProvider):
-    pass
+class UnnormedFrameWithContextInputsProvider(  # pylint: disable=too-many-ancestors
+        H5ChunkingsReader,
+        FramewiseNActiveSpeakersPrepper,
+        hu.BaseWithContextClassSubsamplingSteppedInputsProvider, ):
+    def __init__(  # pylint: disable=too-many-arguments
+            self,
+            filepath,
+            data_context=0,
+            label_subcontext=0,  # 0 for choosing only the center label as label
+            label_from_subcontext_fn=hu.dominant_label_for_subcontext,
+            steps_per_chunk=8,
+            classkeyfn=np.argmax,  # for categorical labels
+            class_subsample_to_ratios=1.,  # float, tuple or dict, default keeps all
+            shuffle_seed=None,
+            npasses=1,
+            audios_root='audios',
+            labels_root='labels',
+            **kwargs):
+
+        # Mainly here for documentation and auto-completion
+        sup = super(UnnormedFrameWithContextInputsProvider, self)
+        sup.__init__(
+            filepath,
+            audios_root=audios_root,
+            labels_root=labels_root,
+            data_context=data_context,
+            label_subcontext=label_subcontext,
+            label_from_subcontext_fn=label_from_subcontext_fn,
+            classkeyfn=classkeyfn,
+            class_subsample_to_ratios=class_subsample_to_ratios,
+            steps_per_chunk=steps_per_chunk,
+            shuffle_seed=shuffle_seed,
+            npasses=npasses,
+            **kwargs)
