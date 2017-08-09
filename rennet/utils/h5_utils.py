@@ -10,7 +10,6 @@ from warnings import warn as warning
 import numpy as np
 import numpy.random as nr
 import h5py as h
-from itertools import groupby
 
 import rennet.utils.np_utils as nu
 
@@ -474,17 +473,25 @@ class BaseClassSubsamplingInputsProvider(BaseInputsProvider):  # pylint: disable
 
     def keeping_decision(self, inputs, keep_seed=None, **kwargs):
         labels = inputs[1]  # this is usually the case, esp for Keras inputs
-        ratios = self.ratios
-        if all(r == 1. for r in ratios.values()):
+        if all(l == 1. for l in self.ratios.values()):
             # we're keeping all ...
             # shuffling will happen on these keeps later
             return np.arange(len(labels))
 
+        # Ref:
+        # http://stackoverflow.com/questions/4651683/numpy-grouping-using-itertools-groupby-performance
+        # FIXME: Assumes categorical labels ... 2D
+        diff = np.concatenate([
+            np.ones((1, ) + labels.shape[1:], dtype=labels.dtype),
+            np.diff(labels, axis=0),
+        ])
+        starts = np.unique(np.where(diff)[0])
+        ends = np.concatenate([starts[1:], [len(labels)]])
+
         seg_keep = []
-        keyfn = lambda el: self.classkeyfn(el[1])
-        for k, it in groupby(enumerate(labels), key=keyfn):
-            ratio = ratios[k]
-            idx, _ = zip(*list(it))
+        for s, e, l in zip(starts, ends, labels[starts]):
+            ratio = self.ratios[self.classkeyfn(l)]
+            idx = np.arange(s, e)
 
             if ratio == 0.:  # skip all
                 continue
