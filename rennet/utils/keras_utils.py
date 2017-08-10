@@ -48,7 +48,7 @@ class ChattyConfusionHistory(Callback):
         super(ChattyConfusionHistory, self).__init__()
 
     def _read_trues(self):
-        gen = self.ip.flow(indefinitely=False, with_chunking=False)
+        gen = self.ip.flow(indefinitely=False, only_labels=True, with_chunking=False)
 
         trues = []
         nsteps = 0
@@ -60,7 +60,7 @@ class ChattyConfusionHistory(Callback):
         return trues, nsteps
 
     def _predict_calculate(self):
-        gen = self.ip.flow(indefinitely=True, with_chunking=False)
+        gen = self.ip.flow(indefinitely=True, only_labels=False, with_chunking=False)
         preds = self.model.predict_generator(gen, self.nsteps, **self._kwargs)
 
         _preds = to_categorical(
@@ -105,7 +105,7 @@ class ChattyConfusionHistory(Callback):
     def on_train_begin(self, *args, **kwargs):  # pylint: disable=unused-argument
         res = self._predict_calculate()
 
-        self._maybe_export(self.trues, "trues")
+        self._maybe_export(self.trues, "trues", multi=False)
         print()
         self._print_class_stats()
         print()
@@ -118,7 +118,7 @@ class ChattyConfusionHistory(Callback):
             "initial/{}".format(n)
             for n in ['preds', 'confs', 'precs', 'recs']
         ]
-        self._maybe_export(res, paths)
+        self._maybe_export(res, paths, multi=True)
 
         print(self.prefixtr.format('INITIAL'))
         print_prec_rec(*res[-2:], onlydiag=True)
@@ -137,7 +137,7 @@ class ChattyConfusionHistory(Callback):
         paths = [
             "final/{}".format(n) for n in ['preds', 'confs', 'precs', 'recs']
         ]
-        self._maybe_export(res, paths)
+        self._maybe_export(res, paths, multi=True)
 
     def on_epoch_end(self, e, *args, **kwargs):  # pylint: disable=unused-argument
         res = self._predict_calculate()
@@ -153,12 +153,11 @@ class ChattyConfusionHistory(Callback):
         print_prec_rec(*res[-2:], onlydiag=True)
         print()
 
-        self._maybe_export(self.trues, "trues")
         paths = [
             "{}/{}/{}".format(n, _pass - 1, _epoc - 1)
             for n in ['preds', 'confs', 'precs', 'recs']
         ]
-        self._maybe_export(res, paths)
+        self._maybe_export(res, paths, multi=True)
 
 
 model_checkpoint_pattern = 'w.{epoch:03d}-{val_loss:.3f}-{val_categorical_accuracy:.3f}.h5'
