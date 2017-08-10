@@ -395,3 +395,19 @@ def print_prec_rec(prec, rec, onlydiag=False):
                 suppress=True, formatter={'float': '{: >6.2f}'.format}):
             print(
                 "\n".join("{}{}{}".format(*z) for z in zip(p, repeat(spc), r)))
+
+
+def normalize_dynamic_range(arr, new_min=0., new_max=1., axis=None):
+    if np.ndim(new_min) != 0 or np.ndim(new_max) != 0:
+        raise NotImplementedError(
+            "Only implemented for scalar new_min and new_max")
+
+    # we do min-/max-ing without NaN values causing issues
+    amin = arr.nanmin(axis=axis)
+    amax = arr.nanmax(axis=axis)
+
+    if axis is not None:
+        amin = np.expand_dims(amin, axis=axis)
+        amax = np.expand_dims(amax, axis=axis)
+
+    return new_min + (arr - amin) * (new_max - new_min) / (amax - amin)
