@@ -372,6 +372,16 @@ class ActiveSpeakers(lu.ContiguousSequenceLabels):
 
 # INPUTS PROVIDERS ######################################### INPUTS PROVIDERS #
 
+chosen_val_callids = [
+    '00007',
+    '00013',
+    '00028',
+    '00062',
+    '00065',
+    '00069',
+    '00086',
+]
+
 
 class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
     def __init__(self,
