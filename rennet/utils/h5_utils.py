@@ -332,6 +332,7 @@ class BaseInputsProvider(BaseH5ChunkingsReader, BaseH5ChunkPrepper):  # pylint: 
                       at,
                       starting_chunk_at=0,
                       only_labels=False,
+                      with_chunking=False,
                       **kwargs):
         co = self._chunk_order_for_pass(at)
         ii = 0
@@ -348,7 +349,10 @@ class BaseInputsProvider(BaseH5ChunkingsReader, BaseH5ChunkPrepper):  # pylint: 
                     only_labels=only_labels,
                     **kwargs)
 
-                yield inputs
+                if with_chunking:
+                    yield inputs, ((c, ), chunking)
+                else:
+                    yield inputs
 
         except GeneratorExit:
             return
@@ -363,18 +367,21 @@ class BaseInputsProvider(BaseH5ChunkingsReader, BaseH5ChunkPrepper):  # pylint: 
             print("soucefile:\n{}".format(self.filepath))
             raise
 
-    def flow(self,
-             indefinitely=False,
-             starting_pass_at=0,
-             starting_chunk_at=0,
-             only_labels=False,
-             **kwargs):
+    def flow(  # pylint: disable=too-many-arguments
+            self,
+            indefinitely=False,
+            starting_pass_at=0,
+            starting_chunk_at=0,
+            only_labels=False,
+            with_chunking=False,
+            **kwargs):
         while True:
             for p in range(starting_pass_at, self.npasses):
                 for inputs in self.flow_for_pass(
                         at=p,
                         starting_chunk_at=starting_chunk_at,
                         only_labels=only_labels,
+                        with_chunking=with_chunking,
                         **kwargs):
                     yield inputs
 
@@ -608,25 +615,34 @@ class BaseSteppedInputsProvider(BaseInputsProvider):  # pylint: disable=abstract
         for s, e in zip(starts, ends):
             yield [i[keeps[s:e], ...] for i in inputs]
 
-    def flow(self,
-             indefinitely=False,
-             starting_pass_at=0,
-             starting_chunk_at=0,
-             only_labels=False,
-             *args,
-             **kwargs):
+    def flow(  # pylint: disable=too-many-arguments
+            self,
+            indefinitely=False,
+            starting_pass_at=0,
+            starting_chunk_at=0,
+            only_labels=False,
+            with_chunking=False,
+            *args,
+            **kwargs):
         sup = super(BaseSteppedInputsProvider, self)
         gen = sup.flow(
             indefinitely=indefinitely,
             starting_pass_at=starting_pass_at,
             starting_chunk_at=starting_chunk_at,
             only_labels=only_labels,
+            with_chunking=with_chunking,
             *args,
             **kwargs)
 
         for stepped_ip in gen:
-            for ip in stepped_ip:
-                yield ip
+            if with_chunking:
+                stepped_ip, (c, chunking) = stepped_ip
+
+            for i, ip in enumerate(stepped_ip):
+                if with_chunking:
+                    yield ip, (c + (i, ), chunking)
+                else:
+                    yield ip
 
 
 class BaseClassSubsamplingSteppedInputsProvider(  # pylint: disable=abstract-method
