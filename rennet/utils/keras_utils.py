@@ -10,6 +10,9 @@ from os.path import join as pjoin
 from keras.callbacks import Callback, ModelCheckpoint, TensorBoard
 from h5py import File as hFile
 
+from keras.models import Sequential
+import keras.layers as kl
+
 from rennet.utils.np_utils import (
     to_categorical, confusion_matrix_forcategorical,
     normalize_confusion_matrix, printoptions, print_prec_rec)
@@ -237,3 +240,78 @@ def predict_on_inputs_provider(model, inputs_provider, export_to_dir,
             currn = chunking.labelpath
             ctrue = ctrue[-1:]
             cpred = cpred[-1:]
+
+
+# MODELS ############################################################# MODELS #
+
+
+def model_c3(input_shape, nclasses, compile_model=True):
+    model = Sequential(name='conv3')
+
+    # first conv2d layer
+    model.add(
+        kl.Conv2D(
+            64,
+            3,
+            strides=1,
+            data_format='channels_last',
+            input_shape=input_shape[1:],
+            name='c1_3_64_1', ))
+    model.add(kl.BatchNormalization(name='c1_bn'))
+    model.add(kl.Activation('relu', name='c1_relu'))
+    model.add(kl.Dropout(0.1, name='c1_d_10'))
+    model.add(kl.MaxPool2D(2, name='c1_mxp2_2'))
+
+    # second conv2d layer
+    model.add(
+        kl.Conv2D(
+            128,
+            3,
+            strides=1,
+            data_format='channels_last',
+            input_shape=input_shape[1:],
+            name='c2_3_128_1', ))
+    model.add(kl.BatchNormalization(name='c2_bn'))
+    model.add(kl.Activation('relu', name='c2_relu'))
+    model.add(kl.Dropout(0.1, name='c2_d_10'))
+    model.add(kl.MaxPool2D(2, name='c2_mxp2_2'))
+
+    # third conv2d layer
+    model.add(
+        kl.Conv2D(
+            256,
+            3,
+            strides=1,
+            data_format='channels_last',
+            input_shape=input_shape[1:],
+            name='c3_3_256_1', ))
+    model.add(kl.BatchNormalization(name='c3_bn'))
+    model.add(kl.Activation('relu', name='c3_relu'))
+    model.add(kl.Dropout(0.1, name='c3_d_10'))
+
+    # max globally
+    model.add(kl.GlobalMaxPool2D(name='gmxp'))
+
+    # first FC
+    model.add(kl.Dense(512, activation='relu', name='f1_512_relu'))
+    model.add(kl.Dropout(0.1, name='f1_d_10'))
+
+    # second FC
+    model.add(kl.Dense(128, activation='relu', name='f2_128_relu'))
+    model.add(kl.Dropout(0.1, name='f2_d_10'))
+
+    # second FC
+    model.add(kl.Dense(32, activation='relu', name='f3_32_relu'))
+    model.add(kl.Dropout(0.1, name='f3_d_10'))
+
+    # output layer
+    model.add(kl.Dense(nclasses, activation='softmax', name='sfmx'))
+
+    if compile_model:
+        # Compile and send the model
+        model.compile(
+            loss='categorical_crossentropy',
+            optimizer='adamax',
+            metrics=['categorical_accuracy'], )
+
+    return model
