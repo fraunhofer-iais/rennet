@@ -155,12 +155,13 @@ def max_label_for_subcontext(labels_in_subcontext):
 
 
 class BaseWithContextPrepper(BaseH5ChunkPrepper):  # pylint: disable=abstract-method
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments
             self,
             filepath,
             data_context=0,
             label_subcontext=0,  # 0 for choosing only the center label as label
             label_from_subcontext_fn=dominant_label_for_subcontext,
+            add_channel_at_end=True,
             **kwargs):
 
         assert data_context >= 0, (
@@ -174,6 +175,8 @@ class BaseWithContextPrepper(BaseH5ChunkPrepper):  # pylint: disable=abstract-me
             "({}), v/s {}".format(self.dctx, label_subcontext))
         self.lctx = label_subcontext
         self.lctxfn = label_from_subcontext_fn
+
+        self.add_channel = add_channel_at_end
 
         sup = super(BaseWithContextPrepper, self)
         sup.__init__(filepath, **kwargs)
@@ -200,7 +203,10 @@ class BaseWithContextPrepper(BaseH5ChunkPrepper):  # pylint: disable=abstract-me
         else:
             label = label[:, np.newaxis, ...]
 
-        return data, self.lctxfn(label)
+        if self.add_channel:
+            return data[..., None], self.lctxfn(label)
+        else:
+            return data, self.lctxfn(label)
 
 
 # NORMALIZERS ################################################### NORMALIZERS #
@@ -721,6 +727,7 @@ class BaseWithContextSteppedInputsProvider(  # pylint: disable=abstract-method
             data_context=0,
             label_subcontext=0,  # 0 for choosing only the center label as label
             label_from_subcontext_fn=dominant_label_for_subcontext,
+            add_channel_at_end=True,
             steps_per_chunk=8,
             shuffle_seed=None,
             npasses=1,
@@ -731,6 +738,7 @@ class BaseWithContextSteppedInputsProvider(  # pylint: disable=abstract-method
             data_context=data_context,
             label_subcontext=label_subcontext,
             label_from_subcontext_fn=label_from_subcontext_fn,
+            add_channel_at_end=add_channel_at_end,
             steps_per_chunk=steps_per_chunk,
             shuffle_seed=shuffle_seed,
             npasses=npasses,
@@ -785,6 +793,7 @@ class BaseWithContextClassSubsamplingSteppedInputsProvider(  # pylint: disable=a
             data_context=0,
             label_subcontext=0,  # 0 for choosing only the center label as label
             label_from_subcontext_fn=dominant_label_for_subcontext,
+            add_channel_at_end=True,
             steps_per_chunk=8,
             classkeyfn=np.argmax,  # for categorical labels
             class_subsample_to_ratios=1.,  # float, tuple or dict, default keeps all
@@ -799,6 +808,7 @@ class BaseWithContextClassSubsamplingSteppedInputsProvider(  # pylint: disable=a
             data_context=data_context,
             label_subcontext=label_subcontext,
             label_from_subcontext_fn=label_from_subcontext_fn,
+            add_channel_at_end=add_channel_at_end,
             classkeyfn=classkeyfn,
             class_subsample_to_ratios=class_subsample_to_ratios,
             steps_per_chunk=steps_per_chunk,
