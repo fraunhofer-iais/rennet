@@ -48,7 +48,8 @@ class ChattyConfusionHistory(Callback):
         super(ChattyConfusionHistory, self).__init__()
 
     def _read_trues(self):
-        gen = self.ip.flow(indefinitely=False, only_labels=True, with_chunking=False)
+        gen = self.ip.flow(
+            indefinitely=False, only_labels=True, with_chunking=False)
 
         trues = []
         nsteps = 0
@@ -60,7 +61,8 @@ class ChattyConfusionHistory(Callback):
         return trues, nsteps
 
     def _predict_calculate(self):
-        gen = self.ip.flow(indefinitely=True, only_labels=False, with_chunking=False)
+        gen = self.ip.flow(
+            indefinitely=True, only_labels=False, with_chunking=False)
         preds = self.model.predict_generator(gen, self.nsteps, **self._kwargs)
 
         _preds = to_categorical(
@@ -80,7 +82,7 @@ class ChattyConfusionHistory(Callback):
                 paths = [paths]
 
             with hFile(self.export_to, 'a') as f:
-                for path, data in zip(datas, paths):
+                for path, data in zip(paths, datas):
                     if path not in f.keys():
                         f.create_dataset(
                             path,
