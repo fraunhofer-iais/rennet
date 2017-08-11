@@ -235,7 +235,8 @@ def predict_on_inputs_provider(model, inputs_provider, export_to_dir,
                     for p in ('trues', 'preds', 'confs')
                 ],
                 datas=[t, p, conf], )
-
+                
+            print(currn)
             currn = chunking.labelpath
             ctrue = ctrue[-1:]
             cpred = cpred[-1:]
