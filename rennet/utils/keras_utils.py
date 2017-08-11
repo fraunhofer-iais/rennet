@@ -65,7 +65,7 @@ class ChattyConfusionHistory(Callback):
 
     def _predict_calculate(self):
         gen = self.ip.flow(
-            indefinitely=True, only_labels=False, with_chunking=False)
+            indefinitely=True, only_labels=False, only_data=True, with_chunking=False)
         preds = self.model.predict_generator(gen, self.nsteps, **self._kwargs)
 
         _preds = to_categorical(
@@ -175,15 +175,14 @@ def create_callbacks(inputs_provider,
                      **kwargs):
     return [
         ModelCheckpoint(
-            checkpoints_pattern,
+            pjoin(activity_dir, checkpoints_pattern),
             save_best_only=False,
             save_weights_only=False,
             period=1,
             verbose=0, ),
         TensorBoard(
             log_dir=activity_dir,
-            histogram_freq=
-            1,  # FIXME: may not work with validation data as generator
+            histogram_freq=1,  # FIXME: may not work with val data as generator
             write_images=True,
             write_graph=False, ),
         ChattyConfusionHistory(
