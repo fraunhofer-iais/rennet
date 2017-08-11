@@ -379,6 +379,7 @@ class BaseInputsProvider(BaseH5ChunkingsReader, BaseH5ChunkPrepper):  # pylint: 
             starting_pass_at=0,
             starting_chunk_at=0,
             only_labels=False,
+            only_data=False,
             with_chunking=False,
             **kwargs):
         while True:
@@ -389,6 +390,9 @@ class BaseInputsProvider(BaseH5ChunkingsReader, BaseH5ChunkPrepper):  # pylint: 
                         only_labels=only_labels,
                         with_chunking=with_chunking,
                         **kwargs):
+                    if only_data:
+                        inputs = inputs[0]
+
                     yield inputs
 
                 starting_chunk_at = 0
@@ -627,6 +631,7 @@ class BaseSteppedInputsProvider(BaseInputsProvider):  # pylint: disable=abstract
             starting_pass_at=0,
             starting_chunk_at=0,
             only_labels=False,
+            only_data=False,
             with_chunking=False,
             *args,
             **kwargs):
@@ -645,6 +650,9 @@ class BaseSteppedInputsProvider(BaseInputsProvider):  # pylint: disable=abstract
                 stepped_ip, (c, chunking) = stepped_ip
 
             for i, ip in enumerate(stepped_ip):
+                if only_data:
+                    ip = ip[0]
+                    
                 if with_chunking:
                     yield ip, (c + (i, ), chunking)
                 else:
