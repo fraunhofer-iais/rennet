@@ -695,3 +695,21 @@ class UnnormedFrameWithContextInputsProvider(  # pylint: disable=too-many-ancest
             shuffle_seed=shuffle_seed,
             npasses=npasses,
             **kwargs)
+
+
+class ChunkMeanVarianceNormalizingNActiveSpeakersPrepper(
+        hu.BaseChunkMeanVarianceNormalizer,
+        FramewiseNActiveSpeakersPrepper, ):
+    pass
+
+
+class ChMVNFramewiseInputsProvider(  # pylint: disable=too-many-ancestors
+        ChunkMeanVarianceNormalizingNActiveSpeakersPrepper,
+        UnnormedFramewiseInputsProvider, ):
+    pass
+
+
+class ChMVNFrameWithContextInputsProvider(  # pylint: disable=too-many-ancestors
+        ChunkMeanVarianceNormalizingNActiveSpeakersPrepper,
+        UnnormedFrameWithContextInputsProvider, ):
+    pass
