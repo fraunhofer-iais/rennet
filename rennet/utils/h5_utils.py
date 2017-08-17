@@ -224,6 +224,22 @@ class BaseDataNormalizer(BaseH5ChunkPrepper):
             return self.normalize_data(data, **kwargs)
 
 
+class BaseChunkMeanVarianceNormalizer(BaseDataNormalizer):  # pylint: disable=abstract-method
+    def __init__(self, filepath, mean_it=True, std_it=False, **k):
+        self.mean_it = mean_it
+        self.std_it = std_it
+        super(BaseChunkMeanVarianceNormalizer, self).__init__(filepath, **k)
+
+    def normalize_data(self, data, **kwargs):
+        if self.mean_it:
+            data = data - data.mean(axis=0)
+
+        if self.std_it:
+            data = data / data.std(axis=0)
+
+        return data
+
+
 # INPUTS PROVIDERS ######################################### INPUTS PROVIDERS #
 
 
@@ -611,7 +627,6 @@ class BaseSteppedInputsProvider(BaseInputsProvider):  # pylint: disable=abstract
                            array_shuffle_seed=None,
                            only_labels=False,
                            **kwargs):
-        print('stepping')
         sup = super(BaseSteppedInputsProvider, self)
         inputs = sup.get_prepped_data_label(
             chunking, only_labels=only_labels, **kwargs)
@@ -625,7 +640,7 @@ class BaseSteppedInputsProvider(BaseInputsProvider):  # pylint: disable=abstract
         for s, e in zip(starts, ends):
             yield [i[keeps[s:e], ...] for i in inputs]
 
-    def flow(  # pylint: disable=too-many-arguments
+    def flow(  # pylint: disable=too-many-arguments, too-many-locals
             self,
             indefinitely=False,
             starting_pass_at=0,
@@ -652,7 +667,7 @@ class BaseSteppedInputsProvider(BaseInputsProvider):  # pylint: disable=abstract
             for i, ip in enumerate(stepped_ip):
                 if only_data:
                     ip = ip[0]
-                    
+
                 if with_chunking:
                     yield ip, (c + (i, ), chunking)
                 else:
@@ -694,7 +709,6 @@ class BaseClassSubsamplingSteppedInputsProvider(  # pylint: disable=abstract-met
             **kwargs)
 
     def get_prepped_inputs(self, chunking, array_shuffle_seed=None, **kwargs):
-        print('stepped subsampling!')
         sup = super(BaseClassSubsamplingSteppedInputsProvider, self)
         inputs = sup.get_prepped_data_label(chunking, **kwargs)
 
