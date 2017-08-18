@@ -237,7 +237,7 @@ def predict_on_inputs_provider(model, inputs_provider, export_to_dir,
                 datas=[t, p, conf], )
                 
             print(currn, end=' ')
-            print_prec_rec(*normalize_confusion_matrix(conf), only_diag=True)
+            print_prec_rec(*normalize_confusion_matrix(conf), onlydiag=True)
             currn = chunking.labelpath
             ctrue = ctrue[-1:]
             cpred = cpred[-1:]
