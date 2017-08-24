@@ -203,7 +203,7 @@ def predict_on_inputs_provider(model, inputs_provider, export_to_dir,
             for path, data in zip(paths, datas):
                 if path not in f.keys():
                     f.create_dataset(
-                        path, data=data, )  #compression='lzf', fletcher32=True)
+                        path, data=data, compression='lzf', fletcher32=True)
 
             f.flush()
 
