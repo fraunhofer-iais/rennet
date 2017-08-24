@@ -231,8 +231,8 @@ def predict_on_inputs_provider(model, inputs_provider, export_to_dir,
 
             _save(
                 paths=[
-                    "{}/{}".format(p, currn)
-                    for p in ('trues', 'preds', 'confs')
+                    "{}/{}".format(_p, currn)
+                    for _p in ('trues', 'preds', 'confs')
                 ],
                 datas=[t, p, conf], )
                 
