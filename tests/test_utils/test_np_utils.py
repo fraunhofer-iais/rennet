@@ -1013,9 +1013,8 @@ def test_pred1_batB_seql1_confmat_printing(
         for k in ['confrecall', 'confprecision']
     ]
 
-    nu.print_normalized_confusion(confrecall)
-    nu.print_normalized_confusion(confprecision)
-
+    nu.print_prec_rec(confprecision, confrecall)
+    
     assert True
 
 

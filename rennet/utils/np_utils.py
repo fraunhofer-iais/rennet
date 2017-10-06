@@ -345,7 +345,7 @@ def confusion_matrix(  #pylint: disable=too-many-arguments
         Ytrue, Ypred, axis=axis, keepdims=keepdims)
 
 
-def normalize_confusion_matrices(conf_matrix):
+def normalize_confusion_matrix(conf_matrix):
     if not isinstance(conf_matrix, np.ndarray):
         conf_matrix = np.array(conf_matrix)
 
@@ -358,9 +358,6 @@ def normalize_confusion_matrices(conf_matrix):
     return confprec, confrec
 
 
-normalize_confusion_matrix = normalize_confusion_matrices
-
-
 @contextmanager
 def printoptions(*args, **kwargs):
     og = np.get_printoptions()
@@ -371,19 +368,15 @@ def printoptions(*args, **kwargs):
         np.set_printoptions(**og)
 
 
-def print_normalized_confusion(confmat, title='CONFUSION MATRIX'):
-    print("\n{:/>70}//".format(" {} ".format(title)))
-    with printoptions(suppress=True, formatter={'float': '{: >6.2f}'.format}):
-        print(confmat * 100)
-
-
-def print_prec_rec(prec, rec, onlydiag=False):
+def print_prec_rec(prec, rec, onlydiag=False, end='\n'):
     p = prec * 100
     r = rec * 100
     if onlydiag:
-        print("P(REC)){}{}".format("{:^2}".format(' '), "{:^2}".format(
-            ' ').join("{: >6.2f} ({: >6.2f})".format(*z)
-                      for z in zip(p.diagonal(), r.diagonal()))))
+        print(
+            "P(REC)){}{}".format("{:^2}".format(' '), "{:^2}".format(' ').join(
+                "{: >6.2f} ({: >6.2f})".format(*z)
+                for z in zip(p.diagonal(), r.diagonal()))),
+            end=end)
     else:
         n = prec.shape[-1]
         tpf = "".join(["{:^", str(n * 7 + 2), "}"]).format("PRECISION")
@@ -394,7 +387,8 @@ def print_prec_rec(prec, rec, onlydiag=False):
         with printoptions(
                 suppress=True, formatter={'float': '{: >6.2f}'.format}):
             print(
-                "\n".join("{}{}{}".format(*z) for z in zip(p, repeat(spc), r)))
+                "\n".join("{}{}{}".format(*z) for z in zip(p, repeat(spc), r)),
+                end="\n" + end if end != "\n" else end)
 
 
 def normalize_dynamic_range(arr, new_min=0., new_max=1., axis=None):
