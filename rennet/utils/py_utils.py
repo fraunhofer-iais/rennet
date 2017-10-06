@@ -119,10 +119,10 @@ def getsize(obj_0):
 
 def lowest_common_multiple(a, b):
     # gcd expects integers, the whole thing is integers, returning integers
-    return abs(a * b) // gcd(a, b) if a and b else 0
+    return abs(a * b) // gcd(a, b) if a and b else 0  # pylint: disable=deprecated-method
 
 
-class ThreadSafeIterator(object):
+class ThreadSafeIterator(object):  # pylint: disable=too-few-public-methods
     def __init__(self, iterator):
         self.iterator = iterator
         self.lock = Lock()

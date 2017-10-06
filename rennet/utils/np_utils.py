@@ -7,6 +7,8 @@ Numpy utilities
 from __future__ import division, print_function
 import numpy as np
 from collections import Iterable
+from itertools import repeat
+from contextlib import contextmanager
 
 
 def base_array_of(arr):
@@ -359,6 +361,53 @@ def normalize_confusion_matrices(conf_matrix):
 normalize_confusion_matrix = normalize_confusion_matrices
 
 
+@contextmanager
+def printoptions(*args, **kwargs):
+    og = np.get_printoptions()
+    np.set_printoptions(*args, **kwargs)
+    try:
+        yield
+    finally:
+        np.set_printoptions(**og)
+
+
 def print_normalized_confusion(confmat, title='CONFUSION MATRIX'):
     print("\n{:/>70}//".format(" {} ".format(title)))
-    print(np.round(confmat * 100, decimals=2))
+    with printoptions(suppress=True, formatter={'float': '{: >6.2f}'.format}):
+        print(confmat * 100)
+
+
+def print_prec_rec(prec, rec, onlydiag=False):
+    p = prec * 100
+    r = rec * 100
+    if onlydiag:
+        print("P(REC)){}{}".format("{:^2}".format(' '), "{:^2}".format(
+            ' ').join("{: >6.2f} ({: >6.2f})".format(*z)
+                      for z in zip(p.diagonal(), r.diagonal()))))
+    else:
+        n = prec.shape[-1]
+        tpf = "".join(["{:^", str(n * 7 + 2), "}"]).format("PRECISION")
+        trf = "".join(["{:^", str(n * 7 + 1), "}"]).format("RECALL")
+        spc = "{:^6}".format(' ')
+        print("".join([tpf, spc, trf]))
+
+        with printoptions(
+                suppress=True, formatter={'float': '{: >6.2f}'.format}):
+            print(
+                "\n".join("{}{}{}".format(*z) for z in zip(p, repeat(spc), r)))
+
+
+def normalize_dynamic_range(arr, new_min=0., new_max=1., axis=None):
+    if np.ndim(new_min) != 0 or np.ndim(new_max) != 0:
+        raise NotImplementedError(
+            "Only implemented for scalar new_min and new_max")
+
+    # we do min-/max-ing without NaN values causing issues
+    amin = arr.nanmin(axis=axis)
+    amax = arr.nanmax(axis=axis)
+
+    if axis is not None:
+        amin = np.expand_dims(amin, axis=axis)
+        amax = np.expand_dims(amax, axis=axis)
+
+    return new_min + (arr - amin) * (new_max - new_min) / (amax - amin)
