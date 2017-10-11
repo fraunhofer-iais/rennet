@@ -358,6 +358,28 @@ def get_audio_metadata(filepath):
                 % filepath)
 
 
+def load_audio(filepath,
+               samplerate=8000,
+               mono=True,
+               return_samplerate=False,
+               **kwargs):
+    """ Load an audio file supported by `librosa.load(...)`.
+
+    Extra keyword arguments supported by `librosa.load(...)` are passed on.
+    Interesting ones may include `offset`, `duration`, `res_type`. Check references.
+
+    References
+    ----------
+    http://librosa.github.io/librosa/generated/librosa.core.load.html#librosa.core.load
+    """
+    data, sr = lr.core.load(filepath, sr=samplerate, mono=mono, **kwargs)
+    data = data.T  # librosa loads data in shape (n, ) or (2, n), which is stupid
+    if return_samplerate:
+        return data, sr
+    else:
+        return data
+
+
 def powspectrogram(y, n_fft, hop_len, win_len=None, window='hann'):
     return np.abs(
         lr.stft(

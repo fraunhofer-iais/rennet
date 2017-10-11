@@ -8,6 +8,7 @@ import pytest
 from numpy.testing import assert_almost_equal
 from glob import glob
 from tempfile import NamedTemporaryFile
+from math import ceil
 
 import rennet.utils.audio_utils as au  # pylint: disable=import-error
 import rennet.utils.pydub_utils as pu  # pylint: disable=import-error
@@ -86,6 +87,7 @@ def test_valid_wav_metadata(valid_wav_files):
     assert au.read_wavefile_metadata(filepath) == valid_wav_files
 
 
+# AUDIOMETADATA ############################################### AUDIOMETADATA #
 @pytest.mark.skipif(not au.get_codec(), reason="No FFMPEG or AVCONV found")
 def test_valid_media_metadata_codec(valid_media_files):
     """ test au.read_audio_metadata_codec(...)
@@ -121,6 +123,61 @@ def test_valid_audio_metadata(valid_media_files):
         assert metadata.nchannels == valid_media_files.nchannels
 
 
+# NOTE: no dataset available in rennet, check rennet-x
+# @pytest.mark.check_dataset
+# def test_able_to_get_metadata_for_all_raw_dataset(working_data_raw_media):
+#     """ Test if able to use au.get_audio_metadata(...) for all raw datasets """
+#     fp = working_data_raw_media
+#
+#     if not fp.endswith("wav") and not au.get_codec():
+#         pytest.skip("No FFMPEG or AVCONV found")
+#     else:
+#         _ = au.get_audio_metadata(fp)
+#         assert True
+
+
+# LOAD_AUDIO ##################################################### LOAD_AUDIO #
+def test_load_audio_as_is(valid_media_files):
+    correct_sr = valid_media_files.samplerate
+    correct_ns = valid_media_files.nsamples
+    correct_nc = valid_media_files.nchannels
+    filepath = valid_media_files.filepath
+
+    data, sr = au.load_audio(
+        filepath, mono=False, samplerate=correct_sr, return_samplerate=True)
+
+    assert sr == correct_sr
+
+    # HACK: avconv and ffmpeg give different nsamples for non-wav
+    if valid_media_files.format != "wav":
+        assert len(data.shape) == correct_nc
+        assert abs(data.shape[0] - correct_ns) <= correct_sr * 0.05
+    else:
+        assert data.shape == (correct_ns, correct_nc)
+
+
+def test_load_audio_with_defaults(valid_media_files):
+    correct_sr = valid_media_files.samplerate
+    correct_ns = ceil(valid_media_files.nsamples * (8000 / correct_sr))
+    filepath = valid_media_files.filepath
+
+    data, sr = au.load_audio(filepath, return_samplerate=True)
+
+    assert sr == 8000
+
+    # HACK: avconv and ffmpeg give different nsamples for non-wav
+    if valid_media_files.format != "wav":
+        assert len(data.shape) == 1  # mono
+        assert abs(data.shape[0] - correct_ns) <= 8000 * 0.05
+    else:
+        assert data.shape == (correct_ns, )  # mono
+
+    data_defaults = au.load_audio(filepath)
+    assert data_defaults.shape == data.shape  # pylint: disable=no-member
+    assert_almost_equal(data_defaults, data)
+
+
+# PYDUB_UTILS ################################################### PYDUB_UTILS #
 @pytest.mark.skipif(not au.get_codec(), reason="No FFMPEG or AVCONV found")
 def test_AudioIO_from_audiometadata(valid_media_files):
     """Test if the returned updated metadata is accurate"""
@@ -164,29 +221,18 @@ def test_AudioIO_get_numpy_data(valid_media_files):
         pytest.skip(">48khz audio not supported by AudioIO")
 
 
-@pytest.mark.check_dataset
-def test_able_to_get_metadata_for_all_raw_dataset(working_data_raw_media):
-    """ Test if able to use au.get_audio_metadata(...) for all raw datasets """
-    fp = working_data_raw_media
-
-    if not fp.endswith("wav") and not au.get_codec():
-        pytest.skip("No FFMPEG or AVCONV found")
-    else:
-        _ = au.get_audio_metadata(fp)
-        assert True
-
-
-@pytest.mark.long_running
-@pytest.mark.check_dataset
-def test_able_to_create_AudioIO_for_all_raw_dataset(working_data_raw_media):
-    """ Test if able to create AudioIO object for all raw datasets """
-    fp = working_data_raw_media
-
-    if not fp.endswith("wav") and not au.get_codec():
-        pytest.skip("No FFMPEG or AVCONV found")
-    else:
-        _ = pu.AudioIO.from_file(fp)
-        assert True
+# NOTE: no dataset available in rennet, check rennet-x
+# @pytest.mark.long_running
+# @pytest.mark.check_dataset
+# def test_able_to_create_AudioIO_for_all_raw_dataset(working_data_raw_media):
+#     """ Test if able to create AudioIO object for all raw datasets """
+#     fp = working_data_raw_media
+#
+#     if not fp.endswith("wav") and not au.get_codec():
+#         pytest.skip("No FFMPEG or AVCONV found")
+#     else:
+#         _ = pu.AudioIO.from_file(fp)
+#         assert True
 
 
 def test_AudioIO_export_standard(valid_media_files):
