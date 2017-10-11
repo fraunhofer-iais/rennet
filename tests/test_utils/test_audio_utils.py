@@ -9,9 +9,8 @@ from numpy.testing import assert_almost_equal
 from glob import glob
 from tempfile import NamedTemporaryFile
 
-# pylint: disable=import-error
-from rennet.utils import audio_utils as au
-# pylint: enable=import-error
+import rennet.utils.audio_utils as au  # pylint: disable=import-error
+import rennet.utils.pydub_utils as pu  # pylint: disable=import-error
 
 # pylint: disable=redefined-outer-name
 ValidAudioFile = au.AudioMetadata
@@ -128,7 +127,7 @@ def test_AudioIO_from_audiometadata(valid_media_files):
 
     # known unsipported functionality for >48kHz files
     if valid_media_files.samplerate <= 48000:
-        _, updated_metadata = au.AudioIO.from_audiometadata(valid_media_files)
+        _, updated_metadata = pu.AudioIO.from_audiometadata(valid_media_files)
 
         # HACK: avconv and ffmpeg give different results for mp3 format
         if valid_media_files.format == "mp3":
@@ -151,7 +150,7 @@ def test_AudioIO_get_numpy_data(valid_media_files):
     correct_noc = valid_media_files.nchannels
 
     if valid_media_files.samplerate <= 48000:
-        data = au.AudioIO.from_audiometadata(valid_media_files)[
+        data = pu.AudioIO.from_audiometadata(valid_media_files)[
             0].get_numpy_data()
 
         # HACK: avconv and ffmpeg give different nsamples for mp3
@@ -186,7 +185,7 @@ def test_able_to_create_AudioIO_for_all_raw_dataset(working_data_raw_media):
     if not fp.endswith("wav") and not au.get_codec():
         pytest.skip("No FFMPEG or AVCONV found")
     else:
-        _ = au.AudioIO.from_file(fp)
+        _ = pu.AudioIO.from_file(fp)
         assert True
 
 
@@ -194,10 +193,10 @@ def test_AudioIO_export_standard(valid_media_files):
     vml = valid_media_files
     if vml.samplerate > 48000:
         pytest.skip(">48kHz audio not supported by AudioIO")
-    s, um = au.AudioIO.from_audiometadata(vml)
+    s, um = pu.AudioIO.from_audiometadata(vml)
 
     with NamedTemporaryFile() as tfp:
-        s.export_standard(tfp)
+        s.export_standard(tfp)  # pylint: disable=no-member
         nm = au.get_audio_metadata(tfp.name)
         assert nm.samplerate == 16000
         assert nm.nchannels == 1
