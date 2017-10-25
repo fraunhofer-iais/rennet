@@ -1014,7 +1014,7 @@ def test_pred1_batB_seql1_confmat_printing(
     ]
 
     nu.print_prec_rec(confprecision, confrecall)
-    
+
     assert True
 
 
@@ -1089,3 +1089,30 @@ def test_2dcopy_doesnot_share_data_with_base_2d(base_2d_array,
 
 # TODO: [ ] Test and implement a more intuitive striding function
 # TODO: [ ] Test strided for zero in some dim of arr
+
+
+@pytest.fixture
+def rolling_stats_data_2d_winlen_2():
+    x = np.arange(10)
+    x = np.stack([x, x])
+
+    return {
+        'x': x,
+        'rmean_0': x[:1, :],
+        'rstd_0': np.zeros(10)[None, :],
+        'rmean_1': x[:, :-1] + 0.5,
+        'rstd_1': np.ones((2, 9)) * 0.5,
+        'win_len': 2,
+    }
+
+
+def test_rolling_mean_2d(rolling_stats_data_2d_winlen_2):
+    x = rolling_stats_data_2d_winlen_2
+    w = x['win_len']
+
+    assert np.array_equal(nu.rolling_mean(x['x'], w, axis=0), x['rmean_0'])
+    assert np.array_equal(nu.rolling_mean(x['x'], w, axis=1), x['rmean_1'])
+
+
+# TODO: [ ] Implement and test rolling_std
+# TODO: [ ] Test normalize_mean_std_rolling

@@ -405,3 +405,66 @@ def normalize_dynamic_range(arr, new_min=0., new_max=1., axis=None):
         amax = np.expand_dims(amax, axis=axis)
 
     return new_min + (arr - amin) * (new_max - new_min) / (amax - amin)
+
+
+def normalize_mean_std_rolling(arr,
+                               win_len,
+                               axis=0,
+                               first_mean_var='skip',
+                               *args,
+                               **kwargs):
+    """
+    NOTE: `first_mean_var` decides what to use for the first `win_len` elements of `arr`.
+    - 'skip' : don't normalize
+    - 'copy' : copy the first mean and std values along the given `axis` and use those
+    - `tuple(mean, std)` : use the values from the tuple
+
+    When the params are none of these, or the tuple's size != 2, a `ValueError` is raised.
+    """
+    if first_mean_var not in ['skip', 'copy'
+                              ] and not isinstance(first_mean_var, tuple):
+        raise ValueError(
+            "first_mean_var should be either : 'skip', 'copy' or a tuple(mean, std) of length 2"
+        )
+    elif isinstance(first_mean_var, tuple):
+        if len(first_mean_var) != 2:
+            raise ValueError(
+                "first_mean_var should be either : 'skip', 'copy' or a tuple(mean, std) of length 2"
+            )
+        elif any((len(mv.shape) == len(arr.shape)) and all(
+            (m == a) or (i == axis)
+                for i, (m, a) in enumerate(zip(mv.shape, arr.shape)))
+                 for mv in first_mean_var):
+            raise ValueError(
+                "Mismatch in shapes of provided first_mean_var and arr.\nThe shape should at least be 1 along given `axis`"
+            )
+    elif axis < 0 or axis + 1 > len(arr.shape):
+        raise ValueError(
+            "axis should be >= 0 and within the shape of the given array")
+    elif win_len < 2:
+        raise ValueError(
+            "Such small win_len is not supported, and perhaps unnecessary")
+
+    rmean = _apply_rolling(np.mean, arr, win_len, axis=axis, *args, **kwargs)
+    rstd = _apply_rolling(np.std, arr, win_len, axis=axis, *args, **kwargs)
+
+    if first_mean_var == 'skip':
+        arridx = (slice(0, None, 1), ) * axis + (slice(win_len - 1, None, 1),
+                                                 Ellipsis, )
+        return (arr[arridx] - rmean) / rstd
+
+    if first_mean_var == 'copy':
+        ridx = (slice(0, None, 1), ) * axis + (slice(0, 1, 1), Ellipsis, )
+        first_mean_std = (rmean[ridx], rstd[ridx])
+    else:  # first_mean_var has been given and is of the right shape
+        first_mean_std = first_mean_var[:1] + (np.sqrt(first_mean_var[-1])
+                                               )  # variance to std
+
+    rmean = np.insert(
+        rmean, slice(0, win_len - 1, 1), first_mean_std[0], axis=axis)
+    rstd = np.insert(
+        rstd, slice(0, win_len - 1, 1), first_mean_std[1], axis=axis)
+
+    print(rmean, rstd, arr, sep='\n')
+
+    return (arr - rmean) / rstd
