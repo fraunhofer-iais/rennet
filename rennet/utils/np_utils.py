@@ -465,6 +465,4 @@ def normalize_mean_std_rolling(arr,
     rstd = np.insert(
         rstd, slice(0, win_len - 1, 1), first_mean_std[1], axis=axis)
 
-    print(rmean, rstd, arr, sep='\n')
-
     return (arr - rmean) / rstd
