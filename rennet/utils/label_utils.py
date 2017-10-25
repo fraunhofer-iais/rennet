@@ -665,3 +665,23 @@ def samples_for_labelsat(nsamples, hop_len, win_len):
     samples_out = (frames_idx * hop_len) + (win_len // 2)
 
     return samples_out
+
+
+def viterbi_smoothing(obs, init, tran, amin=1e-15):
+    obs = np.log(np.maximum(amin, obs))  # pylint: disable=no-member
+    init = np.log(np.maximum(amin, init))  # pylint: disable=no-member
+    tran = np.log(np.maximum(amin, tran))  # pylint: disable=no-member
+
+    backpt = np.ones_like(obs, dtype=np.int) * -1
+    trellis_last = init + obs[0, ...]
+    for t in range(1, len(obs)):
+        x = trellis_last[None, ...] + tran
+        backpt[t, ...] = np.argmax(x, axis=1)
+        trellis_last = np.max(x, axis=1) + obs[t, ...]
+
+    tokens = np.ones(shape=len(obs), dtype=np.int) * -1
+    tokens[-1] = trellis_last.argmax()
+    for t in range(len(obs) - 2, -1, -1):
+        tokens[t] = backpt[t + 1, tokens[t + 1]]
+
+    return tokens
