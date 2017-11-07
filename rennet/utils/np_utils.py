@@ -410,6 +410,7 @@ def normalize_dynamic_range(arr, new_min=0., new_max=1., axis=None):
 def normalize_mean_std_rolling(arr,
                                win_len,
                                axis=0,
+                               std_it=True,
                                first_mean_var='skip',
                                *args,
                                **kwargs):
@@ -446,7 +447,10 @@ def normalize_mean_std_rolling(arr,
             "Such small win_len is not supported, and perhaps unnecessary")
 
     rmean = _apply_rolling(np.mean, arr, win_len, axis=axis, *args, **kwargs)
-    rstd = _apply_rolling(np.std, arr, win_len, axis=axis, *args, **kwargs)
+    if std_it:
+        rstd = _apply_rolling(np.std, arr, win_len, axis=axis, *args, **kwargs)
+    else:
+        rstd = 1
 
     if first_mean_var == 'skip':
         arridx = (slice(0, None, 1), ) * axis + (slice(win_len - 1, None, 1),
@@ -455,14 +459,15 @@ def normalize_mean_std_rolling(arr,
 
     if first_mean_var == 'copy':
         ridx = (slice(0, None, 1), ) * axis + (slice(0, 1, 1), Ellipsis, )
-        first_mean_std = (rmean[ridx], rstd[ridx])
+        first_mean_std = (rmean[ridx], rstd[ridx] if std_it else rstd)
     else:  # first_mean_var has been given and is of the right shape
         first_mean_std = first_mean_var[:1] + (np.sqrt(first_mean_var[-1])
                                                )  # variance to std
 
     rmean = np.insert(
         rmean, slice(0, win_len - 1, 1), first_mean_std[0], axis=axis)
-    rstd = np.insert(
-        rstd, slice(0, win_len - 1, 1), first_mean_std[1], axis=axis)
+    if std_it:
+        rstd = np.insert(
+            rstd, slice(0, win_len - 1, 1), first_mean_std[1], axis=axis)
 
     return (arr - rmean) / rstd
