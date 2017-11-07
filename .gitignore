@@ -92,3 +92,4 @@ docs/_build/
 **/.#*.org
 rennet/utils/sph*/sph2pipe
 .virtualenv
+.temp
