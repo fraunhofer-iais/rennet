@@ -7,7 +7,7 @@ Pure Python utilities
 import re
 from sys import getsizeof
 from numbers import Number
-from collections import Set, Mapping, deque
+from collections import Set, Mapping, deque, namedtuple
 try:
     # FIXME: proper handling for py2
     from math import gcd
@@ -143,3 +143,19 @@ def threadsafe_generator(f):
         return ThreadSafeIterator(f(*a, **k))
 
     return g
+
+
+def namedtuple_with_defaults(typename, field_names, default_values=()):
+    """ namedtuple with default values
+    Reference
+    =========
+    https://stackoverflow.com/a/18348004/2700777
+    """
+    T = namedtuple(typename, field_names)
+    T.__new__.__defaults__ = (None,) * len(T._fields)
+    if isinstance(default_values, Mapping):
+        prototype = T(**default_values)
+    else:
+        prototype = T(*default_values)
+    T.__new__.__defaults__ = tuple(prototype)
+    return T
