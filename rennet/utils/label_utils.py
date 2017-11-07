@@ -6,9 +6,15 @@ Utilities for working with labels
 """
 from __future__ import print_function, division
 import numpy as np
-from collections import Iterable
+from collections import Iterable, OrderedDict
 from contextlib import contextmanager
 from itertools import groupby
+from os.path import abspath
+
+from pympi import Eaf
+
+from rennet import __version__ as rennet_version
+from rennet.utils.py_utils import BaseSlotsOnlyClass
 
 
 class SequenceLabels(object):
@@ -478,10 +484,83 @@ class SequenceLabels(object):
                        for (s, e), l in self)
         return s
 
+    def to_eaf(
+            self,
+            to_filepath=None,
+            linked_media_filepath=None,
+            author="rennet.{}".format(rennet_version),
+            annotinfo_fn=lambda label: EafAnnotationInfo(tier_name=str(label)),
+    ):
+        labels = np.array(list(map(annotinfo_fn, self.labels)))
+        assert all(
+            isinstance(l, EafAnnotationInfo) for l in labels
+        ), "`annotinfo_fn` should return an `EafAnnotationInfo` object for each label"
+
+        # flatten everything
+        with self.samplerate_as(1000):  # pympi only supports milliseconds
+            se, li = self._flattened_indices()
+            if se.dtype != np.int:
+                # EAF requires integers as starts and ends
+                # IDEA: Warn rounding?
+                se = np.rint(se).astype(np.int)  # pylint: disable=no-member
+
+        eaf = Eaf(author=author)
+        eaf.annotations = OrderedDict()
+        eaf.tiers = OrderedDict()
+        eaf.timeslots = OrderedDict()
+
+        if linked_media_filepath is not None:
+            eaf.add_linked_file(abspath(linked_media_filepath))
+
+        # seen_tier_names = set()
+        for (start, end), lix in zip(se, li):
+            curr_seen_tier_names = set()
+            if len(lix) > 0:
+                for ann in labels[lix, ...]:
+                    if ann.tier_name not in eaf.tiers:
+                        # FIXME: handle different participant and annotator for same tier_name
+                        eaf.add_tier(
+                            ann.tier_name,
+                            part=ann.participant,
+                            ann=ann.annotator)
+
+                    if ann.tier_name in curr_seen_tier_names:
+                        raise ValueError(
+                            "Duplicate annotations on the same tier in "
+                            "the same time-slot is not valid in ELAN.\n"
+                            "Found at time-slot {} ms \n{}".format(
+                                (start, end),
+                                "\n".join(map(str, labels[lix, ...])), ))
+
+                    eaf.add_annotation(
+                        ann.tier_name,
+                        start,
+                        end,
+                        value=ann.content, )
+                    curr_seen_tier_names.add(ann.tier_name)
+
+        if to_filepath is not None:
+            eaf.to_file(abspath(to_filepath))
+
+        return eaf
+
     # TODO: [ ] Import from ELAN
-    # TODO: [ ] Export to ELAN
     # TODO: [ ] Import from mpeg7
     # TODO: [ ] Export to mpeg7
+
+
+class EafAnnotationInfo(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
+    __slots__ = ("tier_name", "annotator", "participant", "content")
+
+    def __init__(self,
+                 tier_name,
+                 annotator="rennet.{}".format(rennet_version),
+                 participant="",
+                 content=""):
+        self.tier_name = str(tier_name)
+        self.annotator = str(annotator)
+        self.participant = str(participant)
+        self.content = str(content)
 
 
 class ContiguousSequenceLabels(SequenceLabels):
