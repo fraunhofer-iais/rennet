@@ -10,7 +10,7 @@ from os.path import join as pjoin
 from keras.callbacks import Callback, ModelCheckpoint, TensorBoard
 from h5py import File as hFile
 
-from keras.models import Sequential
+from keras.models import Sequential, Model
 import keras.layers as kl
 
 from rennet.utils.np_utils import (
@@ -385,6 +385,36 @@ def model_c3_avg(input_shape, nclasses, compile_model=True):
         model.compile(
             loss='categorical_crossentropy',
             optimizer='adamax',
-            metrics=['categorical_accuracy'], )
+            metrics=['categorical_accuracy'],
+        )
+
+    return model
+
+
+def combine_keras_models_parallel(models, optimizer=None):
+    """ Combine multiple **compiled** keras models into 1, all being in parallel.
+
+    NOTE: Keras only supports one optimizer per model. If none is provided as argument,
+    the optimizer of the first one will be used in the final model
+    """
+    # FIXME: what if any of the models is not built?
+    assert all(model.built for model in
+               models), "All models must have been compiled before merging"
+    inputs = []
+    outputs = []
+    loss = []
+    metrics = dict()
+    for model in models:
+        inputs.append(kl.Input(model.input_shape[1:]))
+        outputs.append(model(inputs[-1]))
+
+        loss.append(model.loss)
+        metrics[outputs[-1]] = model.metrics
+
+        if optimizer is None:
+            optimizer = model.optimizer
+
+    model = Model(inputs, outputs)
+    model.compile(optimizer, loss, metrics=metrics)
 
     return model
