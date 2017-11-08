@@ -33,8 +33,13 @@ class SequenceLabels(object):
     When iterated over, the returned values are a `zip` of `starts_ends` and
     `labels` for each segment.
     """
-    __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate',
-                 '_minstart_at_orig_sr', )
+    __slots__ = (
+        '_starts_ends',
+        'labels',
+        '_orig_samplerate',
+        '_samplerate',
+        '_minstart_at_orig_sr',
+    )
 
     # To save memory, maybe? I just wanted to learn about them.
     # NOTE: Add at least ``__slots__ = ()`` at the top if you want to keep the functionality in a subclass.
@@ -149,7 +154,8 @@ class SequenceLabels(object):
         return self._convert_samplerate(
             self._minstart_at_orig_sr,
             from_samplerate=self._orig_samplerate,
-            to_samplerate=self._samplerate, )
+            to_samplerate=self._samplerate,
+        )
 
     @property
     def max_end(self):
@@ -175,7 +181,8 @@ class SequenceLabels(object):
         return self._convert_samplerate(
             starts_ends,
             from_samplerate=self._orig_samplerate,
-            to_samplerate=self._samplerate, )
+            to_samplerate=self._samplerate,
+        )
 
     @contextmanager
     def samplerate_as(self, new_samplerate):
@@ -277,7 +284,8 @@ class SequenceLabels(object):
             self._minstart_at_orig_sr = self._convert_samplerate(
                 new_start,
                 from_samplerate=self._samplerate,
-                to_samplerate=self._orig_samplerate, )
+                to_samplerate=self._orig_samplerate,
+            )
             try:
                 yield
             finally:
@@ -530,13 +538,15 @@ class SequenceLabels(object):
                             "the same time-slot is not valid in ELAN.\n"
                             "Found at time-slot {} ms \n{}".format(
                                 (start, end),
-                                "\n".join(map(str, labels[lix, ...])), ))
+                                "\n".join(map(str, labels[lix, ...])),
+                            ))
 
                     eaf.add_annotation(
                         ann.tier_name,
                         start,
                         end,
-                        value=ann.content, )
+                        value=ann.content,
+                    )
                     curr_seen_tier_names.add(ann.tier_name)
 
         if to_filepath is not None:
@@ -547,6 +557,9 @@ class SequenceLabels(object):
     # TODO: [ ] Import from ELAN
     # TODO: [ ] Import from mpeg7
     # TODO: [ ] Export to mpeg7
+
+    # IDEA: [ ] Merge with other SequenceLabels, with label_fn to replace or overlap
+    # IDEA: [ ] Extend other SequenceLabels, with label_fn to replace or overlap
 
 
 class EafAnnotationInfo(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
@@ -632,7 +645,8 @@ class ContiguousSequenceLabels(SequenceLabels):
             bin_idx_within = np.invert(bin_idx_outside)
             res = np.zeros(
                 shape=(len(bin_idx), ) + self.labels.shape[1:],
-                dtype=self.labels.dtype, )
+                dtype=self.labels.dtype,
+            )
             res[bin_idx_within] = self.labels[bin_idx[bin_idx_within], ...]
 
             if default_label == 'zeros':

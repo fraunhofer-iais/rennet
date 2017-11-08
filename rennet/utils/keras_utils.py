@@ -65,18 +65,25 @@ class ChattyConfusionHistory(Callback):
 
     def _predict_calculate(self):
         gen = self.ip.flow(
-            indefinitely=True, only_labels=False, only_data=True, with_chunking=False)
+            indefinitely=True,
+            only_labels=False,
+            only_data=True,
+            with_chunking=False)
         preds = self.model.predict_generator(gen, self.nsteps, **self._kwargs)
 
         _preds = to_categorical(
             preds.argmax(axis=-1),
-            nclasses=self.trues.shape[-1], )
+            nclasses=self.trues.shape[-1],
+        )
         conf = confusion_matrix_forcategorical(self.trues, _preds)
 
         with np.errstate(invalid='ignore'):
             prec_rec = normalize_confusion_matrix(conf)
 
-        return (preds, conf, ) + prec_rec
+        return (
+            preds,
+            conf,
+        ) + prec_rec
 
     def _maybe_export(self, datas, paths, multi=False):
         if self.export_to is not None:
@@ -104,8 +111,8 @@ class ChattyConfusionHistory(Callback):
                 }):
             print("Confusions on {}".format(len(self.trues)))
             print("per class {}".format(self.trues.sum(axis=0).astype(int)))
-            print("percents  {}".format(100 * self.trues.sum(axis=0) /
-                                        self.trues.sum()))
+            print("percents  {}".format(
+                100 * self.trues.sum(axis=0) / self.trues.sum()))
 
     def on_train_begin(self, *args, **kwargs):  # pylint: disable=unused-argument
         res = self._predict_calculate()
@@ -153,7 +160,8 @@ class ChattyConfusionHistory(Callback):
         pre = "{}-{:>3}-{:>3}".format(
             'e' if _epoc < self.epp else 'p',
             _pass,
-            _epoc, )
+            _epoc,
+        )
         print(self.prefixtr.format(pre), end='')
         print_prec_rec(*res[-2:], onlydiag=True)
         print()
@@ -179,12 +187,14 @@ def create_callbacks(inputs_provider,
             save_best_only=False,
             save_weights_only=False,
             period=1,
-            verbose=0, ),
+            verbose=0,
+        ),
         TensorBoard(
             log_dir=activity_dir,
             histogram_freq=1,  # FIXME: may not work with val data as generator
             write_images=True,
-            write_graph=False, ),
+            write_graph=False,
+        ),
         ChattyConfusionHistory(
             inputs_provider,
             epochs_per_pass=epochs_per_pass,
@@ -234,8 +244,9 @@ def predict_on_inputs_provider(model, inputs_provider, export_to_dir,
                     "{}/{}".format(_p, currn)
                     for _p in ('trues', 'preds', 'confs')
                 ],
-                datas=[t, p, conf], )
-                
+                datas=[t, p, conf],
+            )
+
             print(currn, end=' ')
             print_prec_rec(*normalize_confusion_matrix(conf), onlydiag=True)
             currn = chunking.labelpath
@@ -257,7 +268,8 @@ def model_c3(input_shape, nclasses, compile_model=True):
             strides=1,
             data_format='channels_last',
             input_shape=input_shape[1:],
-            name='c1_3_64_1', ))
+            name='c1_3_64_1',
+        ))
     model.add(kl.BatchNormalization(name='c1_bn'))
     model.add(kl.Activation('relu', name='c1_relu'))
     model.add(kl.Dropout(0.1, name='c1_d_10'))
@@ -271,7 +283,8 @@ def model_c3(input_shape, nclasses, compile_model=True):
             strides=1,
             data_format='channels_last',
             input_shape=input_shape[1:],
-            name='c2_3_128_1', ))
+            name='c2_3_128_1',
+        ))
     model.add(kl.BatchNormalization(name='c2_bn'))
     model.add(kl.Activation('relu', name='c2_relu'))
     model.add(kl.Dropout(0.1, name='c2_d_10'))
@@ -285,7 +298,8 @@ def model_c3(input_shape, nclasses, compile_model=True):
             strides=1,
             data_format='channels_last',
             input_shape=input_shape[1:],
-            name='c3_3_256_1', ))
+            name='c3_3_256_1',
+        ))
     model.add(kl.BatchNormalization(name='c3_bn'))
     model.add(kl.Activation('relu', name='c3_relu'))
     model.add(kl.Dropout(0.1, name='c3_d_10'))
@@ -313,7 +327,8 @@ def model_c3(input_shape, nclasses, compile_model=True):
         model.compile(
             loss='categorical_crossentropy',
             optimizer='adamax',
-            metrics=['categorical_accuracy'], )
+            metrics=['categorical_accuracy'],
+        )
 
     return model
 
@@ -329,7 +344,8 @@ def model_c3_avg(input_shape, nclasses, compile_model=True):
             strides=1,
             data_format='channels_last',
             input_shape=input_shape[1:],
-            name='c1_3_64_1', ))
+            name='c1_3_64_1',
+        ))
     model.add(kl.BatchNormalization(name='c1_bn'))
     model.add(kl.Activation('relu', name='c1_relu'))
     model.add(kl.Dropout(0.1, name='c1_d_10'))
@@ -343,7 +359,8 @@ def model_c3_avg(input_shape, nclasses, compile_model=True):
             strides=1,
             data_format='channels_last',
             input_shape=input_shape[1:],
-            name='c2_3_128_1', ))
+            name='c2_3_128_1',
+        ))
     model.add(kl.BatchNormalization(name='c2_bn'))
     model.add(kl.Activation('relu', name='c2_relu'))
     model.add(kl.Dropout(0.1, name='c2_d_10'))
@@ -357,7 +374,8 @@ def model_c3_avg(input_shape, nclasses, compile_model=True):
             strides=1,
             data_format='channels_last',
             input_shape=input_shape[1:],
-            name='c3_3_256_1', ))
+            name='c3_3_256_1',
+        ))
     model.add(kl.BatchNormalization(name='c3_bn'))
     model.add(kl.Activation('relu', name='c3_relu'))
     model.add(kl.Dropout(0.1, name='c3_d_10'))
