@@ -15,6 +15,7 @@ from pympi import Eaf
 
 from rennet import __version__ as rennet_version
 from rennet.utils.py_utils import BaseSlotsOnlyClass
+from rennet.utils.np_utils import normalize_confusion_matrix
 
 
 class SequenceLabels(object):
@@ -758,6 +759,15 @@ def samples_for_labelsat(nsamples, hop_len, win_len):
     samples_out = (frames_idx * hop_len) + (win_len // 2)
 
     return samples_out
+
+
+# TODO: Funtion to extract viterbi priors from SequenceLabels
+
+
+def normalize_raw_viterbi_priors(init, tran):
+    assert init.shape[-1] == tran.shape[-1], "Shape mismatch between the inputs." +\
+        " Both should be for the same number of classes (last dim)"
+    return init / init.sum(), normalize_confusion_matrix(tran)[1]
 
 
 def viterbi_smoothing(obs, init, tran, amin=1e-15):
