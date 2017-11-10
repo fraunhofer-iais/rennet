@@ -48,9 +48,8 @@ optional arguments:
                         doesn't exist (default: respective directories of the
                         inputfiles)
   --modelpath [MODELPATH], -M [MODELPATH]
-                        Path to the model file (default: /Users/abdullah/Delve
-                        /iais/rennet/data/models/model.h5). Please add if
-                        missing.
+                        Path to the model file (default:
+                        $RENNET_ROOT/data/models/model.h5). Please add if missing.
   --version             show program's version number and exit
 ```
 
