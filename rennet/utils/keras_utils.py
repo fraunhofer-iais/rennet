@@ -416,23 +416,28 @@ def combine_keras_models_parallel(models, optimizer=None):
     the optimizer of the first one will be used in the final model
     """
     # FIXME: what if any of the models is not built?
-    assert all(model.built for model in
-               models), "All models must have been compiled before merging"
+    # assert all(model.built for model in
+    #            models), "All models must have been compiled before merging"
     inputs = []
     outputs = []
-    loss = []
-    metrics = dict()
+    # loss = []
+    # metrics = dict()
+    # FIXME: can't export models with different metrics
+    # metrics = None
     for model in models:
         inputs.append(kl.Input(model.input_shape[1:]))
         outputs.append(model(inputs[-1]))
 
-        loss.append(model.loss)
-        metrics[outputs[-1]] = model.metrics
+        # loss.append(model.loss)
+        # metrics[outputs[-1]] = model.metrics
+        # FIXME: support multiple compiled models
+        # if metrics is None:
+        #     metrics = model.metrics
 
-        if optimizer is None:
-            optimizer = model.optimizer
+        # if optimizer is None:
+        #     optimizer = model.optimizer
 
     model = Model(inputs, outputs)
-    model.compile(optimizer, loss, metrics=metrics)
+    # model.compile(optimizer, loss, metrics=metrics)
 
     return model
