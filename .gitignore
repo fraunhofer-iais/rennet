@@ -93,3 +93,5 @@ docs/_build/
 rennet/utils/sph*/sph2pipe
 .virtualenv
 .temp
+.rennet_env
+outputs/*.*
