@@ -6,12 +6,14 @@ The command line interface for rennet, called annonet.
 """
 from __future__ import print_function
 import os
+import sys
 try:
     rennet_root = os.environ['RENNET_ROOT']
 except KeyError:
     raise RuntimeError("Environment variable RENNET_ROOT is not set.")
 import argparse
 from h5py import File as hf
+import warnings
 
 from rennet import __version__ as currver
 import rennet.utils.model_utils as mu
@@ -51,7 +53,7 @@ if __name__ == '__main__':
         '--todir',
         nargs='?',
         help=
-        "Path to output directory. Will be created if it doesn't exist (default: respective directory of the inputfiles)",
+        "Path to output directory. Will be created if it doesn't exist (default: respective directories of the inputfiles)",
         default=None,
     )
     parser.add_argument(
@@ -75,9 +77,22 @@ if __name__ == '__main__':
     model.verbose = 1
 
     outfiles = []
-    for fp in args.infilepaths:
-        print("\nAnalyzing", fp.name)
-        outfiles.append(main(model, fp.name, to_dir=args.todir))
+    absinfilepaths = list(
+        map(os.path.abspath, (f.name for f in args.infilepaths)))
+    total_files = len(absinfilepaths)
+    todir = os.path.abspath(args.todir)
+    for i, fp in enumerate(absinfilepaths):
+        print("\nAnalyzing [{} / {}]".format(i + 1, total_files), fp)
+        try:
+            outfiles.append(main(model, fp, to_dir=todir))
+            print("Output created at", outfiles[-1])
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except:  # pylint: disable=bare-except
+            warnings.warn(
+                RuntimeWarning(
+                    "There was an error in analysing the given file:\n{}\nMoving to the next one.".
+                    format(sys.exc_info()[:1])))
 
     print(
         "\n DONE!",
