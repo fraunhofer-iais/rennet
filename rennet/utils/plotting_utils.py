@@ -10,7 +10,7 @@ from math import ceil
 import numpy as np
 from librosa.display import specshow
 
-from rennet.utils.np_utils import normalize_confusion_matrices
+from rennet.utils.np_utils import normalize_confusion_matrix
 
 
 def plot_multi(  # pylint: disable=too-many-arguments, too-many-locals, too-many-branches
@@ -196,7 +196,7 @@ def plot_confusion_history(  # pylint: disable=too-many-arguments, too-many-loca
         colors_for_true=('grey', 'yellowgreen', 'lightcoral'),
         linestyles_for_TP=('-'),
         linestyles_for_FP=(':', '--', '-.'), ):
-    prec_rec = normalize_confusion_matrices(confusion_matrices)
+    prec_rec = normalize_confusion_matrix(confusion_matrices)
 
     fig, ax = plt.subplots(2, 1, figsize=figsize)
 

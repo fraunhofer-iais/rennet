@@ -1047,3 +1047,50 @@ def test_from_dense_ContiSeqLabels(
 # TODO: Test for multi-dimensional labels
 # TODO: Test ContiguousSequenceLabels for differet dtype labels
 # TODO: Test for non-numerical labels
+
+
+@pytest.fixture
+def viterbi_wiki_data():
+    # obs = ('normal', 'cold', 'dizzy')
+    # states = ('Healthy', 'Fever')
+    # start_p = {'Healthy': 0.6, 'Fever': 0.4}
+    # trans_p = {
+    #    'Healthy' : {'Healthy': 0.7, 'Fever': 0.3},
+    #    'Fever' : {'Healthy': 0.4, 'Fever': 0.6}
+    #    }
+    # emit_p = {
+    #    'Healthy' : {'normal': 0.5, 'cold': 0.4, 'dizzy': 0.1},
+    #    'Fever' : {'normal': 0.1, 'cold': 0.3, 'dizzy': 0.6}
+    #    }
+    emit = np.array([
+        # normal, cold, dizzy
+        [0.5, 0.4, 0.1],  # healthy
+        [0.1, 0.3, 0.6],  # fever
+    ])
+    obs = emit[:, [0, 1, 2]].T
+    obs /= obs.sum(axis=1)[:, None]
+    print(obs)
+
+    init = np.array([0.6, 0.4])
+    tran = np.array([
+        # healthy, fever
+        [0.7, 0.3],  # healthy
+        [0.4, 0.6],  # fever
+    ])
+
+    preds = np.array([0, 0, 1])  # (healthy, healthy, fever)
+
+    return {
+        'obs': obs,
+        'init': init,
+        'tran': tran,
+        'preds': preds,
+    }
+
+
+def test_viterbi_smoothing_wiki_data(viterbi_wiki_data):
+    w = viterbi_wiki_data
+    e = w['preds']
+    r = lu.viterbi_smoothing(w['obs'], w['init'], w['tran'].T)
+
+    assert np.array_equal(e, r), str(e) + '\n' + str(r)

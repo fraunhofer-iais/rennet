@@ -345,7 +345,7 @@ def confusion_matrix(  #pylint: disable=too-many-arguments
         Ytrue, Ypred, axis=axis, keepdims=keepdims)
 
 
-def normalize_confusion_matrices(conf_matrix):
+def normalize_confusion_matrix(conf_matrix):
     if not isinstance(conf_matrix, np.ndarray):
         conf_matrix = np.array(conf_matrix)
 
@@ -358,9 +358,6 @@ def normalize_confusion_matrices(conf_matrix):
     return confprec, confrec
 
 
-normalize_confusion_matrix = normalize_confusion_matrices
-
-
 @contextmanager
 def printoptions(*args, **kwargs):
     og = np.get_printoptions()
@@ -371,19 +368,15 @@ def printoptions(*args, **kwargs):
         np.set_printoptions(**og)
 
 
-def print_normalized_confusion(confmat, title='CONFUSION MATRIX'):
-    print("\n{:/>70}//".format(" {} ".format(title)))
-    with printoptions(suppress=True, formatter={'float': '{: >6.2f}'.format}):
-        print(confmat * 100)
-
-
-def print_prec_rec(prec, rec, onlydiag=False):
+def print_prec_rec(prec, rec, onlydiag=False, end='\n'):
     p = prec * 100
     r = rec * 100
     if onlydiag:
-        print("P(REC)){}{}".format("{:^2}".format(' '), "{:^2}".format(
-            ' ').join("{: >6.2f} ({: >6.2f})".format(*z)
-                      for z in zip(p.diagonal(), r.diagonal()))))
+        print(
+            "P(REC)){}{}".format("{:^2}".format(' '), "{:^2}".format(' ').join(
+                "{: >6.2f} ({: >6.2f})".format(*z)
+                for z in zip(p.diagonal(), r.diagonal()))),
+            end=end)
     else:
         n = prec.shape[-1]
         tpf = "".join(["{:^", str(n * 7 + 2), "}"]).format("PRECISION")
@@ -394,7 +387,8 @@ def print_prec_rec(prec, rec, onlydiag=False):
         with printoptions(
                 suppress=True, formatter={'float': '{: >6.2f}'.format}):
             print(
-                "\n".join("{}{}{}".format(*z) for z in zip(p, repeat(spc), r)))
+                "\n".join("{}{}{}".format(*z) for z in zip(p, repeat(spc), r)),
+                end="\n" + end if end != "\n" else end)
 
 
 def normalize_dynamic_range(arr, new_min=0., new_max=1., axis=None):
@@ -411,3 +405,69 @@ def normalize_dynamic_range(arr, new_min=0., new_max=1., axis=None):
         amax = np.expand_dims(amax, axis=axis)
 
     return new_min + (arr - amin) * (new_max - new_min) / (amax - amin)
+
+
+def normalize_mean_std_rolling(arr,
+                               win_len,
+                               axis=0,
+                               std_it=True,
+                               first_mean_var='skip',
+                               *args,
+                               **kwargs):
+    """
+    NOTE: `first_mean_var` decides what to use for the first `win_len` elements of `arr`.
+    - 'skip' : don't normalize
+    - 'copy' : copy the first mean and std values along the given `axis` and use those
+    - `tuple(mean, std)` : use the values from the tuple
+
+    When the params are none of these, or the tuple's size != 2, a `ValueError` is raised.
+    """
+    if first_mean_var not in ['skip', 'copy'
+                              ] and not isinstance(first_mean_var, tuple):
+        raise ValueError(
+            "first_mean_var should be either : 'skip', 'copy' or a tuple(mean, std) of length 2"
+        )
+    elif isinstance(first_mean_var, tuple):
+        if len(first_mean_var) != 2:
+            raise ValueError(
+                "first_mean_var should be either : 'skip', 'copy' or a tuple(mean, std) of length 2"
+            )
+        elif any((len(mv.shape) == len(arr.shape)) and all(
+            (m == a) or (i == axis)
+                for i, (m, a) in enumerate(zip(mv.shape, arr.shape)))
+                 for mv in first_mean_var):
+            raise ValueError(
+                "Mismatch in shapes of provided first_mean_var and arr.\nThe shape should at least be 1 along given `axis`"
+            )
+    elif axis < 0 or axis + 1 > len(arr.shape):
+        raise ValueError(
+            "axis should be >= 0 and within the shape of the given array")
+    elif win_len < 2:
+        raise ValueError(
+            "Such small win_len is not supported, and perhaps unnecessary")
+
+    rmean = _apply_rolling(np.mean, arr, win_len, axis=axis, *args, **kwargs)
+    if std_it:
+        rstd = _apply_rolling(np.std, arr, win_len, axis=axis, *args, **kwargs)
+    else:
+        rstd = 1
+
+    if first_mean_var == 'skip':
+        arridx = (slice(0, None, 1), ) * axis + (slice(win_len - 1, None, 1),
+                                                 Ellipsis, )
+        return (arr[arridx] - rmean) / rstd
+
+    if first_mean_var == 'copy':
+        ridx = (slice(0, None, 1), ) * axis + (slice(0, 1, 1), Ellipsis, )
+        first_mean_std = (rmean[ridx], rstd[ridx] if std_it else rstd)
+    else:  # first_mean_var has been given and is of the right shape
+        first_mean_std = first_mean_var[:1] + (np.sqrt(first_mean_var[-1])
+                                               )  # variance to std
+
+    rmean = np.insert(
+        rmean, slice(0, win_len - 1, 1), first_mean_std[0], axis=axis)
+    if std_it:
+        rstd = np.insert(
+            rstd, slice(0, win_len - 1, 1), first_mean_std[1], axis=axis)
+
+    return (arr - rmean) / rstd

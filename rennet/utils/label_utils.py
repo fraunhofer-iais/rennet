@@ -6,9 +6,16 @@ Utilities for working with labels
 """
 from __future__ import print_function, division
 import numpy as np
-from collections import Iterable
+from collections import Iterable, OrderedDict
 from contextlib import contextmanager
 from itertools import groupby
+from os.path import abspath
+
+from pympi import Eaf
+
+from rennet import __version__ as rennet_version
+from rennet.utils.py_utils import BaseSlotsOnlyClass
+from rennet.utils.np_utils import normalize_confusion_matrix
 
 
 class SequenceLabels(object):
@@ -27,8 +34,13 @@ class SequenceLabels(object):
     When iterated over, the returned values are a `zip` of `starts_ends` and
     `labels` for each segment.
     """
-    __slots__ = ('_starts_ends', 'labels', '_orig_samplerate', '_samplerate',
-                 '_minstart_at_orig_sr', )
+    __slots__ = (
+        '_starts_ends',
+        'labels',
+        '_orig_samplerate',
+        '_samplerate',
+        '_minstart_at_orig_sr',
+    )
 
     # To save memory, maybe? I just wanted to learn about them.
     # NOTE: Add at least ``__slots__ = ()`` at the top if you want to keep the functionality in a subclass.
@@ -143,7 +155,8 @@ class SequenceLabels(object):
         return self._convert_samplerate(
             self._minstart_at_orig_sr,
             from_samplerate=self._orig_samplerate,
-            to_samplerate=self._samplerate, )
+            to_samplerate=self._samplerate,
+        )
 
     @property
     def max_end(self):
@@ -169,7 +182,8 @@ class SequenceLabels(object):
         return self._convert_samplerate(
             starts_ends,
             from_samplerate=self._orig_samplerate,
-            to_samplerate=self._samplerate, )
+            to_samplerate=self._samplerate,
+        )
 
     @contextmanager
     def samplerate_as(self, new_samplerate):
@@ -271,7 +285,8 @@ class SequenceLabels(object):
             self._minstart_at_orig_sr = self._convert_samplerate(
                 new_start,
                 from_samplerate=self._samplerate,
-                to_samplerate=self._orig_samplerate, )
+                to_samplerate=self._orig_samplerate,
+            )
             try:
                 yield
             finally:
@@ -478,10 +493,88 @@ class SequenceLabels(object):
                        for (s, e), l in self)
         return s
 
+    def to_eaf(
+            self,
+            to_filepath=None,
+            linked_media_filepath=None,
+            author="rennet.{}".format(rennet_version),
+            annotinfo_fn=lambda label: EafAnnotationInfo(tier_name=str(label)),
+    ):
+        labels = np.array(list(map(annotinfo_fn, self.labels)))
+        assert all(
+            isinstance(l, EafAnnotationInfo) for l in labels
+        ), "`annotinfo_fn` should return an `EafAnnotationInfo` object for each label"
+
+        # flatten everything
+        with self.samplerate_as(1000):  # pympi only supports milliseconds
+            se, li = self._flattened_indices()
+            if se.dtype != np.int:
+                # EAF requires integers as starts and ends
+                # IDEA: Warn rounding?
+                se = np.rint(se).astype(np.int)  # pylint: disable=no-member
+
+        eaf = Eaf(author=author)
+        eaf.annotations = OrderedDict()
+        eaf.tiers = OrderedDict()
+        eaf.timeslots = OrderedDict()
+
+        if linked_media_filepath is not None:
+            eaf.add_linked_file(abspath(linked_media_filepath))
+
+        # seen_tier_names = set()
+        for (start, end), lix in zip(se, li):
+            curr_seen_tier_names = set()
+            if len(lix) > 0:
+                for ann in labels[lix, ...]:
+                    if ann.tier_name not in eaf.tiers:
+                        # FIXME: handle different participant and annotator for same tier_name
+                        eaf.add_tier(
+                            ann.tier_name,
+                            part=ann.participant,
+                            ann=ann.annotator)
+
+                    if ann.tier_name in curr_seen_tier_names:
+                        raise ValueError(
+                            "Duplicate annotations on the same tier in "
+                            "the same time-slot is not valid in ELAN.\n"
+                            "Found at time-slot {} ms \n{}".format(
+                                (start, end),
+                                "\n".join(map(str, labels[lix, ...])),
+                            ))
+
+                    eaf.add_annotation(
+                        ann.tier_name,
+                        start,
+                        end,
+                        value=ann.content,
+                    )
+                    curr_seen_tier_names.add(ann.tier_name)
+
+        if to_filepath is not None:
+            eaf.to_file(abspath(to_filepath))
+
+        return eaf
+
     # TODO: [ ] Import from ELAN
-    # TODO: [ ] Export to ELAN
     # TODO: [ ] Import from mpeg7
     # TODO: [ ] Export to mpeg7
+
+    # IDEA: [ ] Merge with other SequenceLabels, with label_fn to replace or overlap
+    # IDEA: [ ] Extend other SequenceLabels, with label_fn to replace or overlap
+
+
+class EafAnnotationInfo(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
+    __slots__ = ("tier_name", "annotator", "participant", "content")
+
+    def __init__(self,
+                 tier_name,
+                 annotator="rennet.{}".format(rennet_version),
+                 participant="",
+                 content=""):
+        self.tier_name = str(tier_name)
+        self.annotator = str(annotator)
+        self.participant = str(participant)
+        self.content = str(content)
 
 
 class ContiguousSequenceLabels(SequenceLabels):
@@ -553,7 +646,8 @@ class ContiguousSequenceLabels(SequenceLabels):
             bin_idx_within = np.invert(bin_idx_outside)
             res = np.zeros(
                 shape=(len(bin_idx), ) + self.labels.shape[1:],
-                dtype=self.labels.dtype, )
+                dtype=self.labels.dtype,
+            )
             res[bin_idx_within] = self.labels[bin_idx[bin_idx_within], ...]
 
             if default_label == 'zeros':
@@ -665,3 +759,32 @@ def samples_for_labelsat(nsamples, hop_len, win_len):
     samples_out = (frames_idx * hop_len) + (win_len // 2)
 
     return samples_out
+
+
+# TODO: Funtion to extract viterbi priors from SequenceLabels
+
+
+def normalize_raw_viterbi_priors(init, tran):
+    assert init.shape[-1] == tran.shape[-1], "Shape mismatch between the inputs." +\
+        " Both should be for the same number of classes (last dim)"
+    return init / init.sum(), normalize_confusion_matrix(tran)[1]
+
+
+def viterbi_smoothing(obs, init, tran, amin=1e-15):
+    obs = np.log(np.maximum(amin, obs))  # pylint: disable=no-member
+    init = np.log(np.maximum(amin, init))  # pylint: disable=no-member
+    tran = np.log(np.maximum(amin, tran))  # pylint: disable=no-member
+
+    backpt = np.ones_like(obs, dtype=np.int) * -1
+    trellis_last = init + obs[0, ...]
+    for t in range(1, len(obs)):
+        x = trellis_last[None, ...] + tran
+        backpt[t, ...] = np.argmax(x, axis=1)
+        trellis_last = np.max(x, axis=1) + obs[t, ...]
+
+    tokens = np.ones(shape=len(obs), dtype=np.int) * -1
+    tokens[-1] = trellis_last.argmax()
+    for t in range(len(obs) - 2, -1, -1):
+        tokens[t] = backpt[t + 1, tokens[t + 1]]
+
+    return tokens
