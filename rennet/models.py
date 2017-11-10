@@ -113,6 +113,15 @@ class DT_2_nosub_0zero20one_mono_mn(mu.BaseRennetModel):  # pylint: disable=too-
         )
         self._cached_preds = dict()
 
+        # get and set any params defined in the model_fp
+        with hFile(model_fp, 'r') as f:
+            model_group = f['rennet/model']
+            for att in model_group.keys():
+                if att == 'viterbi':
+                    continue
+                elif att in self.__dict__:
+                    setattr(self, att, model_group[att][()])
+
     def preprocess(self, filepath, **kwargs):
         d = self.loadaudio(filepath)
         d = self.exttractfeat(d)
