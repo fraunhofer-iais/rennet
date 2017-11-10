@@ -493,9 +493,10 @@ class SequenceLabels(object):
                        for (s, e), l in self)
         return s
 
-    def to_eaf(
+    def to_eaf(  # pylint: disable=too-many-arguments
             self,
             to_filepath=None,
+            eafobj=None,
             linked_media_filepath=None,
             author="rennet.{}".format(rennet_version),
             annotinfo_fn=lambda label: EafAnnotationInfo(tier_name=str(label)),
@@ -513,10 +514,13 @@ class SequenceLabels(object):
                 # IDEA: Warn rounding?
                 se = np.rint(se).astype(np.int)  # pylint: disable=no-member
 
-        eaf = Eaf(author=author)
-        eaf.annotations = OrderedDict()
-        eaf.tiers = OrderedDict()
-        eaf.timeslots = OrderedDict()
+        if eafobj is None:
+            eaf = Eaf(author=author)
+            eaf.annotations = OrderedDict()
+            eaf.tiers = OrderedDict()
+            eaf.timeslots = OrderedDict()
+        else:
+            eaf = eafobj
 
         if linked_media_filepath is not None:
             eaf.add_linked_file(abspath(linked_media_filepath))
