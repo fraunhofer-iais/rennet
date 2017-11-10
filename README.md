@@ -15,13 +15,21 @@
 > The first time the command is run, a local environment will be setup, which requires `git`, a connection to the internet and some time. Subsequent runs will not require this setup.
 
 ### Creating an Alias
-1. Add the following to your `~/.bash_profile`, with the appropriate path:
+1. Add the following to your `~/.bash_profile`, with the appropriate `path/to/local-rennet-repo`:
 ```
 export RENNET_ROOT="path/to/local-rennet-repo"
 alias annonet="./$RENNET_ROOT/annonet.sh"
 ```
 2. Restart terminal.
 3. You should now be able to call `annonet` from any directory in the terminal.
+
+### Choosing `model.h5`
+By default, annonet will look for a compatible `model.h5` file for the necessary configurations to setup the internal model.
+Path to a compatible model file can be provided to the argument `--modelpath` for a run to use the given model instead of the default one for the analysis.
+
+> **`model.h5` file is not part of this repo, and you should ask the owners of the repo for it.**
+>
+> Once acquired, it is preferable that the file be placed as `./data/models/model.h5` (backup and replace if there is already such a file there).
 
 ### More help
 ```
@@ -37,7 +45,7 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   --todir [TODIR]       Path to output directory. Will be created if it
-                        doesn't exist (default: respective directory of the
+                        doesn't exist (default: respective directories of the
                         inputfiles)
   --modelpath [MODELPATH], -M [MODELPATH]
                         Path to the model file (default: /Users/abdullah/Delve
