@@ -12,9 +12,9 @@ from csv import reader
 import h5py as h
 
 import rennet.utils.label_utils as lu
-from rennet.utils.py_utils import BaseSlotsOnlyClass
 import rennet.utils.np_utils as nu
 import rennet.utils.h5_utils as hu
+from rennet.utils.py_utils import BaseSlotsOnlyClass
 
 samples_for_labelsat = lu.samples_for_labelsat
 times_for_labelsat = lu.times_for_labelsat
@@ -78,7 +78,8 @@ class AllCallData(object):
             [
                 Speaker(apin, *agendia.split('.')),
                 Speaker(bpin, *bgendia.split('.')),
-            ], )
+            ],
+        )
 
     @classmethod
     def from_file_for_callid(cls, filepath, callid):
@@ -266,7 +267,8 @@ class Annotations(lu.SequenceLabels):
             caldata,
             np.stack((starts, ends), axis=1),
             trans,
-            samplerate=samplerate, )
+            samplerate=samplerate,
+        )
 
     def __str__(self):
         s = "Source filepath:\n{}\n".format(self.sourcefile)
@@ -349,7 +351,8 @@ class ActiveSpeakers(lu.ContiguousSequenceLabels):
             ann.calldata,
             starts_ends,
             labels,
-            samplerate=ann.samplerate, )
+            samplerate=ann.samplerate,
+        )
 
     @classmethod
     def from_file(cls, filepath, allcalldata=None, warn_duplicates=True):
@@ -632,7 +635,8 @@ class FramewiseNActiveSpeakersPrepper(hu.AsIsChunkPrepper):
 class UnnormedFramewiseInputsProvider(  # pylint: disable=too-many-ancestors
         H5ChunkingsReader,
         FramewiseNActiveSpeakersPrepper,
-        hu.BaseClassSubsamplingSteppedInputsProvider, ):
+        hu.BaseClassSubsamplingSteppedInputsProvider,
+):
     def __init__(  # pylint: disable=too-many-arguments
             self,
             filepath,
@@ -664,7 +668,8 @@ class UnnormedFramewiseInputsProvider(  # pylint: disable=too-many-ancestors
 class UnnormedFrameWithContextInputsProvider(  # pylint: disable=too-many-ancestors
         H5ChunkingsReader,
         FramewiseNActiveSpeakersPrepper,
-        hu.BaseWithContextClassSubsamplingSteppedInputsProvider, ):
+        hu.BaseWithContextClassSubsamplingSteppedInputsProvider,
+):
     def __init__(  # pylint: disable=too-many-arguments
             self,
             filepath,
@@ -699,17 +704,20 @@ class UnnormedFrameWithContextInputsProvider(  # pylint: disable=too-many-ancest
 
 class ChunkMeanVarianceNormalizingNActiveSpeakersPrepper(
         hu.BaseChunkMeanVarianceNormalizer,
-        FramewiseNActiveSpeakersPrepper, ):
+        FramewiseNActiveSpeakersPrepper,
+):
     pass
 
 
 class ChMVNFramewiseInputsProvider(  # pylint: disable=too-many-ancestors
         ChunkMeanVarianceNormalizingNActiveSpeakersPrepper,
-        UnnormedFramewiseInputsProvider, ):
+        UnnormedFramewiseInputsProvider,
+):
     pass
 
 
 class ChMVNFrameWithContextInputsProvider(  # pylint: disable=too-many-ancestors
         ChunkMeanVarianceNormalizingNActiveSpeakersPrepper,
-        UnnormedFrameWithContextInputsProvider, ):
+        UnnormedFrameWithContextInputsProvider,
+):
     pass
