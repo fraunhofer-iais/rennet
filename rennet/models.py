@@ -149,18 +149,22 @@ class DT_2_nosub_0zero20one_mono_mn(mu.BaseRennetModel):  # pylint: disable=too-
             linked_media_filepath=audio_path,
             annotinfo_fn=self.seq_annotinfo_fn)
 
-    def apply(self,
-              filepath,
-              to_dir=None,
-              to_fileextn=".preds.eaf",
-              use_cached_preds=None,
-              return_pred=False,
-              **kwargs):
+    def apply(  # pylint: disable=too-many-arguments
+            self,
+            filepath,
+            to_dir=None,
+            to_fileextn=".preds.eaf",
+            use_cached_preds=None,
+            return_pred=False,
+            **kwargs):
         filepath = os.path.abspath(filepath)
         if to_dir is None:
             to_dir = os.path.dirname(filepath)
 
-        os.makedirs(to_dir, exist_ok=True)
+        try:
+            os.makedirs(to_dir)
+        except:  # pylint: disable=bare-except
+            pass
 
         to_filename = os.path.basename(filepath) + to_fileextn
         to_filepath = os.path.join(to_dir, to_filename)
