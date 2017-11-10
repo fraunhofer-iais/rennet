@@ -4,7 +4,50 @@
 >
 > curdled milk from the stomach of an unweaned calf, containing rennin and used in curdling milk for cheese.
 
-## Library of Stuff that may be helpful in Speech Segmentation & Double Talk Detection
+## Usage
+
+1. In the terminal, change to the root of the local copy of this repository.
+2. Run the following to analyze the two files, for example.
+```
+./annonet.sh path/to/file1.wav path/to/file2.mp4
+```
+
+> The first time the command is run, a local environment will be setup, which requires `git`, a connection to the internet and some time. Subsequent runs will not require this setup.
+
+### Creating an Alias
+1. Add the following to your `~/.bash_profile`, with the appropriate path:
+```
+export RENNET_ROOT="path/to/local-rennet-repo"
+alias annonet="./$RENNET_ROOT/annonet.sh"
+```
+2. Restart terminal.
+3. You should now be able to call `annonet` from any directory in the terminal.
+
+### More help
+```
+$ ./annonet.sh -h
+usage: rennet [-h] [--todir [TODIR]] [--modelpath [MODELPATH]] [--version]
+              infilepaths [infilepaths ...]
+
+Annotate some audio files with rennet.
+
+positional arguments:
+  infilepaths           Paths to input audio files to be analyzed
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --todir [TODIR]       Path to output directory. Will be created if it
+                        doesn't exist (default: respective directory of the
+                        inputfiles)
+  --modelpath [MODELPATH], -M [MODELPATH]
+                        Path to the model file (default: /Users/abdullah/Delve
+                        /iais/rennet/data/models/model.h5). Please add if
+                        missing.
+  --version             show program's version number and exit
+```
+
+## Developers
+### Library of Stuff that may be helpful in Speech Segmentation & Double Talk Detection
 
 This is just the library of useful classes, functions, parsers, etc., and may be also application backend at some point.
 
@@ -15,8 +58,6 @@ For examples of usage in real experiments and experiences, please refer to [renn
 Until this library/package does not have a proper `setup.py`, an easy way to use it would be to add the root of the local copy of this repository to your `PYTHONPATH` variable.
 Then you will be able to access the stuff in this library as any other Python library's stuff.
 Refer to [rennet-x](https://bitbucket.org/nm-rennet/rennet-x) for inspirations.
-
-## NOTE: Things are changing fast. This is not even v1.
 
 It is likely that many things will not be working as is in [rennet-x](https://bitbucket.org/nm-rennet/rennet-x).
 
