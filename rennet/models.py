@@ -85,8 +85,8 @@ class DT_2_nosub_0zero20one_mono_mn(mu.BaseRennetModel):  # pylint: disable=too-
         self.max_q_size = 4
 
         # merging preds
-        self.mergepreds_weights = np.array([[3, 1, 3], [0, 1, 1]])
-        self.mergepreds_fn = lambda *preds: mu.mergepreds_avg(*preds, weights=self.mergepreds_weights)
+        self.mergepreds_weights = np.array([[2, 2, 3], [0, 1, 1]])
+        self.mergepreds_fn = lambda preds: mu.mergepreds_avg(preds, weights=self.mergepreds_weights)
 
         # viterbi smoothing
         with hFile(model_fp, 'r') as f:
