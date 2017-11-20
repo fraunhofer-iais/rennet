@@ -208,7 +208,22 @@ def predict_on_inputs_provider(model, inputs_provider, export_to_dir,
                                **kwargs):
     export_to = pjoin(export_to_dir, "predictions.h5")
 
-    def _save(paths, datas):
+    def _calconf_save(Ytrue, Ypred, path_postfix):
+        conf = confusion_matrix_forcategorical(
+            Ytrue,  # NOTE: Assumed categorical!!
+            to_categorical(
+                Ypred.argmax(
+                    axis=-1
+                ),  # NOTE: Assumed categorical "predictions". Argmax for softmax.
+                nclasses=Ytrue.shape[-1],
+            ),
+        )
+        paths = [
+            "{}/{}".format(_p, path_postfix)
+            for _p in ('trues', 'preds', 'confs')
+        ]
+        datas = [Ytrue, Ypred, conf]
+
         with hFile(export_to, 'a') as f:
             for path, data in zip(paths, datas):
                 if path not in f.keys():
@@ -216,6 +231,8 @@ def predict_on_inputs_provider(model, inputs_provider, export_to_dir,
                         path, data=data, compression='lzf', fletcher32=True)
 
             f.flush()
+
+        return conf
 
     currn = None
     ctrue = []
@@ -232,19 +249,10 @@ def predict_on_inputs_provider(model, inputs_provider, export_to_dir,
             continue
 
         if chunking.labelpath != currn:
-            t = np.concatenate(ctrue[:-1])
-            p = np.concatenate(cpred[:-1])
-            conf = confusion_matrix_forcategorical(t,
-                                                   to_categorical(
-                                                       p.argmax(axis=-1),
-                                                       nclasses=p.shape[-1]))
-
-            _save(
-                paths=[
-                    "{}/{}".format(_p, currn)
-                    for _p in ('trues', 'preds', 'confs')
-                ],
-                datas=[t, p, conf],
+            conf = _calconf_save(
+                np.concatenate(ctrue[:-1]),
+                np.concatenate(cpred[:-1]),
+                path_postfix=currn,
             )
 
             print(currn, end=' ')
@@ -252,6 +260,16 @@ def predict_on_inputs_provider(model, inputs_provider, export_to_dir,
             currn = chunking.labelpath
             ctrue = ctrue[-1:]
             cpred = cpred[-1:]
+
+    # Last Chunking
+    conf = _calconf_save(
+        np.concatenate(ctrue),
+        np.concatenate(cpred),
+        path_postfix=currn,
+    )
+
+    print(currn, end=' ')
+    print_prec_rec(*normalize_confusion_matrix(conf), onlydiag=True)
 
 
 # MODELS ############################################################# MODELS #
