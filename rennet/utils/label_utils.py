@@ -391,6 +391,10 @@ class SequenceLabels(object):
             **kwargs):
         """ Create SequenceLabels instance from dense list of labels.
 
+        NOTE: if the callee `cls` is not SequenceLabels, then no class is instantiated.
+        It will be the responsibility of the callee (probably a child class) to create
+        the appropriate instance of it's class.
+
         Parameters
         ----------
         labels: array_like
