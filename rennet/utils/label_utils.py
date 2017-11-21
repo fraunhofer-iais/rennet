@@ -826,6 +826,27 @@ class ContiguousSequenceLabels(SequenceLabels):
         else:
             return res
 
+    @classmethod
+    def from_mpeg7(cls, filepath, use_tags='ns', **kwargs):
+        """ Create instance of ContiguousSequenceLabels from an mpeg7 annotation file.
+
+        NOTE: Will raise error if the parsed annotations are not conitguous!!
+
+        WARNING: Pretty hacked up solution. Check `rennet.utils.mpeg7_utils`.
+
+        NOTE: if the callee `cls` is not ContiguousSequenceLabels, then no class is instantiated.
+        It will be the responsibility of the callee (probably a child class) to create
+        the appropriate instance of it's class.
+
+        NOTE: Supported use_tags: "ns" (default), "mpeg7".
+        """
+        res = super(ContiguousSequenceLabels, cls).from_mpeg7(
+            filepath, use_tags=use_tags, **kwargs)
+        if cls == ContiguousSequenceLabels:
+            return cls(*res)
+        else:
+            return res
+
 
 def times_for_labelsat(total_duration_sec, samplerate, hop_sec, win_sec):
     # NOTE: all the samplerate multiplication cuz float is fucking AWESOME
