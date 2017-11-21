@@ -481,12 +481,22 @@ class SequenceLabels(object):
             se = se[None, ...]
             l = l[None, ...]
 
+        # create the sub-SequenceLabel instance with the contextually correct samplerate
+        # and *NOT* the original samplerate
         if self.__class__ is SequenceLabels:
-            return self.__class__(se, l, self.orig_samplerate)
+            return self.__class__(se, l, self.samplerate)
         else:
-            return se, l, self._samplerate
+            # some child class
+            # let's honor kwargs, they should too
+            return se, l, self.samplerate
 
     def __iter__(self):
+        # NOTE: Yes, it is known that there is a disparity between __getitem__
+        # returning new instance of SequenceLabels, and __iter__ returning
+        # zipped starts_ends and labels.
+        # It was done so to meet actual usage patterns.
+        # iterating over the individual pairs (start_end, label) was far more common.
+        # FIXME: Fix the disparity between __getitem__ and __iter__
         return zip(self.starts_ends, self.labels)
 
     def __str__(self):
