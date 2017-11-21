@@ -582,6 +582,9 @@ class SequenceLabels(object):
 
 
 class EafAnnotationInfo(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
+    """ Base individual annotation object from an ELAN file.
+    Check `pympi` package for more information. ('pympi-ling' on pypi)
+    """
     __slots__ = ("tier_name", "annotator", "participant", "content")
 
     def __init__(self,
