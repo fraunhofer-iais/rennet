@@ -16,6 +16,7 @@ from pympi import Eaf
 from rennet import __version__ as rennet_version
 from rennet.utils.py_utils import BaseSlotsOnlyClass
 from rennet.utils.np_utils import normalize_confusion_matrix
+from rennet.utils.mpeg7_utils import parse_mpeg7
 
 
 class SequenceLabels(object):
@@ -507,6 +508,48 @@ class SequenceLabels(object):
                        for (s, e), l in self)
         return s
 
+    @classmethod
+    def from_mpeg7(cls, filepath, use_tags='ns', **kwargs):
+        """ Create instance of SequenceLabels from an mpeg7 annotation file.
+
+        WARNING: Pretty hacked up solution. Check `rennet.utils.mpeg7_utils`.
+
+        NOTE: if the callee `cls` is not SequenceLabels, then no class is instantiated.
+        It will be the responsibility of the callee (probably a child class) to create
+        the appropriate instance of it's class.
+
+        NOTE: Supported use_tags: "ns" (default), "mpeg7".
+        """
+        # se, sr, sids, gen, gn, conf, trn = parse_mpeg7(filepath, use_tags=use_tags)
+        filepath = abspath(filepath)
+        parsed = parse_mpeg7(filepath, use_tags=use_tags)
+        starts_ends, samplerate = parsed[:2]
+
+        if len(starts_ends) == 0:
+            raise RuntimeError(
+                "No Annotations were found from file {}.\n".format(filepath) + \
+                "Check `use_tags` parameter for `mpeg7_utils.parse_mpeg7` "+\
+                "and pass appropriate one as keyword argument to this function.\n"+\
+                "Options: 'ns' (default) and 'mpeg7'"
+                )
+
+        labels = [
+            MPEG7AnnotationInfo(
+                speakerid=sid,
+                gender=gen,
+                givenname=gn,
+                confidence=conf,
+                content=trn,
+            ) for sid, gen, gn, conf, trn in zip(*parsed[2:])
+        ]
+
+        if cls == SequenceLabels:
+            return cls(starts_ends, labels, samplerate)
+        else:
+            # some child class
+            # let's honor kwargs, they should too
+            return starts_ends, labels, samplerate, kwargs
+
     def to_eaf(  # pylint: disable=too-many-arguments
             self,
             to_filepath=None,
@@ -595,6 +638,26 @@ class EafAnnotationInfo(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-m
         self.tier_name = str(tier_name)
         self.annotator = str(annotator)
         self.participant = str(participant)
+        self.content = str(content)
+
+
+class MPEG7AnnotationInfo(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
+    """ Base individual annotation object from an MPEG7 file.
+    Check `rennet.utils.mpeg7_utils` for more information.
+    """
+    __slots__ = ("speakerid", "gender", "givenname", "confidence", "content")
+
+    def __init__(  # pylint: disable=too-many-arguments
+            self,
+            speakerid,
+            gender="",
+            givenname="",
+            confidence="",
+            content=""):
+        self.speakerid = str(speakerid)
+        self.gender = str(gender)
+        self.givenname = str(givenname)
+        self.confidence = str(confidence)
         self.content = str(content)
 
 
