@@ -10,7 +10,6 @@ import warnings
 
 import rennet.utils.label_utils as lu
 from rennet.utils.py_utils import BaseSlotsOnlyClass
-from rennet.utils.mpeg7_utils import parse_mpeg7
 
 samples_for_labelsat = lu.samples_for_labelsat
 times_for_labelsat = lu.times_for_labelsat
@@ -46,44 +45,48 @@ class Annotations(lu.SequenceLabels):
         super(Annotations, self).__init__(starts_ends, labels, samplerate)
 
     @classmethod
-    def from_file(cls, filepath, **kwargs):  # pylint: disable=too-many-locals
-        se, sr, sids, gen, gn, conf, trn = parse_mpeg7(filepath, **kwargs)
+    def from_mpeg7(cls, filepath, use_tags='ns', **kwargs):
+        """ Read mpeg7 annotations for KA3 data.
 
-        uniq_sids = sorted(set(sids))
+        NOTE: Supported use_tags: "ns" (default), "mpeg7".
+        Check `rennet.utils.mpeg7_utils`.
+        """
+        starts_ends, _labels, sr, _ = super(Annotations, cls).from_mpeg7(
+            filepath, use_tags=use_tags, **kwargs)
 
-        speakers = []
-        for sid in uniq_sids:
-            i = sids.index(sid)
-            speakers.append(Speaker(sid, gen[i], gn[i]))
+        unique_speakers = set()
+        labels = []
+        for l in _labels:  # _labels is list of lu.MPEG7AnnotationInfo
+            unique_speakers.add((l.speakerid, l.gender, l.givenname))
 
-        starts_ends = []
-        transcriptions = []
-        for i, (s, e) in enumerate(se):
-            starts_ends.append((s, e))
-            transcriptions.append(
-                Transcription(sids[i], float(conf[i]), trn[i]))
+            # FIXME: only keeping speakerid for Transcription will confuse when
+            # there are mutliple speakers with the same speakerid
+            labels.append(
+                Transcription(l.speakerid, float(l.confidence), l.content))
 
-        if len(starts_ends) == 0:
-            raise RuntimeError(
-                "No Annotations were found from file {}.\n".format(filepath) + \
-                "Check `use_tags` parameter for `mpeg7_utils.parse_mpeg7` "+\
-                "and pass appropriate one as keyword argument to this function.\n"+\
-                "Options: 'ns' (default) and 'mpeg7'"
-                )
-
+        # speakers = tuple(map(Speaker, *sorted(unique_speakers)))  # Doesn't work, but the one below does, FML
+        speakers = tuple(Speaker(*uspk) for uspk in sorted(unique_speakers))
         return cls(
             filepath,
-            tuple(speakers),
+            speakers,
             starts_ends,
-            transcriptions,
+            labels,
             samplerate=sr,
         )
 
-    def idx_for_speaker(self, speaker):
-        speakerid = speaker.speakerid
-        for i, l in enumerate(self.labels):
-            if l.speakerid == speakerid:
-                yield i
+    @classmethod
+    def from_file(cls, filepath, **kwargs):  # pylint: disable=too-many-locals
+        """ Parse KA3 annotations from file.
+
+        Parameters
+        ----------
+        filepath: path to a valid file
+        use_tags: 'ns' or 'mpeg7' (optional, valid only when file is mpeg7)
+        """
+        # IDEA: Try parse_eaf automatically if parse_mpeg7 fails.
+        # We have dug ourselves in a hole here by using a generic name and
+        # by being able to support reading ELAN files
+        return cls.from_mpeg7(filepath, **kwargs)
 
     def __str__(self):
         s = "Source filepath: {}".format(self.sourcefile)
@@ -151,6 +154,15 @@ class ActiveSpeakers(lu.ContiguousSequenceLabels):
     @classmethod
     def from_file(cls, filepath, warn_duplicates=True, **kwargs):
         ann = Annotations.from_file(filepath, **kwargs)
+        return cls.from_annotations(ann, warn_duplicates)
+
+    @classmethod
+    def from_mpeg7(cls,
+                   filepath,
+                   use_tags='ns',
+                   warn_duplicates=True,
+                   **kwargs):
+        ann = Annotations.from_mpeg7(filepath, use_tags=use_tags, **kwargs)
         return cls.from_annotations(ann, warn_duplicates)
 
     def __str__(self):
