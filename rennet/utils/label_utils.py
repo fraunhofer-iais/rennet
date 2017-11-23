@@ -512,13 +512,33 @@ class SequenceLabels(object):
     def from_mpeg7(cls, filepath, use_tags='ns', **kwargs):
         """ Create instance of SequenceLabels from an mpeg7 annotation file.
 
-        WARNING: Pretty hacked up solution. Check `rennet.utils.mpeg7_utils`.
-
         NOTE: if the callee `cls` is not SequenceLabels, then no class is instantiated.
         It will be the responsibility of the callee (probably a child class) to create
         the appropriate instance of it's class.
 
         NOTE: Supported use_tags: "ns" (default), "mpeg7".
+
+        Parameters
+        ----------
+        filepath: path to the ELAN file
+        use_tags: options: 'ns' or 'mpeg7'
+            Check `rennet.utils.mpeg7_utils`.
+        kwargs: unused, present for proper sub-classing citizenship.
+
+        Returns
+        -------
+        - if callee `cls` is not `SequenceLabels` (probably a child class):
+            starts_ends: numpy.ndarray of numbers, of shape `(num_annotations_read, 2)`.
+            labels: list of MPEG7AnnotationInfo objects, of length `num_annotations_read`.
+            samplerate: int (most likely 1000, due to limits of `pympi`), the samplerate
+            **kwargs: passed through keyword arguments `**kwargs`
+        - else:
+            instance of SequenceLabels
+
+        Raises
+        ------
+        RuntimeError: if not annotations are found in the given file.
+        ValueError: Check `rennet.utils.mpeg7_utils`.
         """
         # se, sr, sids, gen, gn, conf, trn = parse_mpeg7(filepath, use_tags=use_tags)
         filepath = abspath(filepath)
@@ -617,7 +637,6 @@ class SequenceLabels(object):
         return eaf
 
     # TODO: [ ] Import from ELAN
-    # TODO: [ ] Import from mpeg7
     # TODO: [ ] Export to mpeg7
 
     # IDEA: [ ] Merge with other SequenceLabels, with label_fn to replace or overlap
