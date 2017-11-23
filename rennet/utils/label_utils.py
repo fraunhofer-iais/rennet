@@ -556,11 +556,11 @@ class SequenceLabels(object):
             eafobj=None,
             linked_media_filepath=None,
             author="rennet.{}".format(rennet_version),
-            annotinfo_fn=lambda label: EafAnnotationInfo(tier_name=str(label)),
+            annotinfo_fn=lambda label: EAFAnnotationInfo(tier_name=str(label)),
     ):
         labels = np.array(list(map(annotinfo_fn, self.labels)))
         assert all(
-            isinstance(l, EafAnnotationInfo) for l in labels
+            isinstance(l, EAFAnnotationInfo) for l in labels
         ), "`annotinfo_fn` should return an `EafAnnotationInfo` object for each label"
 
         # flatten everything
@@ -624,7 +624,7 @@ class SequenceLabels(object):
     # IDEA: [ ] Extend other SequenceLabels, with label_fn to replace or overlap
 
 
-class EafAnnotationInfo(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
+class EAFAnnotationInfo(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
     """ Base individual annotation object from an ELAN file.
     Check `pympi` package for more information. ('pympi-ling' on pypi)
     """
@@ -639,6 +639,9 @@ class EafAnnotationInfo(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-m
         self.annotator = str(annotator)
         self.participant = str(participant)
         self.content = str(content)
+
+
+EafAnnotationInfo = EAFAnnotationInfo  # NOTE: for compatibility
 
 
 class MPEG7AnnotationInfo(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
