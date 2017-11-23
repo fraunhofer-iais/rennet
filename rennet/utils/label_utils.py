@@ -10,6 +10,7 @@ from collections import Iterable, OrderedDict
 from contextlib import contextmanager
 from itertools import groupby
 from os.path import abspath
+import warnings
 
 from pympi import Eaf
 
@@ -570,6 +571,106 @@ class SequenceLabels(object):
             # let's honor kwargs, they should too
             return starts_ends, labels, samplerate, kwargs
 
+    @classmethod
+    def from_eaf(cls, filepath, tiers=(), **kwargs):
+        """ Create instance of SequenceLabels from an ELAN annotation file.
+
+        NOTE: Not all features of ELAN files are supported. For example:
+        - Only the aligned annotations are read.
+        - No attempt is made to read any external refernces, linked files, etc.
+        - Multi-level tier heirarchies are not respected.
+
+        NOTE: Annotations of duration <= 0 will be ignored.
+
+        Parameters
+        ----------
+        filepath: path to the ELAN file
+        tiers: list or tuple of strings
+            list or tuple of tier names (as strings) to specify what tiers to be read.
+            By default, this is an empty tuple (or list), and all tiers will be read.
+        kwargs: unused, present for proper sub-classing citizenship
+
+        Returns
+        -------
+        - if callee `cls` is not `SequenceLabels` (probably a child class):
+            starts_ends: numpy.ndarray of numbers, of shape `(num_annotations_read, 2)`.
+            labels: list of EafAnnotationInfo objects, of length `num_annotations_read`.
+            samplerate: int (most likely 1000, due to limits of `pympi`), the samplerate
+            **kwargs: passed through keyword arguments `**kwargs`
+        - else:
+            instance of SequenceLabels
+
+        Raises
+        ------
+        TypeError: if `tiers` is neither a tuple nor a list (of strings).
+        KeyError: if any of the specified tier names are not available in the given file.
+        RuntimeError: if no tiers are found, or if all tiers are empty
+        """
+        filepath = abspath(filepath)
+        eaf = Eaf(file_path=filepath)
+
+        # FIXME: Check if the each element is a string, and support py2 as well.
+        if not isinstance(
+                tiers,
+            (tuple, list)):  # or not isinstance(tiers[0], basestring):
+            raise TypeError(
+                "`tiers` is expected to be a tuple or list of strings, got: {}".
+                format(tiers))
+
+        tiers = tuple(tiers)
+
+        if tiers == ():  # read all tiers
+            tiers = tuple(eaf.get_tier_names())  # method returns dict_keys
+
+        if len(tiers) == 0:
+            raise RuntimeError(
+                "No tiers found in the given file:\n{}".format(filepath))
+
+        starts_ends = []
+        labels = []
+        samplerate = 1000  # NOTE: pympi only supports annotations in milliseconds
+
+        for tier in tiers:
+            annots = eaf.get_annotation_data_for_tier(tier)
+            if len(annots) == 0:
+                warnings.warn(
+                    RuntimeWarning(
+                        "No annotations found for tier: {}.".format(tier)))
+                continue
+
+            attrs = eaf.tiers[tier][2]  # tier attributes
+
+            # filter away annotations that are <= zero duration long
+            starts, ends, contents = zip(*list(
+                filter(lambda s_e_c: s_e_c[1] > s_e_c[0], annots)))
+
+            if len(starts) < len(annots):
+                warnings.warn(
+                    RuntimeWarning(
+                        "IGNORED {} zero- or negative-duration annotations of {} annotations in tier {}".
+                        format(len(annots) - len(starts), len(annots), tier)))
+
+            starts_ends.extend(zip(starts, ends))
+
+            labels.extend(
+                EAFAnnotationInfo(
+                    tier,
+                    annotator=attrs.get('ANNOTATOR', ""),
+                    participant=attrs.get('PARTICIPANT', ""),
+                    content=content,
+                ) for content in contents)
+
+        if len(starts_ends) == 0:
+            raise RuntimeError(
+                "All tiers {} were found to be empty".format(tiers))
+
+        if cls == SequenceLabels:
+            return cls(starts_ends, labels, samplerate)
+        else:
+            # some child class
+            # let's honor kwargs, they should too
+            return starts_ends, labels, samplerate, kwargs
+
     def to_eaf(  # pylint: disable=too-many-arguments
             self,
             to_filepath=None,
@@ -636,7 +737,6 @@ class SequenceLabels(object):
 
         return eaf
 
-    # TODO: [ ] Import from ELAN
     # TODO: [ ] Export to mpeg7
 
     # IDEA: [ ] Merge with other SequenceLabels, with label_fn to replace or overlap
