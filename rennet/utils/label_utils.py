@@ -16,7 +16,7 @@ from pympi import Eaf
 
 from rennet import __version__ as rennet_version
 from rennet.utils.py_utils import BaseSlotsOnlyClass
-from rennet.utils.np_utils import normalize_confusion_matrix
+from rennet.utils.np_utils import normalize_confusion_matrix, confusion_matrix_forcategorical
 from rennet.utils.mpeg7_utils import parse_mpeg7
 
 
@@ -968,6 +968,76 @@ class ContiguousSequenceLabels(SequenceLabels):
             return cls(*res)
         else:
             return res
+
+    def calc_raw_viterbi_priors(self,
+                                state_keyfn=lambda label: label,
+                                samplerate=None,
+                                round_to_int=False):
+        """ Calculate raw priors for Markov states of labels. aka raw Viterbi priors.
+
+        The Markov state corresponding to a label is determined by the calling the provided
+        `state_keyfn`, which should return a value which can be collected into a Python Set.
+        By default, a unit function is applied (i.e. each label is the state itself).
+
+        Parameters
+        ----------
+        state_keyfn: function accepting one label and returning the hidden Markov state
+            See Above.
+        samplerate: int or float > 0, or None (default, check samplerate_as method)
+            samplerate at which to calculate the priors.
+            This is the safe parameter to change if you are getting priors that are floats
+            Although, it does not guarantee that the results will be float, but,
+            with an appropriately safe value chosen, you can force it to int later by passing `round_to_int` as True.
+        round_to_int: bool, (default: False)
+            Whether or not to round the priors calculations to integer values.
+            This will be a hard and unsafe casting (yet following rounding rules), so
+            only do this when it is safe to discard all values after the decimal point for each start/end.
+            Try setting appropriate samplerate first to fix floating priors.
+
+        Returns
+        -------
+        unique_states: array of unique hidden Markov states for the labels
+        init: 1D numpy.ndarray of shape (len(unique_states), )
+            with all zeros except for '1' at the index of the `unique_states`
+            for the first label.
+        trans: 2D numpy.ndarray of shape (len(unique_states), len(unique_states))
+            Number of transitions (at the given `samplerate`) from one state to other.
+        priors: 1D numpy.ndarray of shape (len(unique_states), )
+            with number of occurrences (at the given `samplerate`) for each of the
+            `unique_states`.
+        """
+        states = np.array(list(map(state_keyfn, self.labels)))
+        unique_states = np.array(sorted(set(states)))
+
+        state_ids = unique_states[np.newaxis, :] == states[..., np.newaxis]
+
+        with self.samplerate_as(samplerate):
+            durations = np.diff(self.starts_ends, axis=1)[..., 0]
+
+            # FIXME: What should be done if durations is float with digits after decimal?
+            # They won't make much difference since all the priors are going to get normalized later.
+            # HACK: round the durations to int, and hence also all the priors later
+            if round_to_int:
+                durations = np.round(durations, 0).astype(np.int)
+                # IDEA: At least warn for potential loss of information?
+
+        init = state_ids[0, ...].astype(durations.dtype)
+        priors = np.array([
+            durations[state_ids[:, s]].sum(axis=0)
+            for s in range(len(unique_states))
+        ]).astype(durations.dtype)
+        confmatcat = confusion_matrix_forcategorical
+        trans = confmatcat(state_ids[:-1, ...], state_ids[1:, ...]).astype(
+            durations.dtype)
+        self_trans = (
+            priors - state_ids.astype(np.int).sum(axis=0)
+        )  # e.g. segment of length 5 has 4 transitions to the same state
+
+        # NOTE: Consecutive segments with the same state_id would
+        # already have been accounted for in the confusion_matrix calculation
+        trans.flat[::trans.shape[0] + 1] += self_trans
+
+        return unique_states, init, trans, priors
 
 
 def times_for_labelsat(total_duration_sec, samplerate, hop_sec, win_sec):
