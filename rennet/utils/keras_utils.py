@@ -427,35 +427,34 @@ def model_c3_avg(input_shape, nclasses, compile_model=True):
     return model
 
 
-def combine_keras_models_parallel(models, optimizer=None):
-    """ Combine multiple **compiled** keras models into 1, all being in parallel.
+def combine_keras_models_parallel(models,
+                                  optimizer=None,
+                                  loss=None,
+                                  metrics=None):
+    """ Combine multiple keras models into 1, all being in parallel.
 
-    NOTE: Keras only supports one optimizer per model. If none is provided as argument,
-    the optimizer of the first one will be used in the final model
+    Parameters
+    ----------
+    models: list of keras models to be joined in parallel
+    optimizer: keras.optimizer, or None (default; the final model will not be compiled)
+    loss: keras.loss, or list of them, or None (default; the final model will not be compiled)
+    metrics: list of keras.metrics, or None(default)
+
+    Returns
+    -------
+    model: keras.model, with the given `models` in parallel.
+
+    # TODO: Support automatically compiling the model if all the given models
+    were compiled, and certain other requirments (TBD) are met.
     """
-    # FIXME: what if any of the models is not built?
-    # assert all(model.built for model in
-    #            models), "All models must have been compiled before merging"
     inputs = []
     outputs = []
-    # loss = []
-    # metrics = dict()
-    # FIXME: can't export models with different metrics
-    # metrics = None
     for model in models:
         inputs.append(kl.Input(model.input_shape[1:]))
         outputs.append(model(inputs[-1]))
 
-        # loss.append(model.loss)
-        # metrics[outputs[-1]] = model.metrics
-        # FIXME: support multiple compiled models
-        # if metrics is None:
-        #     metrics = model.metrics
-
-        # if optimizer is None:
-        #     optimizer = model.optimizer
-
     model = Model(inputs, outputs)
-    # model.compile(optimizer, loss, metrics=metrics)
+    if optimizer is not None and loss is not None:  # metrics can be None
+        model.compile(optimizer, loss, metrics=metrics)
 
     return model
