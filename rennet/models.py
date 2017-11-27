@@ -17,6 +17,12 @@ import rennet.utils.audio_utils as au
 import rennet.utils.np_utils as nu
 import rennet.utils.label_utils as lu
 
+# IDEA: Instead of hard-coded classes, serialize everything in the `model.h5`,
+# and use a generic `rennet_model` class that can deserialize and create the appropriate
+# class instance.
+# Inspiration: Keras.
+# Problems: Time, Worthiness for such limited set of tasks, Debugging.
+
 
 # DOUBLE TALK DETECTION #######################################################
 class DT_2_nosub_0zero20one_mono_mn(mu.BaseRennetModel):  # pylint: disable=too-many-instance-attributes
