@@ -116,11 +116,24 @@ class DT_2_nosub_0zero20one_mono_mn(mu.BaseRennetModel):  # pylint: disable=too-
         # get and set any params defined in the model_fp
         with hFile(model_fp, 'r') as f:
             model_group = f['rennet/model']
+            print()
             for att in model_group.keys():
                 if att == 'viterbi':
                     continue
                 elif att in self.__dict__:
-                    setattr(self, att, model_group[att][()])
+                    val = model_group[att][()]
+                    prev = getattr(self, att)
+                    setattr(self, att, val)
+
+                    # IDEA: move this to __setattr__ method to shout-out **all** changes.
+                    # It will shout even on __init__ then, which will have to be handled appropriately.
+                    print(
+                        "{}.{} updated from model file, from {} to {}".format(
+                            self.__class__.__name__, att, prev, val))
+
+                # IDEA: Should we be pesky and raise errors when
+                # there are unavailable `att` in the model file?
+            print()
 
     def preprocess(self, filepath, **kwargs):
         d = self.loadaudio(filepath)
