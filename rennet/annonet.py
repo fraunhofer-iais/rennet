@@ -84,11 +84,11 @@ if __name__ == '__main__':
     absinfilepaths = list(
         map(os.path.abspath, (f.name for f in args.infilepaths)))
     total_files = len(absinfilepaths)
-    todir = os.path.abspath(args.todir)
 
+    todir = os.path.abspath(args.todir) if args.todir is not None else None
     debug_mode = args.debug
     for i, fp in enumerate(absinfilepaths):
-        print("\nAnalyzing [{} / {}]".format(i + 1, total_files), fp)
+        print("\nAnalyzing {}/{} :\n".format(i + 1, total_files), fp)
         try:
             outfiles.append(main(model, fp, to_dir=todir))
             print("Output created at", outfiles[-1])
