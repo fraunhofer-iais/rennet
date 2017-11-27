@@ -66,6 +66,10 @@ if __name__ == '__main__':
         format(DEFAULT_MODEL_PATH),
     )
     parser.add_argument(
+        '--debug',
+        action='store_true',
+    )
+    parser.add_argument(
         '--version',
         action='version',
         version='%(prog)s {}'.format(currver),
@@ -81,6 +85,8 @@ if __name__ == '__main__':
         map(os.path.abspath, (f.name for f in args.infilepaths)))
     total_files = len(absinfilepaths)
     todir = os.path.abspath(args.todir)
+
+    debug_mode = args.debug
     for i, fp in enumerate(absinfilepaths):
         print("\nAnalyzing [{} / {}]".format(i + 1, total_files), fp)
         try:
@@ -89,10 +95,15 @@ if __name__ == '__main__':
         except (KeyboardInterrupt, SystemExit):
             raise
         except:  # pylint: disable=bare-except
-            warnings.warn(
-                RuntimeWarning(
-                    "There was an error in analysing the given file:\n{}\nMoving to the next one.".
-                    format(sys.exc_info()[:1])))
+
+            if debug_mode:
+                raise
+            else:
+                # NOTE: Catch all for errors so that one mis-behaving file doesn't mess all of them
+                warnings.warn(
+                    RuntimeWarning(
+                        "There was an error in analysing the given file:\n{}\nMoving to the next one.".
+                        format(sys.exc_info()[:1])))
 
     print(
         "\n DONE!",
