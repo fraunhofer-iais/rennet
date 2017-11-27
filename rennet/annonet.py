@@ -68,6 +68,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '--debug',
         action='store_true',
+        help=
+        "Enable debugging mode where no errors are suppressed during analysis."
     )
     parser.add_argument(
         '--version',
