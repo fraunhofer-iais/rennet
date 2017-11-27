@@ -643,8 +643,7 @@ class SequenceLabels(object):
             attrs = eaf.tiers[tier][2]  # tier attributes
 
             # filter away annotations that are <= zero duration long
-            starts, ends, contents = zip(*list(
-                filter(lambda s_e_c: s_e_c[1] > s_e_c[0], annots)))
+            starts, ends, contents = zip(*[a for a in annots if a[1] > a[0]])
 
             if len(starts) < len(annots):
                 warnings.warn(
