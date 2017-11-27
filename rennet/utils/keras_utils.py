@@ -5,6 +5,7 @@ Created: 05-08-2017
 Keras Utilities
 """
 from __future__ import print_function, division
+from six.moves import zip
 import numpy as np
 from os.path import join as pjoin
 from keras.callbacks import Callback, ModelCheckpoint, TensorBoard

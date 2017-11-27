@@ -5,6 +5,7 @@ Created: 26-08-2016
 Test the label utilities module
 """
 from __future__ import print_function, division
+from six.moves import zip
 import pytest
 import numpy as np
 import numpy.testing as npt

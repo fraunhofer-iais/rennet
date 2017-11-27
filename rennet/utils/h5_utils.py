@@ -5,6 +5,7 @@ Created: Mon, 10-Apr-2017
 Utilities for training
 """
 from __future__ import print_function, division
+from six.moves import zip
 from collections import namedtuple, Iterable
 from warnings import warn as warning
 import numpy as np
@@ -41,8 +42,8 @@ class BaseH5ChunkingsReader(object):
         we have the final list of all the datasets to be read from the file.
         """
 
-        raise NotImplementedError(
-            "Not implemented in base class {}".format(self.__class__.__name__))
+        raise NotImplementedError("Not implemented in base class {}".format(
+            self.__class__.__name__))
 
     @property
     def chunkings(self):
@@ -55,8 +56,8 @@ class BaseH5ChunkingsReader(object):
         we have the final list of all the datasets to be read from the file.
         """
 
-        raise NotImplementedError(
-            "Not implemented in base class {}".format(self.__class__.__name__))
+        raise NotImplementedError("Not implemented in base class {}".format(
+            self.__class__.__name__))
 
     @property
     def nchunks(self):
@@ -99,16 +100,16 @@ class BaseH5ChunkPrepper(object):
         if only_labels:
             return data  # This is dummy data
         else:
-            raise NotImplementedError(
-                "Not implemented in class {}".format(self.__class__.__name__))
+            raise NotImplementedError("Not implemented in class {}".format(
+                self.__class__.__name__))
 
     def prep_label(self, label, **kwargs):
         """ Do anything additional to the read label like normalize, reshape, etc.
 
         Here to enforce API.
          """
-        raise NotImplementedError(
-            "Not implemented in class {}".format(self.__class__.__name__))
+        raise NotImplementedError("Not implemented in class {}".format(
+            self.__class__.__name__))
 
     def get_prepped_data_label(self, chunking, only_labels=False, **kwargs):
         """ Get the prepped data and label chunks.
@@ -214,8 +215,8 @@ class BaseWithContextPrepper(BaseH5ChunkPrepper):  # pylint: disable=abstract-me
 
 class BaseDataNormalizer(BaseH5ChunkPrepper):
     def normalize_data(self, data, **kwargs):
-        raise NotImplementedError(
-            "Not implemented in class {}".format(self.__class__.__name__))
+        raise NotImplementedError("Not implemented in class {}".format(
+            self.__class__.__name__))
 
     def prep_data(self, data, only_labels=False, **kwargs):
         if only_labels:
@@ -303,8 +304,8 @@ class BaseInputsProvider(BaseH5ChunkingsReader, BaseH5ChunkPrepper):  # pylint: 
                 _corder.append(nr.permutation(self.nchunks))  # pylint: disable=no-member
 
             self._corder = tuple(_corder)
-            self._cseeds = nu.totuples(
-                seeds[self.npasses:].reshape((self.npasses, -1)))
+            self._cseeds = nu.totuples(seeds[self.npasses:].reshape(
+                (self.npasses, -1)))
 
     def _chunk_order_for_pass(self, p):
         if self._corder is None:

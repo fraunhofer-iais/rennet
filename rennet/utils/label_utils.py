@@ -5,6 +5,7 @@ Created: 26-08-2016
 Utilities for working with labels
 """
 from __future__ import print_function, division
+from six.moves import zip
 import numpy as np
 from collections import Iterable, OrderedDict
 from contextlib import contextmanager

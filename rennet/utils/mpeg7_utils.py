@@ -5,6 +5,7 @@ Created: 21-11-2017
 Utilities for working with MPEG7 files
 """
 from __future__ import division
+from six.moves import zip
 import xml.etree.ElementTree as et
 import warnings
 from functools import reduce

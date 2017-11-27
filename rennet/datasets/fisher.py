@@ -5,6 +5,7 @@ Created: 01-02-2017
 Helpers for working with Fisher dataset
 """
 from __future__ import print_function, division
+from six.moves import zip
 import numpy as np
 import warnings
 from os.path import abspath
