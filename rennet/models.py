@@ -5,6 +5,7 @@ Created: 09-11-2017
 Module with rennet models
 """
 from __future__ import print_function, division
+from six import PY2
 import numpy as np
 from keras.models import load_model
 from itertools import chain, repeat
@@ -189,9 +190,9 @@ class DT_2_nosub_0zero20one_mono_mn(mu.BaseRennetModel):  # pylint: disable=too-
         if to_dir is None:
             to_dir = os.path.dirname(filepath)
 
-        try:
-            os.makedirs(to_dir, exist_ok=True)
-        except TypeError:  # Python 2.7 doesn't have exist_ok
+        if not PY2:
+            os.makedirs(to_dir, exist_ok=True)  # pylint: disable=unexpected-keyword-arg
+        else:
             try:
                 os.makedirs(to_dir)
             except OSError:
