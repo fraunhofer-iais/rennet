@@ -66,6 +66,12 @@ if __name__ == '__main__':
         format(DEFAULT_MODEL_PATH),
     )
     parser.add_argument(
+        '--debug',
+        action='store_true',
+        help=
+        "Enable debugging mode where no errors are suppressed during analysis."
+    )
+    parser.add_argument(
         '--version',
         action='version',
         version='%(prog)s {}'.format(currver),
@@ -80,19 +86,26 @@ if __name__ == '__main__':
     absinfilepaths = list(
         map(os.path.abspath, (f.name for f in args.infilepaths)))
     total_files = len(absinfilepaths)
-    todir = os.path.abspath(args.todir)
+
+    todir = os.path.abspath(args.todir) if args.todir is not None else None
+    debug_mode = args.debug
     for i, fp in enumerate(absinfilepaths):
-        print("\nAnalyzing [{} / {}]".format(i + 1, total_files), fp)
+        print("\nAnalyzing {}/{} :\n".format(i + 1, total_files), fp)
         try:
             outfiles.append(main(model, fp, to_dir=todir))
             print("Output created at", outfiles[-1])
         except (KeyboardInterrupt, SystemExit):
             raise
         except:  # pylint: disable=bare-except
-            warnings.warn(
-                RuntimeWarning(
-                    "There was an error in analysing the given file:\n{}\nMoving to the next one.".
-                    format(sys.exc_info()[:1])))
+
+            if debug_mode:
+                raise
+            else:
+                # NOTE: Catch all for errors so that one mis-behaving file doesn't mess all of them
+                warnings.warn(
+                    RuntimeWarning(
+                        "There was an error in analysing the given file:\n{}\nMoving to the next one.".
+                        format(sys.exc_info()[:1])))
 
     print(
         "\n DONE!",

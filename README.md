@@ -34,7 +34,8 @@ Path to a compatible model file can be provided to the argument `--modelpath` fo
 ### More help
 ```
 $ ./annonet.sh -h
-usage: rennet [-h] [--todir [TODIR]] [--modelpath [MODELPATH]] [--version]
+usage: rennet [-h] [--todir [TODIR]] [--modelpath [MODELPATH]] [--debug]
+              [--version]
               infilepaths [infilepaths ...]
 
 Annotate some audio files with rennet.
@@ -48,9 +49,10 @@ optional arguments:
                         doesn't exist (default: respective directories of the
                         inputfiles)
   --modelpath [MODELPATH], -M [MODELPATH]
-                        Path to the model file (default: /Users/abdullah/Delve
-                        /iais/rennet/data/models/model.h5). Please add if
+                        Path to the model file (default: $RENNET_ROOT/data/models/model.h5). Please add if
                         missing.
+  --debug               Enable debugging mode where no errors are suppressed
+                        during analysis.
   --version             show program's version number and exit
 ```
 

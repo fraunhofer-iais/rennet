@@ -99,8 +99,14 @@ def base_noncontiguous_small_seqdata():
     labels_at_secs_nonconti = [
         (0.5, (1, )),
         (1., (0, )),
-        (3.4, (0, 2, )),
-        (4.8, (2, 1, )),
+        (3.4, (
+            0,
+            2,
+        )),
+        (4.8, (
+            2,
+            1,
+        )),
         (5.5, (1, )),
         # (6, (1, )),
     ]
@@ -219,8 +225,8 @@ def seqlabelinst_small_seqdata(request, init_small_seqdata):
     sr = init_small_seqdata['samplerate']
     l = init_small_seqdata['labels']
 
-    if (not init_small_seqdata['isconti'] and
-            request.param is lu.ContiguousSequenceLabels):
+    if (not init_small_seqdata['isconti']
+            and request.param is lu.ContiguousSequenceLabels):
         pytest.skip(
             "Non-Contiguous Sequence data for ContiguousSequenceLabels "
             "will fail to initialize")
@@ -397,8 +403,8 @@ def test_SequenceLabels_labels_at_allwithin(
 
     labels = s.labels_at(la_ends, samplerate=lasr)
 
-    assert all([e == r for e, r in zip(target_labels, labels)
-                ]), list(zip(target_labels, labels))
+    assert all([e == r for e, r in zip(target_labels, labels)]), list(
+        zip(target_labels, labels))
 
 
 @pytest.fixture(
@@ -570,8 +576,8 @@ def test_ContiSequenceLabels_labels_at_allwithin(
 
     labels = s.labels_at(la_ends, samplerate=lasr)
 
-    assert all([e == r for e, r in zip(target_labels, labels)
-                ]), list(zip(target_labels, labels))
+    assert all([e == r for e, r in zip(target_labels, labels)]), list(
+        zip(target_labels, labels))
 
 
 @pytest.fixture(
@@ -1044,11 +1050,6 @@ def test_from_dense_ContiSeqLabels(
         s = lu.ContiguousSequenceLabels.from_dense_labels(labels, keep=9)
 
 
-# TODO: Test for multi-dimensional labels
-# TODO: Test ContiguousSequenceLabels for differet dtype labels
-# TODO: Test for non-numerical labels
-
-
 @pytest.fixture
 def viterbi_wiki_data():
     # obs = ('normal', 'cold', 'dizzy')
@@ -1088,9 +1089,118 @@ def viterbi_wiki_data():
     }
 
 
+@pytest.mark.viterbi
 def test_viterbi_smoothing_wiki_data(viterbi_wiki_data):
     w = viterbi_wiki_data
     e = w['preds']
     r = lu.viterbi_smoothing(w['obs'], w['init'], w['tran'].T)
 
     assert np.array_equal(e, r), str(e) + '\n' + str(r)
+
+
+@pytest.fixture(scope='module')
+def viterbi_priors_for_small_contiseqdata(  # pylint: disable=too-many-locals
+        ContiSequenceLabels_small_seqdata_labels_at_allwithin):
+    """ Fixture with raw and normalized Viterbi priors from ContiguousSequenceLabels """
+    fixt = ContiSequenceLabels_small_seqdata_labels_at_allwithin
+
+    S = fixt['seqlabelinst']
+    round_to_int = True
+    samplerate = fixt['at_sr']
+    if samplerate % 10 != 0:  #or S.samplerate % 10 != 0:
+        pytest.skip(
+            "Testing for ContiguousSequenceLabels with non-zero decimal ends is not clear and not tested"
+        )
+        # TODO: Clarify and testing Viterbi Priors for non-integral multiples of samplerates
+        # and perhaps chnage round_to_int
+
+    with S.samplerate_as(samplerate):
+        ends = lu.samples_for_labelsat(S.max_end - S.min_start, 1, 1)
+        labels_at = S.labels_at(ends)
+
+    unique_states = {ul: i for i, ul in enumerate(sorted(set(labels_at)))}
+
+    init = np.zeros(len(unique_states), dtype=np.int)
+    init[unique_states[labels_at[0]]] = 1
+
+    transitions = np.zeros(
+        shape=(len(unique_states), len(unique_states)), dtype=np.int)
+    priors = np.zeros(len(unique_states), dtype=np.int)
+    for l1, l2 in zip(labels_at[:-1], labels_at[1:]):
+        transitions[unique_states[l1], unique_states[l2]] += 1
+        priors[unique_states[l1]] += 1
+    priors[unique_states[labels_at[-1]]] += 1
+
+    # Normalization
+    norm_transitions = transitions / transitions.sum(axis=1)[..., None]
+    norm_init = init.astype(np.float)
+    norm_priors = priors / priors.sum()
+
+    return {
+        'seqlabelinst': S,
+        'at_sr': samplerate,
+        'ustates': unique_states,
+        'raw_init': init,
+        'raw_tran': transitions,
+        'raw_priors': priors,
+        'norm_init': norm_init,
+        'norm_tran': norm_transitions,
+        'norm_priors': norm_priors,
+        'state_keyfn': lambda x: x,
+        'round_to_int': round_to_int,
+        'labels_at': labels_at,
+    }
+
+
+@pytest.mark.viterbi
+def test_viterbi_priors_from_contiseqlabels(  # pylint: disable=too-many-locals
+        viterbi_priors_for_small_contiseqdata):
+    fixt = viterbi_priors_for_small_contiseqdata
+
+    seqlabels = fixt['seqlabelinst']
+    samplerate = fixt['at_sr']
+    statekeyfn = fixt['state_keyfn']
+    rinit_t = fixt['raw_init']
+    rpriors_t = fixt['raw_priors']
+    rtran_t = fixt['raw_tran']
+    round_to_int = fixt['round_to_int']
+
+    ustates_t = np.array(sorted(fixt['ustates'].keys()))
+
+    ustates_p, rinit_p, rtran_p, rpriors_p = seqlabels.calc_raw_viterbi_priors(
+        samplerate=samplerate,
+        state_keyfn=statekeyfn,
+        round_to_int=round_to_int,
+    )
+
+    npt.assert_equal(ustates_t, ustates_p)
+    npt.assert_equal(rinit_t, rinit_p)
+    npt.assert_equal(rpriors_t, rpriors_p)
+    npt.assert_equal(rtran_t, rtran_p)
+
+    # within a samplerate_as context
+    with seqlabels.samplerate_as(samplerate):
+        ustates_p, rinit_p, rtran_p, rpriors_p = seqlabels.calc_raw_viterbi_priors(
+            state_keyfn=statekeyfn,
+            round_to_int=round_to_int,
+        )
+
+    npt.assert_equal(ustates_t, ustates_p)
+    npt.assert_equal(rinit_t, rinit_p)
+    npt.assert_equal(rpriors_t, rpriors_p)
+    npt.assert_equal(rtran_t, rtran_p)
+
+    # normalized priors
+    ninit_p, ntran_p = lu.normalize_raw_viterbi_priors(rinit_p, rtran_p)
+    npriors_p = rpriors_p / rpriors_p.sum()
+
+    npt.assert_allclose(fixt['norm_init'], ninit_p)
+    npt.assert_allclose(fixt['norm_tran'], ntran_p)
+    npt.assert_allclose(fixt['norm_priors'], npriors_p)
+
+
+# TODO: Test importing and exporting eaf
+# TODO: Test importing mpeg7
+# TODO: Test for multi-dimensional labels
+# TODO: Test ContiguousSequenceLabels for differet dtype labels
+# TODO: Test for non-numerical labels

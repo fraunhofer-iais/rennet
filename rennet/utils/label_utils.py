@@ -10,12 +10,15 @@ from collections import Iterable, OrderedDict
 from contextlib import contextmanager
 from itertools import groupby
 from os.path import abspath
+import sys
+import warnings
 
 from pympi import Eaf
 
 from rennet import __version__ as rennet_version
 from rennet.utils.py_utils import BaseSlotsOnlyClass
-from rennet.utils.np_utils import normalize_confusion_matrix
+from rennet.utils.np_utils import normalize_confusion_matrix, confusion_matrix_forcategorical
+from rennet.utils.mpeg7_utils import parse_mpeg7
 
 
 class SequenceLabels(object):
@@ -391,6 +394,10 @@ class SequenceLabels(object):
             **kwargs):
         """ Create SequenceLabels instance from dense list of labels.
 
+        NOTE: if the callee `cls` is not SequenceLabels, then no class is instantiated.
+        It will be the responsibility of the callee (probably a child class) to create
+        the appropriate instance of it's class.
+
         Parameters
         ----------
         labels: array_like
@@ -477,12 +484,22 @@ class SequenceLabels(object):
             se = se[None, ...]
             l = l[None, ...]
 
+        # create the sub-SequenceLabel instance with the contextually correct samplerate
+        # and *NOT* the original samplerate
         if self.__class__ is SequenceLabels:
-            return self.__class__(se, l, self.orig_samplerate)
+            return self.__class__(se, l, self.samplerate)
         else:
-            return se, l, self._samplerate
+            # some child class
+            # let's honor kwargs, they should too
+            return se, l, self.samplerate
 
     def __iter__(self):
+        # NOTE: Yes, it is known that there is a disparity between __getitem__
+        # returning new instance of SequenceLabels, and __iter__ returning
+        # zipped starts_ends and labels.
+        # It was done so to meet actual usage patterns.
+        # iterating over the individual pairs (start_end, label) was far more common.
+        # FIXME: Fix the disparity between __getitem__ and __iter__
         return zip(self.starts_ends, self.labels)
 
     def __str__(self):
@@ -493,17 +510,179 @@ class SequenceLabels(object):
                        for (s, e), l in self)
         return s
 
+    @classmethod
+    def from_mpeg7(cls, filepath, use_tags='ns', **kwargs):
+        """ Create instance of SequenceLabels from an mpeg7 annotation file.
+
+        NOTE: if the callee `cls` is not SequenceLabels, then no class is instantiated.
+        It will be the responsibility of the callee (probably a child class) to create
+        the appropriate instance of it's class.
+
+        NOTE: Supported use_tags: "ns" (default), "mpeg7".
+
+        Parameters
+        ----------
+        filepath: path to the ELAN file
+        use_tags: options: 'ns' or 'mpeg7'
+            Check `rennet.utils.mpeg7_utils`.
+        kwargs: unused, present for proper sub-classing citizenship.
+
+        Returns
+        -------
+        - if callee `cls` is not `SequenceLabels` (probably a child class):
+            starts_ends: numpy.ndarray of numbers, of shape `(num_annotations_read, 2)`.
+            labels: list of MPEG7AnnotationInfo objects, of length `num_annotations_read`.
+            samplerate: int (most likely 1000, due to limits of `pympi`), the samplerate
+            **kwargs: passed through keyword arguments `**kwargs`
+        - else:
+            instance of SequenceLabels
+
+        Raises
+        ------
+        RuntimeError: if not annotations are found in the given file.
+        ValueError: Check `rennet.utils.mpeg7_utils`.
+        """
+        # se, sr, sids, gen, gn, conf, trn = parse_mpeg7(filepath, use_tags=use_tags)
+        filepath = abspath(filepath)
+        parsed = parse_mpeg7(filepath, use_tags=use_tags)
+        starts_ends, samplerate = parsed[:2]
+
+        if len(starts_ends) == 0:
+            raise RuntimeError(
+                "No Annotations were found from file {}.\n".format(filepath) + \
+                "Check `use_tags` parameter for `mpeg7_utils.parse_mpeg7` "+\
+                "and pass appropriate one as keyword argument to this function.\n"+\
+                "Options: 'ns' (default) and 'mpeg7'"
+                )
+
+        labels = [
+            MPEG7AnnotationInfo(
+                speakerid=sid,
+                gender=gen,
+                givenname=gn,
+                confidence=conf,
+                content=trn,
+            ) for sid, gen, gn, conf, trn in zip(*parsed[2:])
+        ]
+
+        if cls == SequenceLabels:
+            return cls(starts_ends, labels, samplerate)
+        else:
+            # some child class
+            # let's honor kwargs, they should too
+            return starts_ends, labels, samplerate, kwargs
+
+    @classmethod
+    def from_eaf(cls, filepath, tiers=(), **kwargs):
+        """ Create instance of SequenceLabels from an ELAN annotation file.
+
+        NOTE: Not all features of ELAN files are supported. For example:
+        - Only the aligned annotations are read.
+        - No attempt is made to read any external refernces, linked files, etc.
+        - Multi-level tier heirarchies are not respected.
+
+        NOTE: Annotations of duration <= 0 will be ignored.
+
+        Parameters
+        ----------
+        filepath: path to the ELAN file
+        tiers: list or tuple of strings
+            list or tuple of tier names (as strings) to specify what tiers to be read.
+            By default, this is an empty tuple (or list), and all tiers will be read.
+        kwargs: unused, present for proper sub-classing citizenship
+
+        Returns
+        -------
+        - if callee `cls` is not `SequenceLabels` (probably a child class):
+            starts_ends: numpy.ndarray of numbers, of shape `(num_annotations_read, 2)`.
+            labels: list of EafAnnotationInfo objects, of length `num_annotations_read`.
+            samplerate: int (most likely 1000, due to limits of `pympi`), the samplerate
+            **kwargs: passed through keyword arguments `**kwargs`
+        - else:
+            instance of SequenceLabels
+
+        Raises
+        ------
+        TypeError: if `tiers` is neither a tuple nor a list (of strings).
+        KeyError: if any of the specified tier names are not available in the given file.
+        RuntimeError: if no tiers are found, or if all tiers are empty
+        """
+        filepath = abspath(filepath)
+        eaf = Eaf(file_path=filepath)
+
+        # FIXME: Check if the each element is a string, and support py2 as well.
+        if not isinstance(
+                tiers,
+            (tuple, list)):  # or not isinstance(tiers[0], basestring):
+            raise TypeError(
+                "`tiers` is expected to be a tuple or list of strings, got: {}".
+                format(tiers))
+
+        tiers = tuple(tiers)
+
+        if tiers == ():  # read all tiers
+            tiers = tuple(eaf.get_tier_names())  # method returns dict_keys
+
+        if len(tiers) == 0:
+            raise RuntimeError(
+                "No tiers found in the given file:\n{}".format(filepath))
+
+        starts_ends = []
+        labels = []
+        samplerate = 1000  # NOTE: pympi only supports annotations in milliseconds
+
+        for tier in tiers:
+            annots = eaf.get_annotation_data_for_tier(tier)
+            if len(annots) == 0:
+                warnings.warn(
+                    RuntimeWarning(
+                        "No annotations found for tier: {}.".format(tier)))
+                continue
+
+            attrs = eaf.tiers[tier][2]  # tier attributes
+
+            # filter away annotations that are <= zero duration long
+            starts, ends, contents = zip(*list(
+                filter(lambda s_e_c: s_e_c[1] > s_e_c[0], annots)))
+
+            if len(starts) < len(annots):
+                warnings.warn(
+                    RuntimeWarning(
+                        "IGNORED {} zero- or negative-duration annotations of {} annotations in tier {}".
+                        format(len(annots) - len(starts), len(annots), tier)))
+
+            starts_ends.extend(zip(starts, ends))
+
+            labels.extend(
+                EAFAnnotationInfo(
+                    tier,
+                    annotator=attrs.get('ANNOTATOR', ""),
+                    participant=attrs.get('PARTICIPANT', ""),
+                    content=content,
+                ) for content in contents)
+
+        if len(starts_ends) == 0:
+            raise RuntimeError(
+                "All tiers {} were found to be empty".format(tiers))
+
+        if cls == SequenceLabels:
+            return cls(starts_ends, labels, samplerate)
+        else:
+            # some child class
+            # let's honor kwargs, they should too
+            return starts_ends, labels, samplerate, kwargs
+
     def to_eaf(  # pylint: disable=too-many-arguments
             self,
             to_filepath=None,
             eafobj=None,
             linked_media_filepath=None,
             author="rennet.{}".format(rennet_version),
-            annotinfo_fn=lambda label: EafAnnotationInfo(tier_name=str(label)),
+            annotinfo_fn=lambda label: EAFAnnotationInfo(tier_name=str(label)),
     ):
         labels = np.array(list(map(annotinfo_fn, self.labels)))
         assert all(
-            isinstance(l, EafAnnotationInfo) for l in labels
+            isinstance(l, EAFAnnotationInfo) for l in labels
         ), "`annotinfo_fn` should return an `EafAnnotationInfo` object for each label"
 
         # flatten everything
@@ -523,7 +702,13 @@ class SequenceLabels(object):
             eaf = eafobj
 
         if linked_media_filepath is not None:
-            eaf.add_linked_file(abspath(linked_media_filepath))
+            try:
+                eaf.add_linked_file(abspath(linked_media_filepath))
+            except:  # pylint: disable=bare-except
+                warnings.warn(
+                    RuntimeWarning(
+                        "Provided file was not added as linked file due to `pympi` errors. Provided File:\n{}\nError:\n{}".
+                        format(linked_media_filepath, sys.exc_info())))
 
         # seen_tier_names = set()
         for (start, end), lix in zip(se, li):
@@ -559,15 +744,16 @@ class SequenceLabels(object):
 
         return eaf
 
-    # TODO: [ ] Import from ELAN
-    # TODO: [ ] Import from mpeg7
     # TODO: [ ] Export to mpeg7
 
     # IDEA: [ ] Merge with other SequenceLabels, with label_fn to replace or overlap
     # IDEA: [ ] Extend other SequenceLabels, with label_fn to replace or overlap
 
 
-class EafAnnotationInfo(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
+class EAFAnnotationInfo(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
+    """ Base individual annotation object from an ELAN file.
+    Check `pympi` package for more information. ('pympi-ling' on pypi)
+    """
     __slots__ = ("tier_name", "annotator", "participant", "content")
 
     def __init__(self,
@@ -578,6 +764,29 @@ class EafAnnotationInfo(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-m
         self.tier_name = str(tier_name)
         self.annotator = str(annotator)
         self.participant = str(participant)
+        self.content = str(content)
+
+
+EafAnnotationInfo = EAFAnnotationInfo  # NOTE: for compatibility
+
+
+class MPEG7AnnotationInfo(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
+    """ Base individual annotation object from an MPEG7 file.
+    Check `rennet.utils.mpeg7_utils` for more information.
+    """
+    __slots__ = ("speakerid", "gender", "givenname", "confidence", "content")
+
+    def __init__(  # pylint: disable=too-many-arguments
+            self,
+            speakerid,
+            gender="",
+            givenname="",
+            confidence="",
+            content=""):
+        self.speakerid = str(speakerid)
+        self.gender = str(gender)
+        self.givenname = str(givenname)
+        self.confidence = str(confidence)
         self.content = str(content)
 
 
@@ -745,6 +954,97 @@ class ContiguousSequenceLabels(SequenceLabels):
             return self.__class__(*res)
         else:
             return res
+
+    @classmethod
+    def from_mpeg7(cls, filepath, use_tags='ns', **kwargs):
+        """ Create instance of ContiguousSequenceLabels from an mpeg7 annotation file.
+
+        NOTE: Will raise error if the parsed annotations are not conitguous!!
+
+        WARNING: Pretty hacked up solution. Check `rennet.utils.mpeg7_utils`.
+
+        NOTE: if the callee `cls` is not ContiguousSequenceLabels, then no class is instantiated.
+        It will be the responsibility of the callee (probably a child class) to create
+        the appropriate instance of it's class.
+
+        NOTE: Supported use_tags: "ns" (default), "mpeg7".
+        """
+        res = super(ContiguousSequenceLabels, cls).from_mpeg7(
+            filepath, use_tags=use_tags, **kwargs)
+        if cls == ContiguousSequenceLabels:
+            return cls(*res)
+        else:
+            return res
+
+    def calc_raw_viterbi_priors(self,
+                                state_keyfn=lambda label: label,
+                                samplerate=None,
+                                round_to_int=False):
+        """ Calculate raw priors for Markov states of labels. aka raw Viterbi priors.
+
+        The Markov state corresponding to a label is determined by the calling the provided
+        `state_keyfn`, which should return a value which can be collected into a Python Set.
+        By default, a unit function is applied (i.e. each label is the state itself).
+
+        Parameters
+        ----------
+        state_keyfn: function accepting one label and returning the hidden Markov state
+            See Above.
+        samplerate: int or float > 0, or None (default, check samplerate_as method)
+            samplerate at which to calculate the priors.
+            This is the safe parameter to change if you are getting priors that are floats
+            Although, it does not guarantee that the results will be float, but,
+            with an appropriately safe value chosen, you can force it to int later by passing `round_to_int` as True.
+        round_to_int: bool, (default: False)
+            Whether or not to round the priors calculations to integer values.
+            This will be a hard and unsafe casting (yet following rounding rules), so
+            only do this when it is safe to discard all values after the decimal point for each start/end.
+            Try setting appropriate samplerate first to fix floating priors.
+
+        Returns
+        -------
+        unique_states: array of unique hidden Markov states for the labels
+        init: 1D numpy.ndarray of shape (len(unique_states), )
+            with all zeros except for '1' at the index of the `unique_states`
+            for the first label.
+        trans: 2D numpy.ndarray of shape (len(unique_states), len(unique_states))
+            Number of transitions (at the given `samplerate`) from one state to other.
+        priors: 1D numpy.ndarray of shape (len(unique_states), )
+            with number of occurrences (at the given `samplerate`) for each of the
+            `unique_states`.
+        """
+        states = np.array(list(map(state_keyfn, self.labels)))
+        unique_states = np.array(sorted(set(states)))
+
+        state_ids = unique_states[np.newaxis, :] == states[..., np.newaxis]
+
+        with self.samplerate_as(samplerate):
+            durations = np.diff(self.starts_ends, axis=1)[..., 0]
+
+            # FIXME: What should be done if durations is float with digits after decimal?
+            # They won't make much difference since all the priors are going to get normalized later.
+            # HACK: round the durations to int, and hence also all the priors later
+            if round_to_int:
+                durations = np.round(durations, 0).astype(np.int)
+                # IDEA: At least warn for potential loss of information?
+
+        init = state_ids[0, ...].astype(durations.dtype)
+        priors = np.array([
+            durations[state_ids[:, s]].sum(axis=0)
+            for s in range(len(unique_states))
+        ]).astype(durations.dtype)
+        confmatcat = confusion_matrix_forcategorical
+        trans = confmatcat(state_ids[:-1, ...], state_ids[1:, ...]).astype(
+            durations.dtype)
+        self_trans = (
+            priors - state_ids.astype(np.int).sum(axis=0)
+        )  # e.g. segment of length 5 has 4 transitions to the same state
+
+        # NOTE: Consecutive segments with the same state_id would
+        # already have been accounted for in the confusion_matrix calculation
+        trans.flat[::trans.shape[0] + 1] += self_trans
+
+        return unique_states, init, trans, priors
 
 
 def times_for_labelsat(total_duration_sec, samplerate, hop_sec, win_sec):
