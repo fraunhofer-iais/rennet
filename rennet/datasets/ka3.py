@@ -112,7 +112,7 @@ class ActiveSpeakers(lu.ContiguousSequenceLabels):
     def __init__(self, filepath, speakers, starts_ends, labels, samplerate=1):  # pylint: disable=too-many-arguments
         self.sourcefile = filepath
         self.speakers = speakers
-        super().__init__(starts_ends, labels, samplerate)
+        super(ActiveSpeakers, self).__init__(starts_ends, labels, samplerate)
 
     @classmethod
     def from_annotations(cls, ann, warn_duplicates=True):
