@@ -10,6 +10,7 @@ from collections import Iterable, OrderedDict
 from contextlib import contextmanager
 from itertools import groupby
 from os.path import abspath
+import sys
 import warnings
 
 from pympi import Eaf
@@ -701,7 +702,13 @@ class SequenceLabels(object):
             eaf = eafobj
 
         if linked_media_filepath is not None:
-            eaf.add_linked_file(abspath(linked_media_filepath))
+            try:
+                eaf.add_linked_file(abspath(linked_media_filepath))
+            except:  # pylint: disable=bare-except
+                warnings.warn(
+                    RuntimeWarning(
+                        "Provided file was not added as linked file due to `pympi` errors. Provided File:\n{}\nError:\n{}".
+                        format(linked_media_filepath, sys.exc_info())))
 
         # seen_tier_names = set()
         for (start, end), lix in zip(se, li):
