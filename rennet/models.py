@@ -171,9 +171,13 @@ class DT_2_nosub_0zero20one_mono_mn(mu.BaseRennetModel):  # pylint: disable=too-
             to_dir = os.path.dirname(filepath)
 
         try:
-            os.makedirs(to_dir)
-        except:  # pylint: disable=bare-except
-            pass
+            os.makedirs(to_dir, exist_ok=True)
+        except TypeError:  # Python 2.7 doesn't have exist_ok
+            try:
+                os.makedirs(to_dir)
+            except OSError:
+                # directory exists, most likely.
+                pass
 
         to_filename = os.path.basename(filepath) + to_fileextn
         to_filepath = os.path.join(to_dir, to_filename)
