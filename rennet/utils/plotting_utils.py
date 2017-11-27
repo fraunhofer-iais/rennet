@@ -78,8 +78,8 @@ def plot_multi(  # pylint: disable=too-many-arguments, too-many-locals, too-many
             ax[at(i)].set_xticklabels([])
             ax[at(i)].set_yticklabels([])
 
-            ax[at(i)].set_xticks([0.5 + 1 * i for i in range(len(sx))])
-            ax[at(i)].set_yticks([0.5 + 1 * i for i in range(len(sx))])
+            ax[at(i)].set_xticks([0.5 + 1 * _i for _i in range(len(sx))])
+            ax[at(i)].set_yticks([0.5 + 1 * _i for _i in range(len(sx))])
             ax[at(i)].grid(True, linestyle=':')
 
             # adding text for values
