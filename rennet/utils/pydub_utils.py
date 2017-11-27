@@ -16,7 +16,8 @@ import warnings
 from rennet.utils.audio_utils import (
     AudioMetadata,
     get_audio_metadata,
-    get_sph2pipe, )
+    get_sph2pipe,
+)
 
 
 class AudioIO(AudioSegment):
@@ -69,8 +70,8 @@ class AudioIO(AudioSegment):
             return super(AudioIO, cls).from_file(file, format, **kwargs)
 
     @classmethod
-    def from_sph(cls, file):
-        return cls.from_file(file, format='sph')
+    def from_sph(cls, file_path):
+        return cls.from_file(file_path, format='sph')
 
     @classmethod
     def from_audiometadata(cls, audiometadata):

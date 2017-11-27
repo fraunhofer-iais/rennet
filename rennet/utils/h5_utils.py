@@ -709,7 +709,7 @@ class BaseClassSubsamplingSteppedInputsProvider(  # pylint: disable=abstract-met
             npasses=npasses,
             **kwargs)
 
-    def get_prepped_inputs(self, chunking, array_shuffle_seed=None, **kwargs):
+    def get_prepped_inputs(self, chunking, array_shuffle_seed=None, **kwargs):  # pylint: disable=too-many-locals
         sup = super(BaseClassSubsamplingSteppedInputsProvider, self)
         inputs = sup.get_prepped_data_label(chunking, **kwargs)
 
@@ -767,11 +767,12 @@ class BaseWithContextSteppedInputsProvider(  # pylint: disable=abstract-method
             npasses=npasses,
             **kwargs)
 
-    def get_prepped_inputs(self,
-                           chunking,
-                           array_shuffle_seed=None,
-                           only_labels=False,
-                           **kwargs):
+    def get_prepped_inputs(  # pylint: disable=too-many-locals
+            self,
+            chunking,
+            array_shuffle_seed=None,
+            only_labels=False,
+            **kwargs):
         # NOTE: In order to shuffle, the data from strided view has to be copied.
         # Otherwise, it will lead to corruption of the data.
         # WithContextInputsProvider is not implemented ...
@@ -839,11 +840,12 @@ class BaseWithContextClassSubsamplingSteppedInputsProvider(  # pylint: disable=a
             npasses=npasses,
             **kwargs)
 
-    def get_prepped_inputs(self,
-                           chunking,
-                           array_shuffle_seed=None,
-                           only_labels=False,
-                           **kwargs):
+    def get_prepped_inputs(  # pylint: disable=too-many-locals
+            self,
+            chunking,
+            array_shuffle_seed=None,
+            only_labels=False,
+            **kwargs):
         # NOTE: In order to shuffle, the data from strided view has to be copied.
         # Otherwise, it will lead to corruption of the data.
         # WithContextInputsProvider is not implemented ...

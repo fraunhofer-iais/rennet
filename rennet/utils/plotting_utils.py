@@ -112,9 +112,8 @@ def plot_speclike(  # pylint: disable=too-many-arguments
         hop_sec=0.05,
         cmap='viridis',
         show=True):
-    assert all(
-        o.shape[0] == orderedlist[0].shape[0]
-        for o in orderedlist), "All list items should be of the same length"
+    assert all(o.shape[0] == orderedlist[0].shape[0] for o in
+               orderedlist), "All list items should be of the same length"
 
     x_axis = 'time' if show_time else None
     hop_len = int(hop_sec * sr)
@@ -125,7 +124,8 @@ def plot_speclike(  # pylint: disable=too-many-arguments
         x_axis=x_axis,
         sr=sr,
         hop_length=hop_len,
-        cmap=cmap, )
+        cmap=cmap,
+    )
     plt.colorbar()
 
     if show:
@@ -196,7 +196,8 @@ def plot_confusion_history(  # pylint: disable=too-many-arguments, too-many-loca
         marker='|',
         colors_for_true=('grey', 'yellowgreen', 'lightcoral'),
         linestyles_for_TP=('-'),
-        linestyles_for_FP=(':', '--', '-.'), ):
+        linestyles_for_FP=(':', '--', '-.'),
+):
     prec_rec = normalize_confusion_matrix(confusion_matrices)
 
     fig, ax = plt.subplots(2, 1, figsize=figsize)
@@ -220,7 +221,8 @@ def plot_confusion_history(  # pylint: disable=too-many-arguments, too-many-loca
                     color=color(t),
                     linestyle=line(t, p),
                     label="{}_{}".format(t, p),
-                    marker=marker, )
+                    marker=marker,
+                )
                 ax[i].set_ylim([0, 1])
 
         ax[i].legend()
