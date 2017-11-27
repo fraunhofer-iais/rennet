@@ -5,7 +5,7 @@ Created: 28-09-2016
 Numpy utilities
 """
 from __future__ import division, print_function
-from six.moves import zip
+from six.moves import zip, range
 import numpy as np
 from collections import Iterable
 from itertools import repeat

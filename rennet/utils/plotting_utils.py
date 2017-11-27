@@ -5,6 +5,7 @@ Created: 08-10-2016
 Utilities for plotting
 """
 from __future__ import division, print_function
+from six.moves import range
 import matplotlib.pyplot as plt
 from math import ceil
 import numpy as np

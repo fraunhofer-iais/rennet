@@ -6,6 +6,7 @@ Utilities for audio-io and conversions using Pydub.
 Separated from `audio_utils` to remove dependency, I guess.
 """
 from __future__ import print_function, division
+from six.moves import range
 from pydub import AudioSegment
 from tempfile import NamedTemporaryFile
 import subprocess as sp

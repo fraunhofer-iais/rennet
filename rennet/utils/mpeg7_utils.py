@@ -5,10 +5,9 @@ Created: 21-11-2017
 Utilities for working with MPEG7 files
 """
 from __future__ import division
-from six.moves import zip
+from six.moves import zip, reduce
 import xml.etree.ElementTree as et
 import warnings
-from functools import reduce
 
 from rennet.utils.py_utils import lowest_common_multiple
 

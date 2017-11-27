@@ -4,6 +4,8 @@ Created: 10-10-2016
 
 Pure Python utilities
 """
+from __future__ import print_function, division
+from six.moves import range
 import re
 from sys import getsizeof
 from numbers import Number

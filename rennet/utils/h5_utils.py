@@ -5,7 +5,7 @@ Created: Mon, 10-Apr-2017
 Utilities for training
 """
 from __future__ import print_function, division
-from six.moves import zip
+from six.moves import zip, range
 from collections import namedtuple, Iterable
 from warnings import warn as warning
 import numpy as np
