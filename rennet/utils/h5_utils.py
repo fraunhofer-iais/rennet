@@ -22,6 +22,12 @@ Chunking = namedtuple('Chunking', [
 ])
 
 
+# IDEA: Move all logic for reading from hdf5 to h5 chunking reader.
+# Then, any other chunking reader, for example one working with csv, can be implemented
+# and monkey-patched onto the inputs providers, without needing change to preppers.
+# OR, keep it split, and instead introduce parent BaseChunkingsReader and BaseChunkPrepper
+# that are independent of h5, and make a BaseInputsProvider subclass from that.
+# The current BaseInputsProvider will then become BaseH5InputsProvider.
 class BaseH5ChunkingsReader(object):
     """ Base class for reading data and labels chunking info from an HDF5 file.
 
