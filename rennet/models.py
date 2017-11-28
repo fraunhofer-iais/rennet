@@ -17,6 +17,7 @@ import rennet.utils.model_utils as mu
 import rennet.utils.audio_utils as au
 import rennet.utils.np_utils as nu
 import rennet.utils.label_utils as lu
+from rennet.utils.py_utils import makedirs_with_existok
 
 # IDEA: Instead of hard-coded classes, serialize everything in the `model.h5`,
 # and use a generic `rennet_model` class that can deserialize and create the appropriate
@@ -36,8 +37,7 @@ class DT_2_nosub_0zero20one_mono_mn(mu.BaseRennetModel):  # pylint: disable=too-
         self.loadaudio = lambda fp: au.load_audio(
             filepath=fp,
             samplerate=self.samplerate,
-            mono=self.mono,
-        )
+            mono=self.mono, )
 
         # feature extraction
         self.win_len = int(self.samplerate * 0.032)
@@ -190,14 +190,7 @@ class DT_2_nosub_0zero20one_mono_mn(mu.BaseRennetModel):  # pylint: disable=too-
         if to_dir is None:
             to_dir = os.path.dirname(filepath)
 
-        if not PY2:
-            os.makedirs(to_dir, exist_ok=True)  # pylint: disable=unexpected-keyword-arg
-        else:
-            try:
-                os.makedirs(to_dir)
-            except OSError:
-                # directory exists, most likely.
-                pass
+        makedirs_with_existok(to_dir, exist_ok=True)
 
         to_filename = os.path.basename(filepath) + to_fileextn
         to_filepath = os.path.join(to_dir, to_filename)
