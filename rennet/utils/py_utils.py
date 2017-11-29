@@ -76,8 +76,8 @@ class BaseSlotsOnlyClass(object):  #pylint: disable=too-few-public-methods
     def __repr__(self):
         a_v = ((att, getattr(self, att)) for att in self.__slots__)
         r = ".".join((self.__module__.split(".")[-1], self.__class__.__name__))
-        return r + "({})".format(", ".join("{!s}={!r}".format(*av)
-                                           for av in a_v))
+        return r + "({})".format(
+            ", ".join("{!s}={!r}".format(*av) for av in a_v))
 
 
 def getsize(obj_0):
@@ -113,8 +113,8 @@ def getsize(obj_0):
             size += inner(vars(obj))
         if hasattr(obj, '__slots__'):  # can have __slots__ with __dict__
             size += sum(
-                inner(getattr(obj, s)) for s in obj.__slots__
-                if hasattr(obj, s))
+                inner(getattr(obj, s)) for s in obj.__slots__ if hasattr(
+                    obj, s))
         return size
 
     return inner(obj_0)
