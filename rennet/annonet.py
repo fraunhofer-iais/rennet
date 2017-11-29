@@ -104,8 +104,10 @@ if __name__ == '__main__':
                 # NOTE: Catch all for errors so that one mis-behaving file doesn't mess all of them
                 warnings.warn(
                     RuntimeWarning(
-                        "There was an error in analysing the given file:\n{}\nMoving to the next one.".
-                        format(sys.exc_info()[:1])))
+                        "There was an error in analysing the given file:\n{}\n".format(sys.exc_info()[:1])+\
+                        "Add '--debug' at the end of your call to annonet to get a full stacktrace.\n"+\
+                        "Moving to the next audio."
+                        ))
 
     print(
         "\n DONE!",
