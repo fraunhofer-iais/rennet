@@ -21,7 +21,6 @@ echo ""
 echo ""
 pip install pip --upgrade
 pip install six
-pip install numpy
 
 pip install -r "$RENNET_ROOT/requirements/base.txt"
 
