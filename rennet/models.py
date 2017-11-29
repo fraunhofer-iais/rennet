@@ -5,7 +5,6 @@ Created: 09-11-2017
 Module with rennet models
 """
 from __future__ import print_function, division
-from six import PY2
 import numpy as np
 from keras.models import load_model
 from itertools import chain, repeat
