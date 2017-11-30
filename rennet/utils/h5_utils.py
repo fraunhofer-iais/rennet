@@ -5,6 +5,7 @@ Created: Mon, 10-Apr-2017
 Utilities for training
 """
 from __future__ import print_function, division
+from six.moves import zip, range
 from collections import namedtuple, Iterable
 from warnings import warn as warning
 import numpy as np
@@ -21,6 +22,12 @@ Chunking = namedtuple('Chunking', [
 ])
 
 
+# IDEA: Move all logic for reading from hdf5 to h5 chunking reader.
+# Then, any other chunking reader, for example one working with csv, can be implemented
+# and monkey-patched onto the inputs providers, without needing change to preppers.
+# OR, keep it split, and instead introduce parent BaseChunkingsReader and BaseChunkPrepper
+# that are independent of h5, and make a BaseInputsProvider subclass from that.
+# The current BaseInputsProvider will then become BaseH5InputsProvider.
 class BaseH5ChunkingsReader(object):
     """ Base class for reading data and labels chunking info from an HDF5 file.
 
@@ -41,8 +48,8 @@ class BaseH5ChunkingsReader(object):
         we have the final list of all the datasets to be read from the file.
         """
 
-        raise NotImplementedError(
-            "Not implemented in base class {}".format(self.__class__.__name__))
+        raise NotImplementedError("Not implemented in base class {}".format(
+            self.__class__.__name__))
 
     @property
     def chunkings(self):
@@ -55,8 +62,8 @@ class BaseH5ChunkingsReader(object):
         we have the final list of all the datasets to be read from the file.
         """
 
-        raise NotImplementedError(
-            "Not implemented in base class {}".format(self.__class__.__name__))
+        raise NotImplementedError("Not implemented in base class {}".format(
+            self.__class__.__name__))
 
     @property
     def nchunks(self):
@@ -99,16 +106,16 @@ class BaseH5ChunkPrepper(object):
         if only_labels:
             return data  # This is dummy data
         else:
-            raise NotImplementedError(
-                "Not implemented in class {}".format(self.__class__.__name__))
+            raise NotImplementedError("Not implemented in class {}".format(
+                self.__class__.__name__))
 
     def prep_label(self, label, **kwargs):
         """ Do anything additional to the read label like normalize, reshape, etc.
 
         Here to enforce API.
          """
-        raise NotImplementedError(
-            "Not implemented in class {}".format(self.__class__.__name__))
+        raise NotImplementedError("Not implemented in class {}".format(
+            self.__class__.__name__))
 
     def get_prepped_data_label(self, chunking, only_labels=False, **kwargs):
         """ Get the prepped data and label chunks.
@@ -214,8 +221,8 @@ class BaseWithContextPrepper(BaseH5ChunkPrepper):  # pylint: disable=abstract-me
 
 class BaseDataNormalizer(BaseH5ChunkPrepper):
     def normalize_data(self, data, **kwargs):
-        raise NotImplementedError(
-            "Not implemented in class {}".format(self.__class__.__name__))
+        raise NotImplementedError("Not implemented in class {}".format(
+            self.__class__.__name__))
 
     def prep_data(self, data, only_labels=False, **kwargs):
         if only_labels:
@@ -303,8 +310,8 @@ class BaseInputsProvider(BaseH5ChunkingsReader, BaseH5ChunkPrepper):  # pylint: 
                 _corder.append(nr.permutation(self.nchunks))  # pylint: disable=no-member
 
             self._corder = tuple(_corder)
-            self._cseeds = nu.totuples(
-                seeds[self.npasses:].reshape((self.npasses, -1)))
+            self._cseeds = nu.totuples(seeds[self.npasses:].reshape(
+                (self.npasses, -1)))
 
     def _chunk_order_for_pass(self, p):
         if self._corder is None:
@@ -708,7 +715,7 @@ class BaseClassSubsamplingSteppedInputsProvider(  # pylint: disable=abstract-met
             npasses=npasses,
             **kwargs)
 
-    def get_prepped_inputs(self, chunking, array_shuffle_seed=None, **kwargs):
+    def get_prepped_inputs(self, chunking, array_shuffle_seed=None, **kwargs):  # pylint: disable=too-many-locals
         sup = super(BaseClassSubsamplingSteppedInputsProvider, self)
         inputs = sup.get_prepped_data_label(chunking, **kwargs)
 
@@ -766,11 +773,12 @@ class BaseWithContextSteppedInputsProvider(  # pylint: disable=abstract-method
             npasses=npasses,
             **kwargs)
 
-    def get_prepped_inputs(self,
-                           chunking,
-                           array_shuffle_seed=None,
-                           only_labels=False,
-                           **kwargs):
+    def get_prepped_inputs(  # pylint: disable=too-many-locals
+            self,
+            chunking,
+            array_shuffle_seed=None,
+            only_labels=False,
+            **kwargs):
         # NOTE: In order to shuffle, the data from strided view has to be copied.
         # Otherwise, it will lead to corruption of the data.
         # WithContextInputsProvider is not implemented ...
@@ -838,11 +846,12 @@ class BaseWithContextClassSubsamplingSteppedInputsProvider(  # pylint: disable=a
             npasses=npasses,
             **kwargs)
 
-    def get_prepped_inputs(self,
-                           chunking,
-                           array_shuffle_seed=None,
-                           only_labels=False,
-                           **kwargs):
+    def get_prepped_inputs(  # pylint: disable=too-many-locals
+            self,
+            chunking,
+            array_shuffle_seed=None,
+            only_labels=False,
+            **kwargs):
         # NOTE: In order to shuffle, the data from strided view has to be copied.
         # Otherwise, it will lead to corruption of the data.
         # WithContextInputsProvider is not implemented ...

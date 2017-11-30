@@ -4,6 +4,9 @@ Created: 10-10-2016
 
 Pure Python utilities
 """
+from __future__ import print_function, division
+from six.moves import range
+from six import PY2
 import re
 from sys import getsizeof
 from numbers import Number
@@ -73,8 +76,8 @@ class BaseSlotsOnlyClass(object):  #pylint: disable=too-few-public-methods
     def __repr__(self):
         a_v = ((att, getattr(self, att)) for att in self.__slots__)
         r = ".".join((self.__module__.split(".")[-1], self.__class__.__name__))
-        return r + "({})".format(", ".join("{!s}={!r}".format(*av)
-                                           for av in a_v))
+        return r + "({})".format(
+            ", ".join("{!s}={!r}".format(*av) for av in a_v))
 
 
 def getsize(obj_0):
@@ -110,8 +113,8 @@ def getsize(obj_0):
             size += inner(vars(obj))
         if hasattr(obj, '__slots__'):  # can have __slots__ with __dict__
             size += sum(
-                inner(getattr(obj, s)) for s in obj.__slots__
-                if hasattr(obj, s))
+                inner(getattr(obj, s)) for s in obj.__slots__ if hasattr(
+                    obj, s))
         return size
 
     return inner(obj_0)
@@ -152,10 +155,39 @@ def namedtuple_with_defaults(typename, field_names, default_values=()):
     https://stackoverflow.com/a/18348004/2700777
     """
     T = namedtuple(typename, field_names)
-    T.__new__.__defaults__ = (None,) * len(T._fields)
+    T.__new__.__defaults__ = (None, ) * len(T._fields)
     if isinstance(default_values, Mapping):
         prototype = T(**default_values)
     else:
         prototype = T(*default_values)
     T.__new__.__defaults__ = tuple(prototype)
     return T
+
+
+def recursive_glob(rootdir, pattern):
+    """Search recursively for files matching a specified pattern.
+    eff you py2
+
+    Adapted from http://stackoverflow.com/questions/2186525/use-a-glob-to-find-files-recursively-in-python
+    """
+    import fnmatch
+    import os
+
+    for root, _, filenames in os.walk(rootdir):
+        for filename in fnmatch.filter(filenames, pattern):
+            yield os.path.join(root, filename)
+
+
+def makedirs_with_existok(name, exist_ok=False):
+    import os
+
+    if not PY2:
+        os.makedirs(name, exist_ok=exist_ok)  # pylint: disable=unexpected-keyword-arg
+    else:
+        try:
+            os.makedirs(name)
+        except OSError:
+            if exist_ok:
+                pass
+            else:
+                raise

@@ -32,8 +32,21 @@ class BaseRennetModel(object):
         raise NotImplementedError
 
 
-def mergepreds_avg(preds, weights=None, **kwargs):
-    # FIXME: handle single pred provided as preds
+def mergepreds_avg(preds, weights=None, **kwargs):  # pylint: disable=unused-argument
+    """ Merge and normalize a list of softmax predictions by taking a weighted average.
+
+    Parameters
+    ----------
+    preds: list of numpy.ndarrays, checked, so far, only for softmax outputs
+        - All should be of the same shape.
+    weights:
+        - If it is None, all predictions are given the weight of 1.
+        - If it is int or float, all predictions are given this weight. Unnecessary, but supported.
+        - If it is a list of ints or floats, it's first axis's length should be equal to the number of predictions.
+            + `weights` can, then also be a numpy.ndarray, but then the second axis onwards shape should match a prediction's shape.
+    """
+    # IDEA: handle single pred provided as preds.
+    # `numpy.stack` will probably raise errors for all the possible mishaps from the user, I guess.
     p = np.stack(preds, axis=-1)
     if weights is not None:
         if isinstance(weights, (int, float)):

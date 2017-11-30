@@ -5,6 +5,7 @@ Created: 28-09-2016
 Numpy utilities
 """
 from __future__ import division, print_function
+from six.moves import zip, range
 import numpy as np
 from collections import Iterable
 from itertools import repeat
@@ -83,9 +84,9 @@ def strided_view(arr, win_shape, step_shape):
         raise ValueError(
             "Both win_shape: {} and step_shape: {} should be iterable or not iterable.".
             format(win_shape, step_shape))
-    elif (isinstance(win_shape, Iterable) and
-          (len(win_shape) != len(step_shape) or
-           len(win_shape) > len(arr.shape))):
+    elif (isinstance(win_shape, Iterable)
+          and (len(win_shape) != len(step_shape)
+               or len(win_shape) > len(arr.shape))):
         raise ValueError(
             "iterables win_shape: {} and step_shape: {} should be of the same length,"
             "and, the length should be <= len(arr.shape) : {}".format(
@@ -111,9 +112,8 @@ def strided_view(arr, win_shape, step_shape):
     final_shape = tuple()
     final_strides = tuple()
 
-    for d, (
-            win, step, shape, stride
-    ) in enumerate(zip(_win_shape, _step_shape, arr.shape, arr.strides)):
+    for d, (win, step, shape, stride) in enumerate(
+            zip(_win_shape, _step_shape, arr.shape, arr.strides)):
         if win is None != step is None:
             raise ValueError(
                 "BOTH win_shape: {} and step_shape: {} should be None at [{}] "
@@ -125,8 +125,8 @@ def strided_view(arr, win_shape, step_shape):
         elif win <= 0 or step <= 0:
             raise ValueError(
                 "Both win_shape: {} and step_shape: {} should be > 0 or None "
-                "(if you want to skip striding in a dimension) at [{}].".format(
-                    win_shape, step_shape, d))
+                "(if you want to skip striding in a dimension) at [{}].".
+                format(win_shape, step_shape, d))
         elif win > shape:
             raise ValueError(
                 "win_shape: {} should be <= arr.shape: {} at [{}], given: {} > {}".
@@ -134,8 +134,14 @@ def strided_view(arr, win_shape, step_shape):
         else:
             # s is zero when step is larger, resulting in one stride in this dim
             s = (shape - (win - step)) // step
-            final_shape += (s or 1, win, )
-            final_strides += (stride * (step if s else 1), stride, )
+            final_shape += (
+                s or 1,
+                win,
+            )
+            final_strides += (
+                stride * (step if s else 1),
+                stride,
+            )
 
     return np.lib.stride_tricks.as_strided(
         arr, shape=final_shape, strides=final_strides)
@@ -285,7 +291,8 @@ def _generic_confusion_matrix_forcat(  #pylint: disable=too-many-arguments
             - An axis of size <= 1 {}
             """.format(
                 "TRUE" if reduce_axis == len(Ypred.shape) - 1 else "",
-                "TRUE" if Ypred.shape[reduce_axis] <= 1 else "", )
+                "TRUE" if Ypred.shape[reduce_axis] <= 1 else "",
+            )
             raise ValueError(msg)
 
     conf = reduce_function(
@@ -373,9 +380,10 @@ def print_prec_rec(prec, rec, onlydiag=False, end='\n'):
     r = rec * 100
     if onlydiag:
         print(
-            "P(REC)){}{}".format("{:^2}".format(' '), "{:^2}".format(' ').join(
-                "{: >6.2f} ({: >6.2f})".format(*z)
-                for z in zip(p.diagonal(), r.diagonal()))),
+            "P(REC)){}{}".format(
+                "{:^2}".format(' '),
+                "{:^2}".format(' ').join("{: >6.2f} ({: >6.2f})".format(
+                    *z) for z in zip(p.diagonal(), r.diagonal()))),
             end=end)
     else:
         n = prec.shape[-1]
@@ -385,7 +393,9 @@ def print_prec_rec(prec, rec, onlydiag=False, end='\n'):
         print("".join([tpf, spc, trf]))
 
         with printoptions(
-                suppress=True, formatter={'float': '{: >6.2f}'.format}):
+                suppress=True, formatter={
+                    'float': '{: >6.2f}'.format
+                }):
             print(
                 "\n".join("{}{}{}".format(*z) for z in zip(p, repeat(spc), r)),
                 end="\n" + end if end != "\n" else end)
@@ -414,7 +424,8 @@ def normalize_mean_std_rolling(arr,
                                first_mean_var='skip',
                                *args,
                                **kwargs):
-    """
+    """ Mean-Variance normalize a given numpy.ndarray in a rolling way.
+
     NOTE: `first_mean_var` decides what to use for the first `win_len` elements of `arr`.
     - 'skip' : don't normalize
     - 'copy' : copy the first mean and std values along the given `axis` and use those
@@ -432,10 +443,9 @@ def normalize_mean_std_rolling(arr,
             raise ValueError(
                 "first_mean_var should be either : 'skip', 'copy' or a tuple(mean, std) of length 2"
             )
-        elif any((len(mv.shape) == len(arr.shape)) and all(
-            (m == a) or (i == axis)
-                for i, (m, a) in enumerate(zip(mv.shape, arr.shape)))
-                 for mv in first_mean_var):
+        elif any((len(mv.shape) == len(arr.shape)) and all((m == a) or (
+                i == axis) for i, (m, a) in enumerate(
+                    zip(mv.shape, arr.shape))) for mv in first_mean_var):
             raise ValueError(
                 "Mismatch in shapes of provided first_mean_var and arr.\nThe shape should at least be 1 along given `axis`"
             )
@@ -453,12 +463,17 @@ def normalize_mean_std_rolling(arr,
         rstd = 1
 
     if first_mean_var == 'skip':
-        arridx = (slice(0, None, 1), ) * axis + (slice(win_len - 1, None, 1),
-                                                 Ellipsis, )
+        arridx = (slice(0, None, 1), ) * axis + (
+            slice(win_len - 1, None, 1),
+            Ellipsis,
+        )
         return (arr[arridx] - rmean) / rstd
 
     if first_mean_var == 'copy':
-        ridx = (slice(0, None, 1), ) * axis + (slice(0, 1, 1), Ellipsis, )
+        ridx = (slice(0, None, 1), ) * axis + (
+            slice(0, 1, 1),
+            Ellipsis,
+        )
         first_mean_std = (rmean[ridx], rstd[ridx] if std_it else rstd)
     else:  # first_mean_var has been given and is of the right shape
         first_mean_std = first_mean_var[:1] + (np.sqrt(first_mean_var[-1])

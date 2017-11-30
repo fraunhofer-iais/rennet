@@ -16,6 +16,13 @@ import rennet.utils.model_utils as mu
 import rennet.utils.audio_utils as au
 import rennet.utils.np_utils as nu
 import rennet.utils.label_utils as lu
+from rennet.utils.py_utils import makedirs_with_existok
+
+# IDEA: Instead of hard-coded classes, serialize everything in the `model.h5`,
+# and use a generic `rennet_model` class that can deserialize and create the appropriate
+# class instance.
+# Inspiration: Keras.
+# Problems: Time, Worthiness for such limited set of tasks, Debugging.
 
 
 # DOUBLE TALK DETECTION #######################################################
@@ -29,8 +36,7 @@ class DT_2_nosub_0zero20one_mono_mn(mu.BaseRennetModel):  # pylint: disable=too-
         self.loadaudio = lambda fp: au.load_audio(
             filepath=fp,
             samplerate=self.samplerate,
-            mono=self.mono,
-        )
+            mono=self.mono, )
 
         # feature extraction
         self.win_len = int(self.samplerate * 0.032)
@@ -116,11 +122,24 @@ class DT_2_nosub_0zero20one_mono_mn(mu.BaseRennetModel):  # pylint: disable=too-
         # get and set any params defined in the model_fp
         with hFile(model_fp, 'r') as f:
             model_group = f['rennet/model']
+            print()
             for att in model_group.keys():
                 if att == 'viterbi':
                     continue
                 elif att in self.__dict__:
-                    setattr(self, att, model_group[att][()])
+                    val = model_group[att][()]
+                    prev = getattr(self, att)
+                    setattr(self, att, val)
+
+                    # IDEA: move this to __setattr__ method to shout-out **all** changes.
+                    # It will shout even on __init__ then, which will have to be handled appropriately.
+                    print(
+                        "{}.{} updated from model file, from {} to {}".format(
+                            self.__class__.__name__, att, prev, val))
+
+                # IDEA: Should we be pesky and raise errors when
+                # there are unavailable `att` in the model file?
+            print()
 
     def preprocess(self, filepath, **kwargs):
         d = self.loadaudio(filepath)
@@ -170,10 +189,7 @@ class DT_2_nosub_0zero20one_mono_mn(mu.BaseRennetModel):  # pylint: disable=too-
         if to_dir is None:
             to_dir = os.path.dirname(filepath)
 
-        try:
-            os.makedirs(to_dir)
-        except:  # pylint: disable=bare-except
-            pass
+        makedirs_with_existok(to_dir, exist_ok=True)
 
         to_filename = os.path.basename(filepath) + to_fileextn
         to_filepath = os.path.join(to_dir, to_filename)

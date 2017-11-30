@@ -4,6 +4,7 @@ Created: 18-08-2016
 
 Test the audio utilities module
 """
+from __future__ import print_function, division
 import pytest
 from numpy.testing import assert_almost_equal
 from glob import glob
