@@ -424,7 +424,8 @@ def normalize_mean_std_rolling(arr,
                                first_mean_var='skip',
                                *args,
                                **kwargs):
-    """
+    """ Mean-Variance normalize a given numpy.ndarray in a rolling way.
+
     NOTE: `first_mean_var` decides what to use for the first `win_len` elements of `arr`.
     - 'skip' : don't normalize
     - 'copy' : copy the first mean and std values along the given `axis` and use those
