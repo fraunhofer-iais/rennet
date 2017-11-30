@@ -103,8 +103,8 @@ It will be required to setup this repository in `dev-mode` before using [`rennet
 5. It is required that the environment variables `RENNET_ROOT` (pointing to the root of this repo) and `RENNET_ENV` (pointing to the virtual environment setup above) are available for working with [`rennet-x`](https://bitbucket.org/nm-rennet/rennet-x).
     - Add the following lines to your `~/.bash_profile`, for example:
 
-        export RENNET_ROOT="path/to/local-rennet-repo"  # change here !!!
-        export RENNET_ENV="$RENNET_ROOT/.rennet_env"
+            export RENNET_ROOT="path/to/local-rennet-repo"  # change here !!!
+            export RENNET_ENV="$RENNET_ROOT/.rennet_env"
 
     - Reload `~/.bash_profile`, following the same example, to have these variables loaded, by running:
     ```
