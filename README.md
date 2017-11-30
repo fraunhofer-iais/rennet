@@ -95,8 +95,9 @@ It will be required to setup this repository in `dev-mode` before using [`rennet
     > Follow the instructions for that in [`rennet-x`](https://bitbucket.org/nm-rennet/rennet-x).
 
 4. Install `base` and `dev` packages with `pip` by running the following:
-    pip install -r requirements/base.txt
-    pip install -r requirements/dev.txt
+
+        pip install -r requirements/base.txt
+        pip install -r requirements/dev.txt
     
 
 5. It is required that the environment variables `RENNET_ROOT` (pointing to the root of this repo) and `RENNET_ENV` (pointing to the virtual environment setup above) are available for working with [`rennet-x`](https://bitbucket.org/nm-rennet/rennet-x).
