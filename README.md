@@ -91,21 +91,21 @@ It will be required to setup this repository in `dev-mode` before using [`rennet
     ```
     > **NOTE**
     >
-    > This environment will not install the packages wtih GPU support.
+    > This environment will not install the packages with GPU support.
     > Follow the instructions for that in [`rennet-x`](https://bitbucket.org/nm-rennet/rennet-x).
 
 4. Install `base` and `dev` packages with `pip` by running the following:
-    ```
-    pip install -r requirements/base.txt
-    pip install -r requirements/dev.txt
-    ```
+
+        pip install -r requirements/base.txt
+        pip install -r requirements/dev.txt
+    
 
 5. It is required that the environment variables `RENNET_ROOT` (pointing to the root of this repo) and `RENNET_ENV` (pointing to the virtual environment setup above) are available for working with [`rennet-x`](https://bitbucket.org/nm-rennet/rennet-x).
     - Add the following lines to your `~/.bash_profile`, for example:
-    ```
-    export RENNET_ROOT="path/to/local-rennet-repo"  # change here !!!
-    export RENNET_ENV="$RENNET_ROOT/.rennet_env"
-    ```
+
+            export RENNET_ROOT="path/to/local-rennet-repo"  # change here !!!
+            export RENNET_ENV="$RENNET_ROOT/.rennet_env"
+
     - Reload `~/.bash_profile`, following the same example, to have these variables loaded, by running:
     ```
     source ~/.bash_profile
@@ -125,7 +125,7 @@ To check that everything has been setup properly, run the included tests using `
     ```
 3. Add this library to `PYTHONPATH`:
     ```
-    PYTHONPATH=$RENNET_ROOT:$PYTHONPATH
+    export PYTHONPATH=$RENNET_ROOT:$PYTHONPATH
     ```
 4. Run the tests in `tests`, excluding long running ones:
     ```

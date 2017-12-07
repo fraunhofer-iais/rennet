@@ -12,3 +12,4 @@ distributed==1.16.3
 tensorflow==1.1.0
 graphviz==0.6
 pydot-ng==1.0.0
+ipywidgets==7.0.5

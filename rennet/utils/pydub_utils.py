@@ -138,11 +138,11 @@ def convert_to_standard(filepath,
                         todir,
                         tofmt="wav",
                         samplerate=16000,
-                        channels=1):
+                        channels=1, **kwargs):
     """ Convert a single media file to the standard format """
     tofilename = os.path.splitext(os.path.basename(filepath))[0] + "." + tofmt
     tofilepath = os.path.join(todir, tofilename)
-    s = AudioIO.from_file(filepath)
+    s = AudioIO.from_file(filepath, **kwargs)
     f = s.export_standard(  # pylint: disable=no-member
         tofilepath,
         samplerate=samplerate,
@@ -154,8 +154,8 @@ def convert_to_standard(filepath,
     ]
 
 
-def convert_to_standard_split(filepath, todir, tofmt="wav", samplerate=16000):
-    s = AudioIO.from_file(filepath)
+def convert_to_standard_split(filepath, todir, tofmt="wav", samplerate=16000, **kwargs):
+    s = AudioIO.from_file(filepath, **kwargs)
     s = s.set_frame_rate(samplerate)
 
     splits = s.split_to_mono()
