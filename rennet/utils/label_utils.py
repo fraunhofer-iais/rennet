@@ -587,9 +587,11 @@ class SequenceLabels(object):
         Parameters
         ----------
         filepath: path to the ELAN file
-        tiers: list or tuple of strings
+        tiers: list or tuple of strings or unary callable
             list or tuple of tier names (as strings) to specify what tiers to be read.
             By default, this is an empty tuple (or list), and all tiers will be read.
+            If it is an unary callable (i.e. taking one argument), the function will be
+            used as the predicated to filter which tiers should be kept.
         kwargs: unused, present for proper sub-classing citizenship
 
         Returns
@@ -612,17 +614,19 @@ class SequenceLabels(object):
         eaf = Eaf(file_path=filepath)
 
         # FIXME: Check if the each element is a string, and support py2 as well.
-        if not isinstance(
-                tiers,
-            (tuple, list)):  # or not isinstance(tiers[0], basestring):
+        if not (isinstance(tiers, (tuple, list)) or callable(tiers)):
             raise TypeError(
-                "`tiers` is expected to be a tuple or list of strings, got: {}".
+                "`tiers` is expected to be a tuple or list of strings, or a predicate function, got: {}".
                 format(tiers))
 
-        tiers = tuple(tiers)
+        tiers = tuple(tiers) if not callable(tiers) else tiers
 
+        warnemptytier = True
         if tiers == ():  # read all tiers
             tiers = tuple(eaf.get_tier_names())  # method returns dict_keys
+            warnemptytier = False
+        elif callable(tiers):
+            tiers = tuple(name for name in eaf.get_tier_names() if tiers(name))
 
         if len(tiers) == 0:
             raise RuntimeError(
@@ -634,25 +638,25 @@ class SequenceLabels(object):
 
         for tier in tiers:
             annots = eaf.get_annotation_data_for_tier(tier)
-            if len(annots) == 0:
+            if warnemptytier and len(annots) == 0:
                 warnings.warn(
                     RuntimeWarning(
                         "No annotations found for tier: {}.".format(tier)))
                 continue
 
-            attrs = eaf.tiers[tier][2]  # tier attributes
-
+            annots = list(zip(*[a for a in annots if a[1] > a[0]]))
             # filter away annotations that are <= zero duration long
-            starts, ends, contents = zip(*[a for a in annots if a[1] > a[0]])
 
-            if len(starts) < len(annots):
+            if warnemptytier and len(annots[0]) < len(annots):
                 warnings.warn(
                     RuntimeWarning(
                         "IGNORED {} zero- or negative-duration annotations of {} annotations in tier {}".
-                        format(len(annots) - len(starts), len(annots), tier)))
+                        format(
+                            len(annots) - len(annots[0]), len(annots), tier)))
 
-            starts_ends.extend(zip(starts, ends))
-
+            starts_ends.extend(zip(*annots[:2]))
+            attrs = eaf.tiers[tier][2]  # tier attributes
+            contents = zip(*annots[2:])  # symbolic associations, etc.
             labels.extend(
                 EAFAnnotationInfo(
                     tier,
