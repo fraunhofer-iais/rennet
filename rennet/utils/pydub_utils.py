@@ -36,8 +36,8 @@ class AudioIO(AudioSegment):
             if not converterpath:
                 _e = (
                     "sph2pipe was not found on PATH."
-                    "\n\nPlease follow the readme in the `rennet/utils/sph2pipe_v2.5/` folder in repo to install"
-                    "\nOr check https://www.ldc.upenn.edu/language-resources/tools/sphere-conversion-tools"
+                    "\n\nPlease install the `sph2pipe_v2.5` tool for converting sph files, it can be found at:\n"
+                    "https://www.ldc.upenn.edu/language-resources/tools/sphere-conversion-tools"
                     "\n\nPlease make sure it is available on PATH after installation"
                     "\nOR, provide fullpath as `AudioIO.from_file(file, format='sph', sph2pipe_path=SPH2PIPE)``"
                 )
@@ -138,7 +138,8 @@ def convert_to_standard(filepath,
                         todir,
                         tofmt="wav",
                         samplerate=16000,
-                        channels=1, **kwargs):
+                        channels=1,
+                        **kwargs):
     """ Convert a single media file to the standard format """
     tofilename = os.path.splitext(os.path.basename(filepath))[0] + "." + tofmt
     tofilepath = os.path.join(todir, tofilename)
@@ -154,7 +155,11 @@ def convert_to_standard(filepath,
     ]
 
 
-def convert_to_standard_split(filepath, todir, tofmt="wav", samplerate=16000, **kwargs):
+def convert_to_standard_split(filepath,
+                              todir,
+                              tofmt="wav",
+                              samplerate=16000,
+                              **kwargs):
     s = AudioIO.from_file(filepath, **kwargs)
     s = s.set_frame_rate(samplerate)
 
