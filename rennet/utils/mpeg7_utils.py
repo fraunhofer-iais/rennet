@@ -4,12 +4,12 @@ Created: 21-11-2017
 
 Utilities for working with MPEG7 files
 """
-from __future__ import division
+from __future__ import division, absolute_import, print_function
 from six.moves import zip, reduce
 import xml.etree.ElementTree as et
 import warnings
 
-from rennet.utils.py_utils import lowest_common_multiple
+from .py_utils import lowest_common_multiple
 
 MPEG7_NAMESPACES = {
     "ns": "http://www.iais.fraunhofer.de/ifinder",
@@ -33,26 +33,16 @@ NS2_TAGS = {
 }
 
 MPEG7_TAGS = {
-    "audiosegment":
-    ".//mpeg7:AudioSegment",
-    "timepoint":
-    ".//mpeg7:MediaTimePoint",
-    "duration":
-    ".//mpeg7:MediaDuration",
-    "descriptor":
-    ".//mpeg7:AudioDescriptor[@xsi:type='ifinder:SpokenContentType']",
-    "speakerid":
-    ".//ifinder:Identifier",
-    "transcription":
-    ".//ifinder:SpokenUnitVector",
-    "confidence":
-    ".//ifinder:ConfidenceVector",
-    "speakerinfo":
-    ".//ifinder:Speaker",
-    "gender":
-    "gender",
-    "givenname":
-    ".//mpeg7:GivenName",
+    "audiosegment": ".//mpeg7:AudioSegment",
+    "timepoint": ".//mpeg7:MediaTimePoint",
+    "duration": ".//mpeg7:MediaDuration",
+    "descriptor": ".//mpeg7:AudioDescriptor[@xsi:type='ifinder:SpokenContentType']",
+    "speakerid": ".//ifinder:Identifier",
+    "transcription": ".//ifinder:SpokenUnitVector",
+    "confidence": ".//ifinder:ConfidenceVector",
+    "speakerinfo": ".//ifinder:Speaker",
+    "gender": "gender",
+    "givenname": ".//mpeg7:GivenName",
 }
 
 
@@ -94,9 +84,10 @@ def parse_mpeg7(filepath, use_tags="ns"):  # pylint: disable=too-many-locals
             continue
 
         if start_end_persec[1] <= start_end_persec[0]:  # (end - start) <= 0
-            msg = ("(end - start) <= 0 ignored for annotation at position "
-                   "{} with values {} in file:\n{}".format(
-                       i, start_end_persec, filepath))
+            msg = (
+                "(end - start) <= 0 ignored for annotation at position "
+                "{} with values {} in file:\n{}".format(i, start_end_persec, filepath)
+            )
 
             warnings.warn(RuntimeWarning(msg))
             continue
@@ -117,8 +108,9 @@ def parse_mpeg7(filepath, use_tags="ns"):  # pylint: disable=too-many-locals
 
     starts_ends, persecs = _sanitize_starts_ends(starts_ends, persecs)
 
-    return (starts_ends, persecs, speakerids, genders, givennames, confidences,
-            transcriptions)
+    return (
+        starts_ends, persecs, speakerids, genders, givennames, confidences, transcriptions
+    )
 
 
 def _parse_segment(segment, TAGS):
@@ -127,8 +119,7 @@ def _parse_segment(segment, TAGS):
     descriptor = segment.find(TAGS["descriptor"], MPEG7_NAMESPACES)
 
     if any(d is None for d in [timepoint, duration]):  #, descriptor]):
-        raise ValueError(
-            "timepoint, duration or decriptor not found in segment")
+        raise ValueError("timepoint, duration or decriptor not found in segment")
 
     start_end_persec = _parse_timestring(timepoint, duration)
 
@@ -178,21 +169,20 @@ def _parse_duration(duration):
           int(sec)
 
     return res * int(persec) + int(val), int(
-        persec)  # need to send separately as the float sum is not great
+        persec
+    )  # need to send separately as the float sum is not great
 
 
 def _parse_descriptor(descriptor, TAGS):
     speakerid = descriptor.find(TAGS["speakerid"], MPEG7_NAMESPACES).text
     speakerinfo = descriptor.find(TAGS["speakerinfo"], MPEG7_NAMESPACES)
-    transcription = descriptor.find(TAGS["transcription"],
-                                    MPEG7_NAMESPACES).text
+    transcription = descriptor.find(TAGS["transcription"], MPEG7_NAMESPACES).text
     confidence = descriptor.find(TAGS["confidence"], MPEG7_NAMESPACES).text
 
     gender = speakerinfo.get(TAGS["gender"])
     givenname = speakerinfo.find(TAGS["givenname"], MPEG7_NAMESPACES).text
 
-    if any(x is None
-           for x in [speakerid, gender, givenname, confidence, transcription]):
+    if any(x is None for x in [speakerid, gender, givenname, confidence, transcription]):
         raise ValueError("Some descriptor information is None / not found")
 
     return speakerid, gender, givenname, confidence, transcription
@@ -201,5 +191,6 @@ def _parse_descriptor(descriptor, TAGS):
 def _sanitize_starts_ends(starts_ends, persecs):
     """ Sanitize starts ends to be of the same samplerate (persec) """
     persec = reduce(lowest_common_multiple, set(persecs))
-    return [(s * persec // p, e * persec // p)
-            for (s, e), p in zip(starts_ends, persecs)], persec
+    return [
+        (s * persec // p, e * persec // p) for (s, e), p in zip(starts_ends, persecs)
+    ], persec

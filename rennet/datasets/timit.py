@@ -4,12 +4,13 @@ Created: 28-08-2016
 
 Helpers for working with TIMIT dataset
 """
+from __future__ import print_function, division, absolute_import
 from os.path import abspath
 from csv import reader
 import numpy as np
 
-import rennet.utils.label_utils as lu
-from rennet.utils.np_utils import group_by_values
+from ..utils import label_utils as lu
+from ..utils.np_utils import group_by_values
 
 
 class Annotations(lu.SequenceLabels):
@@ -75,10 +76,8 @@ class Annotations(lu.SequenceLabels):
         starts_ends, active_speakers = group_by_values(active_speakers)
 
         return self.__class__(
-            self.sourcefile,
-            starts_ends,
-            active_speakers,
-            samplerate=samplerate)
+            self.sourcefile, starts_ends, active_speakers, samplerate=samplerate
+        )
 
     def __getitem__(self, idx):
         args = super(Annotations, self).__getitem__(idx)

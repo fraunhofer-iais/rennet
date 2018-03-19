@@ -41,7 +41,8 @@ def main(rennet_model, filepath, to_dir=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description="Annotate some audio files with rennet.", prog='rennet')
+        description="Annotate some audio files with rennet.", prog='rennet'
+    )
 
     parser.add_argument(
         'infilepaths',
@@ -68,8 +69,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--debug',
         action='store_true',
-        help=
-        "Enable debugging mode where no errors are suppressed during analysis."
+        help="Enable debugging mode where no errors are suppressed during analysis."
     )
     parser.add_argument(
         '--version',
@@ -83,8 +83,7 @@ if __name__ == '__main__':
     model.verbose = 1
 
     outfiles = []
-    absinfilepaths = list(
-        map(os.path.abspath, (f.name for f in args.infilepaths)))
+    absinfilepaths = list(map(os.path.abspath, (f.name for f in args.infilepaths)))
     total_files = len(absinfilepaths)
 
     todir = os.path.abspath(args.todir) if args.todir is not None else None
@@ -111,7 +110,7 @@ if __name__ == '__main__':
 
     print(
         "\n DONE!",
-        "Output file{} can be found at:".format("s"
-                                                if len(outfiles) > 1 else ""),
+        "Output file{} can be found at:".format("s" if len(outfiles) > 1 else ""),
         *outfiles,
-        sep='\n')
+        sep='\n'
+    )

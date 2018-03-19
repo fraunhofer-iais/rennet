@@ -4,7 +4,7 @@ Created: 09-11-2017
 
 Module with rennet models
 """
-from __future__ import print_function, division
+from __future__ import print_function, division, absolute_import
 import numpy as np
 from keras.models import load_model
 from itertools import chain, repeat
@@ -12,11 +12,11 @@ from h5py import File as hFile
 import os
 import copy
 
-import rennet.utils.model_utils as mu
-import rennet.utils.audio_utils as au
-import rennet.utils.np_utils as nu
-import rennet.utils.label_utils as lu
-from rennet.utils.py_utils import makedirs_with_existok
+from .utils import model_utils as mu
+from .utils import audio_utils as au
+from .utils import np_utils as nu
+from .utils import label_utils as lu
+from .utils.py_utils import makedirs_with_existok
 
 # IDEA: Instead of hard-coded classes, serialize everything in the `model.h5`,
 # and use a generic `rennet_model` class that can deserialize and create the appropriate
@@ -55,8 +55,9 @@ class DT_2_nosub_0zero20one_mono_mn(mu.BaseRennetModel):  # pylint: disable=too-
         # feature normalization
         self.std_it = False
         self.norm_winsec = 200
-        self.norm_winlen = int((self.hop_len / self.samplerate * 1000) *
-                               self.norm_winsec)  # seconds
+        self.norm_winlen = int(
+            (self.hop_len / self.samplerate * 1000) * self.norm_winsec
+        )  # seconds
         self.first_mean_var = 'copy'
         self.normalize = lambda feat: nu.normalize_mean_std_rolling(
             feat,
@@ -98,14 +99,13 @@ class DT_2_nosub_0zero20one_mono_mn(mu.BaseRennetModel):  # pylint: disable=too-
         with hFile(model_fp, 'r') as f:
             self.rinit = f['rennet/model/viterbi/init'][()]
             self.rtran = f['rennet/model/viterbi/tran'][()]
-        self.vinit, self.vtran = lu.normalize_raw_viterbi_priors(
-            self.rinit, self.rtran)
+        self.vinit, self.vtran = lu.normalize_raw_viterbi_priors(self.rinit, self.rtran)
 
         # output
         self.seq_minstart = (
             self.win_len // 2 +  # removed during feature extraction
-            int((self.data_context // 2
-                 ) * self.hop_len)  # removed during adding data-context
+            int((self.data_context // 2) * self.hop_len
+                )  # removed during adding data-context
         ) / self.hop_len  # bringing to hop's samplerate. NOTE: yes, this can float
         self.seq_samplerate = self.samplerate // self.hop_len
         self.seq_keep = 'keys'
@@ -135,7 +135,9 @@ class DT_2_nosub_0zero20one_mono_mn(mu.BaseRennetModel):  # pylint: disable=too-
                     # It will shout even on __init__ then, which will have to be handled appropriately.
                     print(
                         "{}.{} updated from model file, from {} to {}".format(
-                            self.__class__.__name__, att, prev, val))
+                            self.__class__.__name__, att, prev, val
+                        )
+                    )
 
                 # IDEA: Should we be pesky and raise errors when
                 # there are unavailable `att` in the model file?
@@ -156,10 +158,8 @@ class DT_2_nosub_0zero20one_mono_mn(mu.BaseRennetModel):  # pylint: disable=too-
             model = load_model(model_fp)
 
         return model.predict_generator(
-            Xgen,
-            steps=nsteps,
-            verbose=self.verbose,
-            max_q_size=self.max_q_size)
+            Xgen, steps=nsteps, verbose=self.verbose, max_q_size=self.max_q_size
+        )
 
     def postprocess(self, preds, **kwargs):
         pred = self.mergepreds_fn(preds)
@@ -170,12 +170,14 @@ class DT_2_nosub_0zero20one_mono_mn(mu.BaseRennetModel):  # pylint: disable=too-
             pred,
             keep=self.seq_keep,
             min_start=self.seq_minstart,
-            samplerate=self.seq_samplerate)
+            samplerate=self.seq_samplerate
+        )
 
         seq.to_eaf(
             to_filepath=to_filepath,
             linked_media_filepath=audio_path,
-            annotinfo_fn=self.seq_annotinfo_fn)
+            annotinfo_fn=self.seq_annotinfo_fn
+        )
 
     def apply(  # pylint: disable=too-many-arguments
             self,

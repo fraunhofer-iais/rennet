@@ -4,7 +4,7 @@ Created: 18-08-2016
 
 Utilities for working with audio.
 """
-from __future__ import print_function, division
+from __future__ import print_function, division, absolute_import
 import os
 import warnings
 from collections import namedtuple
@@ -12,7 +12,7 @@ import subprocess as sp
 import numpy as np
 import librosa as lr
 
-from rennet.utils.py_utils import cvsecs
+from .py_utils import cvsecs
 
 try:
     from subprocess import DEVNULL
@@ -28,7 +28,8 @@ AudioMetadata = namedtuple(
         'nchannels',
         'seconds',  # duration in seconds, may not be exact beyond 1e-2
         'nsamples',  # may not be accurate if not WAV, since being derived from seconds
-    ])
+    ]
+)
 
 
 def which(executable):
@@ -135,8 +136,9 @@ def read_wavefile_metadata(filepath):
             elif chunk in (b'JUNK', b'Fake', b'LIST', b'fact'):
                 _skip_unknown_chunk(fid, is_big_endian)
             else:
-                warnings.warn("Chunk (non-data) not understood, skipping it.",
-                              RuntimeWarning)
+                warnings.warn(
+                    "Chunk (non-data) not understood, skipping it.", RuntimeWarning
+                )
                 _skip_unknown_chunk(fid, is_big_endian)
     finally:  # always close
         fid.close()
@@ -165,8 +167,7 @@ def read_sph_metadata(filepath):
 
         # First line gives the header type
         fid.seek(0)
-        assert fid.readline().startswith(
-            b'NIST'), "Unrecognized Sphere Header type"
+        assert fid.readline().startswith(b'NIST'), "Unrecognized Sphere Header type"
 
         # The second line tells the header size
         _header_size = int(fid.readline().strip())
@@ -197,8 +198,7 @@ def read_sph_metadata(filepath):
         fid.close()
 
     if any(x is None for x in [nsamples, nchannels, samplerate]):
-        raise RuntimeError(
-            "The Sphere header was read, but some information was missing")
+        raise RuntimeError("The Sphere header was read, but some information was missing")
     else:
         return AudioMetadata(
             filepath=filepath,
@@ -206,7 +206,8 @@ def read_sph_metadata(filepath):
             samplerate=samplerate,
             nchannels=nchannels,
             seconds=nsamples / samplerate,
-            nsamples=nsamples)
+            nsamples=nsamples
+        )
 
 
 def read_audio_metadata_codec(filepath):
@@ -247,7 +248,8 @@ def read_audio_metadata_codec(filepath):
         except:
             raise RuntimeError(
                 "Failed to load sample rate of file %s from %s\n the infos from %s are \n%s"
-                % (filepath, CODEC_EXEC, CODEC_EXEC, infos))
+                % (filepath, CODEC_EXEC, CODEC_EXEC, infos)
+            )
 
     def _read_n_channels(line):
         try:
@@ -269,20 +271,21 @@ def read_audio_metadata_codec(filepath):
         except:
             raise RuntimeError(
                 "Failed to load n channels of file %s from %s\n the infos from %s are \n%s"
-                % (filepath, CODEC_EXEC, CODEC_EXEC, infos))
+                % (filepath, CODEC_EXEC, CODEC_EXEC, infos)
+            )
 
     def _read_duration(line):
         try:
             keyword = 'Duration: '
             line = [l for l in lines if keyword in l][0]
-            match = re.findall("([0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9])",
-                               line)[0]
+            match = re.findall("([0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9])", line)[0]
             duration_seconds = cvsecs(match)
             return duration_seconds
         except:
             raise RuntimeError(
                 "Failed to load duration of file %s from %s\n the infos from %s are \n%s"
-                % (filepath, CODEC_EXEC, CODEC_EXEC, infos))
+                % (filepath, CODEC_EXEC, CODEC_EXEC, infos)
+            )
 
     # to throw error for FileNotFound
     # TODO: [A] test error when FileNotFound
@@ -298,7 +301,8 @@ def read_audio_metadata_codec(filepath):
     if lines_audio == []:
         raise RuntimeError(
             "%s did not find audio in the file %s and produced infos\n%s" %
-            (CODEC_EXEC, filepath, infos))
+            (CODEC_EXEC, filepath, infos)
+        )
 
     samplerate = _read_samplerate(lines_audio[0])
     channels = _read_n_channels(lines_audio[0])
@@ -307,8 +311,9 @@ def read_audio_metadata_codec(filepath):
     n_samples = int(duration_seconds * samplerate) + 1
 
     warnings.warn(
-        "Metadata was read from %s, duration and number of samples may not be accurate"
-        % CODEC_EXEC, RuntimeWarning)
+        "Metadata was read from %s, duration and number of samples may not be accurate" %
+        CODEC_EXEC, RuntimeWarning
+    )
 
     return AudioMetadata(
         filepath=filepath,
@@ -316,7 +321,8 @@ def read_audio_metadata_codec(filepath):
         samplerate=samplerate,
         nchannels=channels,
         seconds=duration_seconds,
-        nsamples=n_samples)
+        nsamples=n_samples
+    )
 
 
 def get_audio_metadata(filepath):
@@ -354,15 +360,12 @@ def get_audio_metadata(filepath):
             return read_audio_metadata_codec(filepath)
         else:
             raise RuntimeError(
-                "Neither FFMPEG or AVCONV was found, nor is file %s a valid WAVE file"
-                % filepath)
+                "Neither FFMPEG or AVCONV was found, nor is file %s a valid WAVE file" %
+                filepath
+            )
 
 
-def load_audio(filepath,
-               samplerate=8000,
-               mono=True,
-               return_samplerate=False,
-               **kwargs):
+def load_audio(filepath, samplerate=8000, mono=True, return_samplerate=False, **kwargs):
     """ Load an audio file supported by `librosa.load(...)`.
 
     Extra keyword arguments supported by `librosa.load(...)` are passed on.
@@ -388,7 +391,9 @@ def powspectrogram(y, n_fft, hop_len, win_len=None, window='hann'):
             hop_length=hop_len,
             win_length=win_len,
             window=window,
-            center=False)).T**2.0
+            center=False
+        )
+    ).T**2.0
 
 
 def melspectrogram(  # pylint: disable=too-many-arguments
@@ -402,8 +407,7 @@ def melspectrogram(  # pylint: disable=too-many-arguments
         n_mels=64,
         **kwargs):
     if powspec is None:
-        powspec = powspectrogram(
-            y, n_fft, hop_len, win_len=win_len, window=window).T
+        powspec = powspectrogram(y, n_fft, hop_len, win_len=win_len, window=window).T
 
     mel_basis = lr.filters.mel(sr, n_fft, n_mels=n_mels, **kwargs)
 
@@ -432,6 +436,7 @@ def logmelspectrogram(  # pylint: disable=too-many-arguments
             win_len=win_len,
             window=window,
             n_mels=n_mels,
-            **kwargs)
+            **kwargs
+        )
 
     return np.log10(np.maximum(amin, melspec))  # pylint: disable=no-member

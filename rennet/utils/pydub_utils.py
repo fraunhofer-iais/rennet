@@ -5,7 +5,7 @@ Created: 11-10-2017
 Utilities for audio-io and conversions using Pydub.
 Separated from `audio_utils` to remove dependency, I guess.
 """
-from __future__ import print_function, division
+from __future__ import print_function, division, absolute_import
 from six.moves import range
 from pydub import AudioSegment
 from tempfile import NamedTemporaryFile
@@ -13,7 +13,7 @@ import subprocess as sp
 import os
 import warnings
 
-from rennet.utils.audio_utils import (
+from .audio_utils import (
     AudioMetadata,
     get_audio_metadata,
     get_sph2pipe,
@@ -58,7 +58,9 @@ class AudioIO(AudioSegment):
             if p.returncode != 0:
                 raise RuntimeError(
                     "Converting sph to wav failed with:\n{}\n{}".format(
-                        p.returncode, p_err))
+                        p.returncode, p_err
+                    )
+                )
 
             obj = cls._from_safe_wav(output)
 
@@ -97,8 +99,9 @@ class AudioIO(AudioSegment):
         nframes = obj.frame_count()
         if nframes != int(nframes):
             warnings.warn(
-                "Frame Count is calculated as float = {} by pydub".format(
-                    nframes), RuntimeWarning)
+                "Frame Count is calculated as float = {} by pydub".format(nframes),
+                RuntimeWarning
+            )
 
         updated_metadata = AudioMetadata(
             filepath=audiometadata.filepath,
@@ -106,7 +109,8 @@ class AudioIO(AudioSegment):
             samplerate=obj.frame_rate,
             nchannels=obj.channels,
             seconds=obj.duration_seconds,
-            nsamples=int(nframes))
+            nsamples=int(nframes)
+        )
 
         return obj, updated_metadata
 
@@ -123,23 +127,16 @@ class AudioIO(AudioSegment):
 
         return nparr([data[i::nchannels] for i in range(nchannels)]).T
 
-    def export_standard(self,
-                        outfilepath,
-                        samplerate=16000,
-                        channels=1,
-                        fmt="wav"):
+    def export_standard(self, outfilepath, samplerate=16000, channels=1, fmt="wav"):
 
         channeled = self.set_channels(channels)
         framed = channeled.set_frame_rate(samplerate)
         return framed.export(outfilepath, format=fmt)
 
 
-def convert_to_standard(filepath,
-                        todir,
-                        tofmt="wav",
-                        samplerate=16000,
-                        channels=1,
-                        **kwargs):
+def convert_to_standard(
+    filepath, todir, tofmt="wav", samplerate=16000, channels=1, **kwargs
+):
     """ Convert a single media file to the standard format """
     tofilename = os.path.splitext(os.path.basename(filepath))[0] + "." + tofmt
     tofilepath = os.path.join(todir, tofilename)
@@ -155,11 +152,7 @@ def convert_to_standard(filepath,
     ]
 
 
-def convert_to_standard_split(filepath,
-                              todir,
-                              tofmt="wav",
-                              samplerate=16000,
-                              **kwargs):
+def convert_to_standard_split(filepath, todir, tofmt="wav", samplerate=16000, **kwargs):
     s = AudioIO.from_file(filepath, **kwargs)
     s = s.set_frame_rate(samplerate)
 

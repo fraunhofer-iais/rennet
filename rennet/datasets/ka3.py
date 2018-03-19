@@ -4,12 +4,12 @@ Created: 29-08-2016
 
 Helpers for working with KA3 dataset
 """
-from __future__ import print_function, division
+from __future__ import print_function, division, absolute_import
 import numpy as np
 import warnings
 
-import rennet.utils.label_utils as lu
-from rennet.utils.py_utils import BaseSlotsOnlyClass
+from ..utils import label_utils as lu
+from ..utils.py_utils import BaseSlotsOnlyClass
 
 samples_for_labelsat = lu.samples_for_labelsat
 times_for_labelsat = lu.times_for_labelsat
@@ -52,7 +52,8 @@ class Annotations(lu.SequenceLabels):
         Check `rennet.utils.mpeg7_utils`.
         """
         starts_ends, _labels, sr, _ = super(Annotations, cls).from_mpeg7(
-            filepath, use_tags=use_tags, **kwargs)
+            filepath, use_tags=use_tags, **kwargs
+        )
 
         unique_speakers = set()
         labels = []
@@ -61,8 +62,7 @@ class Annotations(lu.SequenceLabels):
 
             # FIXME: only keeping speakerid for Transcription will confuse when
             # there are mutliple speakers with the same speakerid
-            labels.append(
-                Transcription(l.speakerid, float(l.confidence), l.content))
+            labels.append(Transcription(l.speakerid, float(l.confidence), l.content))
 
         # speakers = tuple(map(Speaker, *sorted(unique_speakers)))  # Doesn't work, but the one below does, FML
         speakers = tuple(Speaker(*uspk) for uspk in sorted(unique_speakers))
@@ -122,8 +122,7 @@ class ActiveSpeakers(lu.ContiguousSequenceLabels):
         labels = np.zeros(shape=(len(starts_ends), len(spks)), dtype=np.int)
         for i, lix in enumerate(labels_idx):
             if len(lix) == 1:
-                labels[i] = (spks == ann.labels[lix[0]].speakerid).astype(
-                    np.int)
+                labels[i] = (spks == ann.labels[lix[0]].speakerid).astype(np.int)
             elif len(lix) > 1:
                 lspks = np.array([ann.labels[s].speakerid for s in lix])
                 labels[i] = (spks == lspks[:, None]).sum(axis=0)
@@ -133,7 +132,8 @@ class ActiveSpeakers(lu.ContiguousSequenceLabels):
             if warn_duplicates:
                 warnings.warn(
                     "Some speakers may have duplicate annotations for file {}.\nDUPLICATES IGNORED".
-                    format(ann.sourcefile))
+                    format(ann.sourcefile)
+                )
 
         # IDEA: merge consecutive segments with the same label
         # No practical impact expected, except probably in turn-taking calculations
@@ -157,11 +157,7 @@ class ActiveSpeakers(lu.ContiguousSequenceLabels):
         return cls.from_annotations(ann, warn_duplicates)
 
     @classmethod
-    def from_mpeg7(cls,
-                   filepath,
-                   use_tags='ns',
-                   warn_duplicates=True,
-                   **kwargs):
+    def from_mpeg7(cls, filepath, use_tags='ns', warn_duplicates=True, **kwargs):
         ann = Annotations.from_mpeg7(filepath, use_tags=use_tags, **kwargs)
         return cls.from_annotations(ann, warn_duplicates)
 

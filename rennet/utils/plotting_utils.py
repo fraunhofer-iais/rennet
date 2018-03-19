@@ -4,14 +4,14 @@ Created: 08-10-2016
 
 Utilities for plotting
 """
-from __future__ import division, print_function
+from __future__ import division, print_function, absolute_import
 from six.moves import range
 import matplotlib.pyplot as plt
 from math import ceil
 import numpy as np
 from librosa.display import specshow
 
-from rennet.utils.np_utils import normalize_confusion_matrix
+from .np_utils import normalize_confusion_matrix
 
 
 def plot_multi(  # pylint: disable=too-many-arguments, too-many-locals, too-many-branches
@@ -92,7 +92,8 @@ def plot_multi(  # pylint: disable=too-many-arguments, too-many-locals, too-many
                         horizontalalignment='center',
                         verticalalignment='center',
                         color=fontcolor,
-                        fontsize=fontsize)
+                        fontsize=fontsize
+                    )
     else:
         raise ValueError("Unsupported plotting function {}".format(func))
 
@@ -112,8 +113,8 @@ def plot_speclike(  # pylint: disable=too-many-arguments
         hop_sec=0.05,
         cmap='viridis',
         show=True):
-    assert all(o.shape[0] == orderedlist[0].shape[0] for o in
-               orderedlist), "All list items should be of the same length"
+    assert all(o.shape[0] == orderedlist[0].shape[0] for o in orderedlist
+               ), "All list items should be of the same length"
 
     x_axis = 'time' if show_time else None
     hop_len = int(hop_sec * sr)
@@ -157,7 +158,8 @@ def plot_normalized_confusion_matrix(  # pylint: disable=too-many-arguments
         conf_fontcolor=fontcolor,
         cmap=cmap,
         *args,
-        **kwargs)
+        **kwargs
+    )
 
 
 def plot_confusion_precision_recall(  # pylint: disable=too-many-arguments
@@ -186,7 +188,8 @@ def plot_confusion_precision_recall(  # pylint: disable=too-many-arguments
         conf_fontcolor=fontcolor,
         cmap=cmap,
         *args,
-        **kwargs)
+        **kwargs
+    )
 
 
 def plot_confusion_history(  # pylint: disable=too-many-arguments, too-many-locals

@@ -4,7 +4,7 @@ Created: 01-02-2017
 
 Helpers for working with Fisher dataset
 """
-from __future__ import print_function, division
+from __future__ import print_function, division, absolute_import
 from six.moves import zip
 import numpy as np
 import warnings
@@ -12,10 +12,10 @@ from os.path import abspath
 from csv import reader
 import h5py as h
 
-import rennet.utils.label_utils as lu
-import rennet.utils.np_utils as nu
-import rennet.utils.h5_utils as hu
-from rennet.utils.py_utils import BaseSlotsOnlyClass
+from ..utils import label_utils as lu
+from ..utils import np_utils as nu
+from ..utils import h5_utils as hu
+from ..utils.py_utils import BaseSlotsOnlyClass
 
 samples_for_labelsat = lu.samples_for_labelsat
 times_for_labelsat = lu.times_for_labelsat
@@ -31,8 +31,7 @@ class Speaker(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
 
 
 class CallData(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
-    __slots__ = ('callid', 'topicid', 'signalgrade', 'convgrade',
-                 'channelspeakers')
+    __slots__ = ('callid', 'topicid', 'signalgrade', 'convgrade', 'channelspeakers')
 
     def __init__(  # pylint: disable=too-many-arguments
             self, callid, topicid, signalgrade, convgrade, channelspeakers):
@@ -98,8 +97,10 @@ class AllCallData(object):
 
         if calldata is None:
             raise KeyError(
-                "Call Data for callid {} not found in provided filepath:\n{}".
-                format(callid, filepath))
+                "Call Data for callid {} not found in provided filepath:\n{}".format(
+                    callid, filepath
+                )
+            )
 
         return calldata
 
@@ -111,7 +112,8 @@ class AllCallData(object):
         except KeyError:
             raise KeyError(
                 "Call Data for filename {} (assumed callid {}) not found in provided filepath:\n{}".
-                format(fn, callid_for_filename(fn), filepath))
+                format(fn, callid_for_filename(fn), filepath)
+            )
 
     @classmethod
     def from_file(cls, filepath):
@@ -145,8 +147,9 @@ class AllCallData(object):
         elif any(isinstance(i, str) for i in idx):
             return [self[i] for i in idx]
         else:
-            raise TypeError('Unsupported index {} for {}'.format(
-                idx, self.__class__.__name__))
+            raise TypeError(
+                'Unsupported index {} for {}'.format(idx, self.__class__.__name__)
+            )
 
 
 class Transcription(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
@@ -195,9 +198,10 @@ class Annotations(lu.SequenceLabels):
         elif isinstance(allcalldata, str):  # filename, probably
             self.calldata = AllCallData.from_file_for_filename(allcalldata, fn)
         else:
-            raise TypeError("allcalldata of unexpected type: {}\n".format(
-                type(allcalldata)
-            ) + "Provide either AllCallData instance or filepath to it")
+            raise TypeError(
+                "allcalldata of unexpected type: {}\n".format(type(allcalldata)) +
+                "Provide either AllCallData instance or filepath to it"
+            )
 
     @classmethod
     def from_file(cls, filepath, allcalldata=None):
@@ -215,9 +219,10 @@ class Annotations(lu.SequenceLabels):
         elif isinstance(allcalldata, str):  # probably filepath to AllCallData
             caldata = AllCallData.from_file_for_filename(allcalldata, filepath)
         else:
-            raise TypeError("allcalldata of unexpected type: {}\n".format(
-                type(allcalldata)
-            ) + "Provide either AllCallData instance or filepath to it")
+            raise TypeError(
+                "allcalldata of unexpected type: {}\n".format(type(allcalldata)) +
+                "Provide either AllCallData instance or filepath to it"
+            )
 
         with open(filepath, 'r') as f:
 
@@ -248,8 +253,10 @@ class Annotations(lu.SequenceLabels):
                         trans.append(Transcription(1, row[1].strip()))
                     else:
                         raise ValueError(
-                            "Speaker channel other than A and B ({}) in file\n{}".
-                            format(spk, filepath))
+                            "Speaker channel other than A and B ({}) in file\n{}".format(
+                                spk, filepath
+                            )
+                        )
 
         # resolve the final samplerate
         # we don't have to do lowest_common_multiple cuz it is only powers of 10
@@ -315,9 +322,10 @@ class ActiveSpeakers(lu.ContiguousSequenceLabels):
         elif isinstance(allcalldata, str):  # filename, probably
             self.calldata = AllCallData.from_file_for_filename(allcalldata, fn)
         else:
-            raise TypeError("allcalldata of unexpected type: {}\n".format(
-                type(allcalldata)
-            ) + "Provide either AllCallData instance or filepath to it")
+            raise TypeError(
+                "allcalldata of unexpected type: {}\n".format(type(allcalldata)) +
+                "Provide either AllCallData instance or filepath to it"
+            )
 
     @classmethod
     def from_annotations(cls, ann, warn_duplicates=True):
@@ -340,7 +348,8 @@ class ActiveSpeakers(lu.ContiguousSequenceLabels):
             labels[labels > 1] = 1
             if warn_duplicates:
                 _w = "some speakers may have duplicate annotations for file:\n{}.\n!!! IGNORED !!!".format(
-                    ann.sourcefile)
+                    ann.sourcefile
+                )
                 warnings.warn(_w)
 
         # IDEA: merge consecutive segments with the same label
@@ -388,11 +397,7 @@ chosen_val_callids = [
 
 
 class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
-    def __init__(self,
-                 filepath,
-                 audios_root='audios',
-                 labels_root='labels',
-                 **kwargs):
+    def __init__(self, filepath, audios_root='audios', labels_root='labels', **kwargs):
 
         self.audios_root = audios_root
         self.labels_root = labels_root
@@ -463,8 +468,9 @@ class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
                             datapath=ad.name,
                             dataslice=np.s_[s:e, ...],
                             labelpath=ld.name,
-                            labelslice=np.s_[s:e, ...])
-                        for s, e in zip(starts, ends))
+                            labelslice=np.s_[s:e, ...]
+                        ) for s, e in zip(starts, ends)
+                    )
 
         self._totlen = total_len
         self._chunkings = chunkings
@@ -477,17 +483,15 @@ class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
         return self._chunkings
 
     @classmethod
-    def for_groupids(cls,
-                     filepath,
-                     groupids='all',
-                     audios_root='audios',
-                     labels_root='labels',
-                     **kwargs):
-        obj = cls(
-            filepath,
-            audios_root=audios_root,
-            labels_root=labels_root,
-            **kwargs)
+    def for_groupids(
+        cls,
+        filepath,
+        groupids='all',
+        audios_root='audios',
+        labels_root='labels',
+        **kwargs
+    ):
+        obj = cls(filepath, audios_root=audios_root, labels_root=labels_root, **kwargs)
 
         if groupids == 'all':
             return obj
@@ -508,17 +512,10 @@ class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
         return obj
 
     @classmethod
-    def for_groupids_at(cls,
-                        filepath,
-                        at=np.s_[:],
-                        audios_root='audios',
-                        labels_root='labels',
-                        **kwargs):
-        obj = cls(
-            filepath,
-            audios_root=audios_root,
-            labels_root=labels_root,
-            **kwargs)
+    def for_groupids_at(
+        cls, filepath, at=np.s_[:], audios_root='audios', labels_root='labels', **kwargs
+    ):
+        obj = cls(filepath, audios_root=audios_root, labels_root=labels_root, **kwargs)
 
         if at == np.s_[:]:
             return obj
@@ -533,9 +530,7 @@ class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
 
         if not isinstance(groupids_at, np.ndarray):
             # HACK: single group
-            obj.grouped_callids = {
-                groupids_at: obj.grouped_callids[groupids_at]
-            }
+            obj.grouped_callids = {groupids_at: obj.grouped_callids[groupids_at]}
         else:
             grouped_callids = dict()
 
@@ -547,18 +542,16 @@ class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
         return obj
 
     @classmethod
-    def for_callids(cls,
-                    filepath,
-                    callids='all',
-                    audios_root='audios',
-                    labels_root='labels',
-                    **kwargs):
+    def for_callids(
+        cls,
+        filepath,
+        callids='all',
+        audios_root='audios',
+        labels_root='labels',
+        **kwargs
+    ):
         # FIXME: figure out proper way to kwargs
-        obj = cls(
-            filepath,
-            audios_root=audios_root,
-            labels_root=labels_root,
-            **kwargs)
+        obj = cls(filepath, audios_root=audios_root, labels_root=labels_root, **kwargs)
 
         if callids == 'all':
             return obj
@@ -586,17 +579,10 @@ class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
         return obj
 
     @classmethod
-    def for_callids_at(cls,
-                       filepath,
-                       at=np.s_[:],
-                       audios_root='audios',
-                       labels_root='labels',
-                       **kwargs):
-        obj = cls(
-            filepath,
-            audios_root=audios_root,
-            labels_root=labels_root,
-            **kwargs)
+    def for_callids_at(
+        cls, filepath, at=np.s_[:], audios_root='audios', labels_root='labels', **kwargs
+    ):
+        obj = cls(filepath, audios_root=audios_root, labels_root=labels_root, **kwargs)
 
         if at == np.s_[:]:
             return obj
@@ -611,9 +597,7 @@ class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
 
         if not isinstance(callids_at, np.ndarray):
             # HACK: single callid
-            obj.grouped_callids = {
-                groupid_for_callid(callids_at): {callids_at}
-            }
+            obj.grouped_callids = {groupid_for_callid(callids_at): {callids_at}}
         else:
             grouped_callids = dict()
 
@@ -663,7 +647,8 @@ class UnnormedFramewiseInputsProvider(  # pylint: disable=too-many-ancestors
             steps_per_chunk=steps_per_chunk,
             shuffle_seed=shuffle_seed,
             npasses=npasses,
-            **kwargs)
+            **kwargs
+        )
 
 
 class UnnormedFrameWithContextInputsProvider(  # pylint: disable=too-many-ancestors
@@ -700,12 +685,13 @@ class UnnormedFrameWithContextInputsProvider(  # pylint: disable=too-many-ancest
             steps_per_chunk=steps_per_chunk,
             shuffle_seed=shuffle_seed,
             npasses=npasses,
-            **kwargs)
+            **kwargs
+        )
 
 
 class ChunkMeanVarianceNormalizingNActiveSpeakersPrepper(
-        hu.BaseChunkMeanVarianceNormalizer,
-        FramewiseNActiveSpeakersPrepper,
+    hu.BaseChunkMeanVarianceNormalizer,
+    FramewiseNActiveSpeakersPrepper,
 ):
     pass
 

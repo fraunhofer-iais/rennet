@@ -4,7 +4,7 @@ Created: 05-08-2017
 
 Keras Utilities
 """
-from __future__ import print_function, division
+from __future__ import print_function, division, absolute_import
 from six.moves import zip
 import numpy as np
 from os.path import join as pjoin
@@ -14,9 +14,10 @@ from h5py import File as hFile
 from keras.models import Sequential, Model
 import keras.layers as kl
 
-from rennet.utils.np_utils import (
-    to_categorical, confusion_matrix_forcategorical,
-    normalize_confusion_matrix, printoptions, print_prec_rec)
+from .np_utils import (
+    to_categorical, confusion_matrix_forcategorical, normalize_confusion_matrix,
+    printoptions, print_prec_rec
+)
 
 
 # CALLBACKS ####################################################### CALLBACKS #
@@ -29,17 +30,14 @@ class ChattyConfusionHistory(Callback):
     NOTE: Expects Softmax/categorical labels from the model/inputs_provider
     """
 
-    def __init__(self,
-                 inputs_provider,
-                 epochs_per_pass=1,
-                 export_dir=None,
-                 **kwargs):
+    def __init__(self, inputs_provider, epochs_per_pass=1, export_dir=None, **kwargs):
         # IDEA: Accept numpy arrays as X and Y
         self.ip = inputs_provider
         self._kwargs = kwargs
         self.epp = int(epochs_per_pass)
         assert self.epp >= 1, "epochs_per_pass should be >= 1, v/s {}".format(
-            epochs_per_pass)
+            epochs_per_pass
+        )
 
         if export_dir is not None:
             self.export_to = pjoin(export_dir, "confusions.h5")
@@ -52,8 +50,7 @@ class ChattyConfusionHistory(Callback):
         super(ChattyConfusionHistory, self).__init__()
 
     def _read_trues(self):
-        gen = self.ip.flow(
-            indefinitely=False, only_labels=True, with_chunking=False)
+        gen = self.ip.flow(indefinitely=False, only_labels=True, with_chunking=False)
 
         trues = []
         nsteps = 0
@@ -66,10 +63,8 @@ class ChattyConfusionHistory(Callback):
 
     def _predict_calculate(self):
         gen = self.ip.flow(
-            indefinitely=True,
-            only_labels=False,
-            only_data=True,
-            with_chunking=False)
+            indefinitely=True, only_labels=False, only_data=True, with_chunking=False
+        )
         preds = self.model.predict_generator(gen, self.nsteps, **self._kwargs)
 
         _preds = to_categorical(
@@ -96,24 +91,22 @@ class ChattyConfusionHistory(Callback):
                 for path, data in zip(paths, datas):
                     if path not in f.keys():
                         f.create_dataset(
-                            path,
-                            data=data,
-                            compression='lzf',
-                            fletcher32=True)
+                            path, data=data, compression='lzf', fletcher32=True
+                        )
 
                 f.flush()
 
     def _print_class_stats(self):
         with printoptions(
-                suppress=True,
-                formatter={
-                    'float': '{: >9.2f}'.format,
-                    'int': '{: >9d}'.format
-                }):
+            suppress=True,
+            formatter={
+                'float': '{: >9.2f}'.format,
+                'int': '{: >9d}'.format
+            }
+        ):
             print("Confusions on {}".format(len(self.trues)))
             print("per class {}".format(self.trues.sum(axis=0).astype(int)))
-            print("percents  {}".format(
-                100 * self.trues.sum(axis=0) / self.trues.sum()))
+            print("percents  {}".format(100 * self.trues.sum(axis=0) / self.trues.sum()))
 
     def on_train_begin(self, *args, **kwargs):  # pylint: disable=unused-argument
         res = self._predict_calculate()
@@ -127,10 +120,7 @@ class ChattyConfusionHistory(Callback):
         print_prec_rec(*res[-2:], onlydiag=False)
         print()
 
-        paths = [
-            "initial/{}".format(n)
-            for n in ['preds', 'confs', 'precs', 'recs']
-        ]
+        paths = ["initial/{}".format(n) for n in ['preds', 'confs', 'precs', 'recs']]
         self._maybe_export(res, paths, multi=True)
 
         print(self.prefixtr.format('INITIAL'))
@@ -147,9 +137,7 @@ class ChattyConfusionHistory(Callback):
         print_prec_rec(*res[-2:], onlydiag=False)
         print()
 
-        paths = [
-            "final/{}".format(n) for n in ['preds', 'confs', 'precs', 'recs']
-        ]
+        paths = ["final/{}".format(n) for n in ['preds', 'confs', 'precs', 'recs']]
         self._maybe_export(res, paths, multi=True)
 
     def on_epoch_end(self, e, *args, **kwargs):  # pylint: disable=unused-argument
@@ -177,11 +165,13 @@ class ChattyConfusionHistory(Callback):
 model_checkpoint_pattern = 'w.{epoch:03d}-{val_loss:.3f}-{val_categorical_accuracy:.3f}.h5'
 
 
-def create_callbacks(inputs_provider,
-                     activity_dir,
-                     epochs_per_pass,
-                     checkpoints_pattern=model_checkpoint_pattern,
-                     **kwargs):
+def create_callbacks(
+    inputs_provider,
+    activity_dir,
+    epochs_per_pass,
+    checkpoints_pattern=model_checkpoint_pattern,
+    **kwargs
+):
     return [
         ModelCheckpoint(
             pjoin(activity_dir, checkpoints_pattern),
@@ -200,13 +190,13 @@ def create_callbacks(inputs_provider,
             inputs_provider,
             epochs_per_pass=epochs_per_pass,
             export_dir=activity_dir,
-            **kwargs),
+            **kwargs
+        ),
         # IDEA: A predictions saver at the end of training?
     ]
 
 
-def predict_on_inputs_provider(model, inputs_provider, export_to_dir,
-                               **kwargs):
+def predict_on_inputs_provider(model, inputs_provider, export_to_dir, **kwargs):
     export_to = pjoin(export_to_dir, "predictions.h5")
 
     def _calconf_save(Ytrue, Ypred, path_postfix):
@@ -219,17 +209,13 @@ def predict_on_inputs_provider(model, inputs_provider, export_to_dir,
                 nclasses=Ytrue.shape[-1],
             ),
         )
-        paths = [
-            "{}/{}".format(_p, path_postfix)
-            for _p in ('trues', 'preds', 'confs')
-        ]
+        paths = ["{}/{}".format(_p, path_postfix) for _p in ('trues', 'preds', 'confs')]
         datas = [Ytrue, Ypred, conf]
 
         with hFile(export_to, 'a') as f:
             for path, data in zip(paths, datas):
                 if path not in f.keys():
-                    f.create_dataset(
-                        path, data=data, compression='lzf', fletcher32=True)
+                    f.create_dataset(path, data=data, compression='lzf', fletcher32=True)
 
             f.flush()
 
@@ -239,8 +225,8 @@ def predict_on_inputs_provider(model, inputs_provider, export_to_dir,
     ctrue = []
     cpred = []
     for xy, (_, chunking) in inputs_provider.flow(
-            indefinitely=False, only_labels=False, with_chunking=True,
-            **kwargs):
+        indefinitely=False, only_labels=False, with_chunking=True, **kwargs
+    ):
 
         ctrue.append(xy[1])
         cpred.append(model.predict_on_batch(xy[0]))
@@ -288,7 +274,8 @@ def model_c3(input_shape, nclasses, compile_model=True):
             data_format='channels_last',
             input_shape=input_shape[1:],
             name='c1_3_64_1',
-        ))
+        )
+    )
     model.add(kl.BatchNormalization(name='c1_bn'))
     model.add(kl.Activation('relu', name='c1_relu'))
     model.add(kl.Dropout(0.1, name='c1_d_10'))
@@ -303,7 +290,8 @@ def model_c3(input_shape, nclasses, compile_model=True):
             data_format='channels_last',
             input_shape=input_shape[1:],
             name='c2_3_128_1',
-        ))
+        )
+    )
     model.add(kl.BatchNormalization(name='c2_bn'))
     model.add(kl.Activation('relu', name='c2_relu'))
     model.add(kl.Dropout(0.1, name='c2_d_10'))
@@ -318,7 +306,8 @@ def model_c3(input_shape, nclasses, compile_model=True):
             data_format='channels_last',
             input_shape=input_shape[1:],
             name='c3_3_256_1',
-        ))
+        )
+    )
     model.add(kl.BatchNormalization(name='c3_bn'))
     model.add(kl.Activation('relu', name='c3_relu'))
     model.add(kl.Dropout(0.1, name='c3_d_10'))
@@ -364,7 +353,8 @@ def model_c3_avg(input_shape, nclasses, compile_model=True):
             data_format='channels_last',
             input_shape=input_shape[1:],
             name='c1_3_64_1',
-        ))
+        )
+    )
     model.add(kl.BatchNormalization(name='c1_bn'))
     model.add(kl.Activation('relu', name='c1_relu'))
     model.add(kl.Dropout(0.1, name='c1_d_10'))
@@ -379,7 +369,8 @@ def model_c3_avg(input_shape, nclasses, compile_model=True):
             data_format='channels_last',
             input_shape=input_shape[1:],
             name='c2_3_128_1',
-        ))
+        )
+    )
     model.add(kl.BatchNormalization(name='c2_bn'))
     model.add(kl.Activation('relu', name='c2_relu'))
     model.add(kl.Dropout(0.1, name='c2_d_10'))
@@ -394,7 +385,8 @@ def model_c3_avg(input_shape, nclasses, compile_model=True):
             data_format='channels_last',
             input_shape=input_shape[1:],
             name='c3_3_256_1',
-        ))
+        )
+    )
     model.add(kl.BatchNormalization(name='c3_bn'))
     model.add(kl.Activation('relu', name='c3_relu'))
     model.add(kl.Dropout(0.1, name='c3_d_10'))
@@ -428,10 +420,7 @@ def model_c3_avg(input_shape, nclasses, compile_model=True):
     return model
 
 
-def combine_keras_models_parallel(models,
-                                  optimizer=None,
-                                  loss=None,
-                                  metrics=None):
+def combine_keras_models_parallel(models, optimizer=None, loss=None, metrics=None):
     """ Combine multiple keras models into 1, all being in parallel.
 
     Parameters

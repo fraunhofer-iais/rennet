@@ -4,7 +4,7 @@ Created: 26-08-2016
 
 Utilities for working with labels
 """
-from __future__ import print_function, division
+from __future__ import print_function, division, absolute_import
 from six.moves import zip, range
 import numpy as np
 from collections import Iterable, OrderedDict
@@ -16,10 +16,10 @@ import warnings
 
 from pympi import Eaf
 
-from rennet import __version__ as rennet_version
-from rennet.utils.py_utils import BaseSlotsOnlyClass
-from rennet.utils.np_utils import normalize_confusion_matrix, confusion_matrix_forcategorical
-from rennet.utils.mpeg7_utils import parse_mpeg7
+from .. import __version__ as rennet_version
+from .py_utils import BaseSlotsOnlyClass
+from .np_utils import normalize_confusion_matrix, confusion_matrix_forcategorical
+from .mpeg7_utils import parse_mpeg7
 
 
 class SequenceLabels(object):
@@ -64,7 +64,9 @@ class SequenceLabels(object):
             raise AssertionError(
                 "starts_ends doesn't look like a list of pairs\n"
                 "converted numpy.ndarray shape is: {}. Expected {}".format(
-                    starts_ends.shape, (len(labels), 2)))
+                    starts_ends.shape, (len(labels), 2)
+                )
+            )
 
         if samplerate <= 0:
             # IDEA: Support negative samplerate?
@@ -78,8 +80,10 @@ class SequenceLabels(object):
         if not sort_idx.shape[0] == 1:
             # something has gone horribly wrong
             raise RuntimeError(
-                "sort_idx has an unexpected shape: {}\nShould have been {}".
-                format(sort_idx.shape, (1, ) + sort_idx.shape[1:]))
+                "sort_idx has an unexpected shape: {}\nShould have been {}".format(
+                    sort_idx.shape, (1, ) + sort_idx.shape[1:]
+                )
+            )
 
         sort_idx = sort_idx[0, :]  # shape in dim-0 **should** always be 1
         self._starts_ends = starts_ends[sort_idx, ...]
@@ -134,10 +138,12 @@ class SequenceLabels(object):
         if to_samplerate <= 0 or from_samplerate <= 0:
             raise ValueError(
                 "samplerates <=0 not supported: from_samplerate= {}, to_samplerate= {}".
-                format(from_samplerate, to_samplerate))
+                format(from_samplerate, to_samplerate)
+            )
 
         if to_samplerate == from_samplerate or (
-                not isinstance(value, np.ndarray) and value == 0):
+            not isinstance(value, np.ndarray) and value == 0
+        ):
             return value
 
         if to_samplerate > from_samplerate and to_samplerate % from_samplerate == 0:
@@ -444,11 +450,11 @@ class SequenceLabels(object):
                              "Accepted values {'both', 'keys', 'labels'}.")
 
         if not isinstance(samplerate, int):
-            raise TypeError('samplerate should be of type int, not {}'.format(
-                type(samplerate)))
+            raise TypeError(
+                'samplerate should be of type int, not {}'.format(type(samplerate))
+            )
         if samplerate <= 0:
-            raise ValueError(
-                'samplerate should be >= 0, not {}'.format(samplerate))
+            raise ValueError('samplerate should be >= 0, not {}'.format(samplerate))
 
         keylabels = []
         bins = [0]
@@ -507,8 +513,9 @@ class SequenceLabels(object):
         s = ".".join((self.__module__.split('.')[-1], self.__class__.__name__))
         s += " with sample rate {}\n".format(self.samplerate)
         s += "{:8} - {:8} : {}\n".format("Start", "End", "Label")
-        s += "\n".join("{:<8.4f} - {:<8.4f} : {}".format(s, e, str(l))
-                       for (s, e), l in self)
+        s += "\n".join(
+            "{:<8.4f} - {:<8.4f} : {}".format(s, e, str(l)) for (s, e), l in self
+        )
         return s
 
     @classmethod
@@ -617,7 +624,8 @@ class SequenceLabels(object):
         if not (isinstance(tiers, (tuple, list)) or callable(tiers)):
             raise TypeError(
                 "`tiers` is expected to be a tuple or list of strings, or a predicate function, got: {}".
-                format(tiers))
+                format(tiers)
+            )
 
         tiers = tuple(tiers) if not callable(tiers) else tiers
 
@@ -629,8 +637,7 @@ class SequenceLabels(object):
             tiers = tuple(name for name in eaf.get_tier_names() if tiers(name))
 
         if len(tiers) == 0:
-            raise RuntimeError(
-                "No tiers found in the given file:\n{}".format(filepath))
+            raise RuntimeError("No tiers found in the given file:\n{}".format(filepath))
 
         starts_ends = []
         labels = []
@@ -640,8 +647,8 @@ class SequenceLabels(object):
             annots = eaf.get_annotation_data_for_tier(tier)
             if warnemptytier and len(annots) == 0:
                 warnings.warn(
-                    RuntimeWarning(
-                        "No annotations found for tier: {}.".format(tier)))
+                    RuntimeWarning("No annotations found for tier: {}.".format(tier))
+                )
                 continue
 
             annots = list(zip(*[a for a in annots if a[1] > a[0]]))
@@ -651,8 +658,9 @@ class SequenceLabels(object):
                 warnings.warn(
                     RuntimeWarning(
                         "IGNORED {} zero- or negative-duration annotations of {} annotations in tier {}".
-                        format(
-                            len(annots) - len(annots[0]), len(annots), tier)))
+                        format(len(annots) - len(annots[0]), len(annots), tier)
+                    )
+                )
 
             starts_ends.extend(zip(*annots[:2]))
             attrs = eaf.tiers[tier][2]  # tier attributes
@@ -663,11 +671,11 @@ class SequenceLabels(object):
                     annotator=attrs.get('ANNOTATOR', ""),
                     participant=attrs.get('PARTICIPANT', ""),
                     content=content,
-                ) for content in contents)
+                ) for content in contents
+            )
 
         if len(starts_ends) == 0:
-            raise RuntimeError(
-                "All tiers {} were found to be empty".format(tiers))
+            raise RuntimeError("All tiers {} were found to be empty".format(tiers))
 
         if cls == SequenceLabels:
             return cls(starts_ends, labels, samplerate)
@@ -712,7 +720,9 @@ class SequenceLabels(object):
                 warnings.warn(
                     RuntimeWarning(
                         "Provided file was not added as linked file due to `pympi` errors. Provided File:\n{}\nError:\n{}".
-                        format(linked_media_filepath, sys.exc_info())))
+                        format(linked_media_filepath, sys.exc_info())
+                    )
+                )
 
         # seen_tier_names = set()
         for (start, end), lix in zip(se, li):
@@ -722,9 +732,8 @@ class SequenceLabels(object):
                     if ann.tier_name not in eaf.tiers:
                         # FIXME: handle different participant and annotator for same tier_name
                         eaf.add_tier(
-                            ann.tier_name,
-                            part=ann.participant,
-                            ann=ann.annotator)
+                            ann.tier_name, part=ann.participant, ann=ann.annotator
+                        )
 
                     if ann.tier_name in curr_seen_tier_names:
                         raise ValueError(
@@ -733,7 +742,8 @@ class SequenceLabels(object):
                             "Found at time-slot {} ms \n{}".format(
                                 (start, end),
                                 "\n".join(map(str, labels[lix, ...])),
-                            ))
+                            )
+                        )
 
                     eaf.add_annotation(
                         ann.tier_name,
@@ -760,11 +770,13 @@ class EAFAnnotationInfo(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-m
     """
     __slots__ = ("tier_name", "annotator", "participant", "content")
 
-    def __init__(self,
-                 tier_name,
-                 annotator="rennet.{}".format(rennet_version),
-                 participant="",
-                 content=""):
+    def __init__(
+        self,
+        tier_name,
+        annotator="rennet.{}".format(rennet_version),
+        participant="",
+        content=""
+    ):
         self.tier_name = str(tier_name)
         self.annotator = str(annotator)
         self.participant = str(participant)
@@ -815,11 +827,7 @@ class ContiguousSequenceLabels(SequenceLabels):
             msg += "\nNo duplicate or missing segments allowed between min-start and max-end"
             raise AssertionError(msg)
 
-    def labels_at(self,
-                  ends,
-                  samplerate=None,
-                  default_label='zeros',
-                  rounded=10):
+    def labels_at(self, ends, samplerate=None, default_label='zeros', rounded=10):
         """ Get labels at ends.
 
         if `samplerate` is `None`, it is assumed that `ends` are at the same
@@ -946,7 +954,8 @@ class ContiguousSequenceLabels(SequenceLabels):
          (array([ 36.,  37.]), array([1, ([0.4, 0.6],)], dtype=object))]
         """
         params = super(ContiguousSequenceLabels, cls).from_dense_labels(
-            labels, groupby_keyfn, keep, min_start, samplerate, **kwargs)
+            labels, groupby_keyfn, keep, min_start, samplerate, **kwargs
+        )
         if cls == ContiguousSequenceLabels:
             return cls(*params[:-1])
         else:
@@ -974,16 +983,16 @@ class ContiguousSequenceLabels(SequenceLabels):
         NOTE: Supported use_tags: "ns" (default), "mpeg7".
         """
         res = super(ContiguousSequenceLabels, cls).from_mpeg7(
-            filepath, use_tags=use_tags, **kwargs)
+            filepath, use_tags=use_tags, **kwargs
+        )
         if cls == ContiguousSequenceLabels:
             return cls(*res)
         else:
             return res
 
-    def calc_raw_viterbi_priors(self,
-                                state_keyfn=lambda label: label,
-                                samplerate=None,
-                                round_to_int=False):
+    def calc_raw_viterbi_priors(
+        self, state_keyfn=lambda label: label, samplerate=None, round_to_int=False
+    ):
         """ Calculate raw priors for Markov states of labels. aka raw Viterbi priors.
 
         The Markov state corresponding to a label is determined by the calling the provided
@@ -1033,16 +1042,14 @@ class ContiguousSequenceLabels(SequenceLabels):
                 # IDEA: At least warn for potential loss of information?
 
         init = state_ids[0, ...].astype(durations.dtype)
-        priors = np.array([
-            durations[state_ids[:, s]].sum(axis=0)
-            for s in range(len(unique_states))
-        ]).astype(durations.dtype)
+        priors = np.array(
+            [durations[state_ids[:, s]].sum(axis=0) for s in range(len(unique_states))]
+        ).astype(durations.dtype)
         confmatcat = confusion_matrix_forcategorical
-        trans = confmatcat(state_ids[:-1, ...], state_ids[1:, ...]).astype(
-            durations.dtype)
-        self_trans = (
-            priors - state_ids.astype(np.int).sum(axis=0)
-        )  # e.g. segment of length 5 has 4 transitions to the same state
+        trans = confmatcat(state_ids[:-1, ...],
+                           state_ids[1:, ...]).astype(durations.dtype)
+        self_trans = (priors - state_ids.astype(np.int).sum(axis=0)
+                      )  # e.g. segment of length 5 has 4 transitions to the same state
 
         # NOTE: Consecutive segments with the same state_id would
         # already have been accounted for in the confusion_matrix calculation

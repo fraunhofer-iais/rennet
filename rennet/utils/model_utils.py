@@ -74,10 +74,12 @@ def validate_rennet_version(minversion, srcversion):
     if _curversion < _minversion:
         raise RuntimeError(
             "Please update rennet. Current: {}, Minimum Required for this model: {}".
-            format(curversion, minversion))
+            format(curversion, minversion)
+        )
 
     if _curversion < _srcversion:
         warnings.warn(
             RuntimeWarning(
                 "Please update rennet to the latest version for best compatibility and stability"
-            ))
+            )
+        )

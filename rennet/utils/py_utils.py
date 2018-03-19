@@ -49,8 +49,10 @@ def cvsecs(time):
         expr = r"(\d+):(\d+):(\d+)[,|.](\d+)"
         finds = re.findall(expr, time)[0]
         nums = [float(f) for f in finds]
-        return (3600 * int(finds[0]) + 60 * int(finds[1]) + int(finds[2]) +
-                nums[3] / (10**len(finds[3])))
+        return (
+            3600 * int(finds[0]) + 60 * int(finds[1]) + int(finds[2]) + nums[3] /
+            (10**len(finds[3]))
+        )
 
     elif isinstance(time, tuple):
         if len(time) == 3:
@@ -76,8 +78,7 @@ class BaseSlotsOnlyClass(object):  #pylint: disable=too-few-public-methods
     def __repr__(self):
         a_v = ((att, getattr(self, att)) for att in self.__slots__)
         r = ".".join((self.__module__.split(".")[-1], self.__class__.__name__))
-        return r + "({})".format(
-            ", ".join("{!s}={!r}".format(*av) for av in a_v))
+        return r + "({})".format(", ".join("{!s}={!r}".format(*av) for av in a_v))
 
 
 def getsize(obj_0):
@@ -106,15 +107,12 @@ def getsize(obj_0):
         elif isinstance(obj, (tuple, list, Set, deque)):
             size += sum(inner(i) for i in obj)
         elif isinstance(obj, Mapping) or hasattr(obj, iteritems):
-            size += sum(
-                inner(k) + inner(v) for k, v in getattr(obj, iteritems)())
+            size += sum(inner(k) + inner(v) for k, v in getattr(obj, iteritems)())
         # Check for custom object instances - may subclass above too
         if hasattr(obj, '__dict__'):
             size += inner(vars(obj))
         if hasattr(obj, '__slots__'):  # can have __slots__ with __dict__
-            size += sum(
-                inner(getattr(obj, s)) for s in obj.__slots__ if hasattr(
-                    obj, s))
+            size += sum(inner(getattr(obj, s)) for s in obj.__slots__ if hasattr(obj, s))
         return size
 
     return inner(obj_0)

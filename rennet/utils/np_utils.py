@@ -83,14 +83,17 @@ def strided_view(arr, win_shape, step_shape):
         # one is iterable, the other is not
         raise ValueError(
             "Both win_shape: {} and step_shape: {} should be iterable or not iterable.".
-            format(win_shape, step_shape))
+            format(win_shape, step_shape)
+        )
     elif (isinstance(win_shape, Iterable)
           and (len(win_shape) != len(step_shape)
                or len(win_shape) > len(arr.shape))):
         raise ValueError(
             "iterables win_shape: {} and step_shape: {} should be of the same length,"
             "and, the length should be <= len(arr.shape) : {}".format(
-                win_shape, step_shape, arr.shape))
+                win_shape, step_shape, arr.shape
+            )
+        )
     else:
         # both are not iterable
         if (not isinstance(win_shape, Iterable) and
@@ -98,7 +101,8 @@ def strided_view(arr, win_shape, step_shape):
              or (win_shape <= 0 or step_shape <= 0))):
             raise ValueError(
                 "Both win_shape: {} and step_shape: {} should be positive integers.".
-                format(win_shape, step_shape))
+                format(win_shape, step_shape)
+            )
 
     # create appropriate shaped inputs
     if not isinstance(win_shape, Iterable):
@@ -112,12 +116,13 @@ def strided_view(arr, win_shape, step_shape):
     final_shape = tuple()
     final_strides = tuple()
 
-    for d, (win, step, shape, stride) in enumerate(
-            zip(_win_shape, _step_shape, arr.shape, arr.strides)):
+    for d, (win, step, shape,
+            stride) in enumerate(zip(_win_shape, _step_shape, arr.shape, arr.strides)):
         if win is None != step is None:
             raise ValueError(
                 "BOTH win_shape: {} and step_shape: {} should be None at [{}] "
-                "or not None.".format(win_shape, step_shape, d))
+                "or not None.".format(win_shape, step_shape, d)
+            )
         elif win is None:
             # Not striding in this dim
             final_shape += (shape, )
@@ -125,12 +130,16 @@ def strided_view(arr, win_shape, step_shape):
         elif win <= 0 or step <= 0:
             raise ValueError(
                 "Both win_shape: {} and step_shape: {} should be > 0 or None "
-                "(if you want to skip striding in a dimension) at [{}].".
-                format(win_shape, step_shape, d))
+                "(if you want to skip striding in a dimension) at [{}].".format(
+                    win_shape, step_shape, d
+                )
+            )
         elif win > shape:
             raise ValueError(
-                "win_shape: {} should be <= arr.shape: {} at [{}], given: {} > {}".
-                format(win_shape, arr.shape, d, win, shape))
+                "win_shape: {} should be <= arr.shape: {} at [{}], given: {} > {}".format(
+                    win_shape, arr.shape, d, win, shape
+                )
+            )
         else:
             # s is zero when step is larger, resulting in one stride in this dim
             s = (shape - (win - step)) // step
@@ -143,8 +152,7 @@ def strided_view(arr, win_shape, step_shape):
                 stride,
             )
 
-    return np.lib.stride_tricks.as_strided(
-        arr, shape=final_shape, strides=final_strides)
+    return np.lib.stride_tricks.as_strided(arr, shape=final_shape, strides=final_strides)
 
 
 def _apply_rolling(func, arr, win_len, step_len=1, axis=0, *args, **kwargs):
@@ -238,11 +246,14 @@ def to_categorical(y, nclasses=None, warn=False):
         nclasses = ymax
     elif nclasses < ymax:
         raise RuntimeError(
-            "Some class labels are greater than provided nclasses: {} > {}".
-            format(ymax, nclasses))
+            "Some class labels are greater than provided nclasses: {} > {}".format(
+                ymax, nclasses
+            )
+        )
     elif nclasses > ymax and warn:
         raise RuntimeWarning(
-            "Some class labels may be missing: {} > {}".format(nclasses, ymax))
+            "Some class labels may be missing: {} > {}".format(nclasses, ymax)
+        )
 
     res = np.arange(nclasses)[np.newaxis, :] == y[..., np.newaxis]
     res = res.astype(np.float)  # cuz it is a probability dist
@@ -271,9 +282,7 @@ def _generic_confusion_matrix_forcat(  #pylint: disable=too-many-arguments
     #     "True {} != {} Predictions".format(Ytrue.shape, Ypred.shape)
     # NOTE: Can't use this, cuz case of multi-pred
 
-    _valid_axes = [
-        i for i in range(len(Ypred.shape) - 1) if Ypred.shape[i] > 1
-    ]
+    _valid_axes = [i for i in range(len(Ypred.shape) - 1) if Ypred.shape[i] > 1]
     if len(_valid_axes) == 0:
         msg = """ No valid reduction axes found\n
         - Are there more than one examples, at all? Check Shape.\n\tTrue: {}, Pred: {}\n
@@ -298,9 +307,11 @@ def _generic_confusion_matrix_forcat(  #pylint: disable=too-many-arguments
     conf = reduce_function(
         predicate_match(
             predicate_true(Ytrue[..., np.newaxis]),
-            predicate_pred(Ypred[..., np.newaxis, :])),
+            predicate_pred(Ypred[..., np.newaxis, :])
+        ),
         axis=reduce_axis,
-        keepdims=reduce_keepdims)
+        keepdims=reduce_keepdims
+    )
 
     return conf
 
@@ -317,7 +328,8 @@ def confusion_matrix_forcategorical(Ytrue, Ypred, axis=None, keepdims=False):
         predicate_match,
         reduce_function,
         reduce_axis=axis,
-        reduce_keepdims=keepdims)
+        reduce_keepdims=keepdims
+    )
 
 
 def confusion_matrix(  #pylint: disable=too-many-arguments
@@ -348,8 +360,7 @@ def confusion_matrix(  #pylint: disable=too-many-arguments
     # Ytrue tells the correct nclasses now
     Ypred = to_categorical(ypred, nclasses=Ytrue.shape[-1], warn=warn)
 
-    return confusion_matrix_forcategorical(
-        Ytrue, Ypred, axis=axis, keepdims=keepdims)
+    return confusion_matrix_forcategorical(Ytrue, Ypred, axis=axis, keepdims=keepdims)
 
 
 def normalize_confusion_matrix(conf_matrix):
@@ -381,10 +392,13 @@ def print_prec_rec(prec, rec, onlydiag=False, end='\n'):
     if onlydiag:
         print(
             "P(REC)){}{}".format(
-                "{:^2}".format(' '),
-                "{:^2}".format(' ').join("{: >6.2f} ({: >6.2f})".format(
-                    *z) for z in zip(p.diagonal(), r.diagonal()))),
-            end=end)
+                "{:^2}".format(' '), "{:^2}".format(' ').join(
+                    "{: >6.2f} ({: >6.2f})".format(*z)
+                    for z in zip(p.diagonal(), r.diagonal())
+                )
+            ),
+            end=end
+        )
     else:
         n = prec.shape[-1]
         tpf = "".join(["{:^", str(n * 7 + 2), "}"]).format("PRECISION")
@@ -392,19 +406,16 @@ def print_prec_rec(prec, rec, onlydiag=False, end='\n'):
         spc = "{:^6}".format(' ')
         print("".join([tpf, spc, trf]))
 
-        with printoptions(
-                suppress=True, formatter={
-                    'float': '{: >6.2f}'.format
-                }):
+        with printoptions(suppress=True, formatter={'float': '{: >6.2f}'.format}):
             print(
                 "\n".join("{}{}{}".format(*z) for z in zip(p, repeat(spc), r)),
-                end="\n" + end if end != "\n" else end)
+                end="\n" + end if end != "\n" else end
+            )
 
 
 def normalize_dynamic_range(arr, new_min=0., new_max=1., axis=None):
     if np.ndim(new_min) != 0 or np.ndim(new_max) != 0:
-        raise NotImplementedError(
-            "Only implemented for scalar new_min and new_max")
+        raise NotImplementedError("Only implemented for scalar new_min and new_max")
 
     # we do min-/max-ing without NaN values causing issues
     amin = arr.nanmin(axis=axis)
@@ -417,13 +428,9 @@ def normalize_dynamic_range(arr, new_min=0., new_max=1., axis=None):
     return new_min + (arr - amin) * (new_max - new_min) / (amax - amin)
 
 
-def normalize_mean_std_rolling(arr,
-                               win_len,
-                               axis=0,
-                               std_it=True,
-                               first_mean_var='skip',
-                               *args,
-                               **kwargs):
+def normalize_mean_std_rolling(
+    arr, win_len, axis=0, std_it=True, first_mean_var='skip', *args, **kwargs
+):
     """ Mean-Variance normalize a given numpy.ndarray in a rolling way.
 
     NOTE: `first_mean_var` decides what to use for the first `win_len` elements of `arr`.
@@ -433,8 +440,7 @@ def normalize_mean_std_rolling(arr,
 
     When the params are none of these, or the tuple's size != 2, a `ValueError` is raised.
     """
-    if first_mean_var not in ['skip', 'copy'
-                              ] and not isinstance(first_mean_var, tuple):
+    if first_mean_var not in ['skip', 'copy'] and not isinstance(first_mean_var, tuple):
         raise ValueError(
             "first_mean_var should be either : 'skip', 'copy' or a tuple(mean, std) of length 2"
         )
@@ -443,18 +449,19 @@ def normalize_mean_std_rolling(arr,
             raise ValueError(
                 "first_mean_var should be either : 'skip', 'copy' or a tuple(mean, std) of length 2"
             )
-        elif any((len(mv.shape) == len(arr.shape)) and all((m == a) or (
-                i == axis) for i, (m, a) in enumerate(
-                    zip(mv.shape, arr.shape))) for mv in first_mean_var):
+        elif any(
+            (len(mv.shape) == len(arr.shape)) and all(
+                (m == a) or (i == axis)
+                for i, (m, a) in enumerate(zip(mv.shape, arr.shape))
+            ) for mv in first_mean_var
+        ):
             raise ValueError(
                 "Mismatch in shapes of provided first_mean_var and arr.\nThe shape should at least be 1 along given `axis`"
             )
     elif axis < 0 or axis + 1 > len(arr.shape):
-        raise ValueError(
-            "axis should be >= 0 and within the shape of the given array")
+        raise ValueError("axis should be >= 0 and within the shape of the given array")
     elif win_len < 2:
-        raise ValueError(
-            "Such small win_len is not supported, and perhaps unnecessary")
+        raise ValueError("Such small win_len is not supported, and perhaps unnecessary")
 
     rmean = _apply_rolling(np.mean, arr, win_len, axis=axis, *args, **kwargs)
     if std_it:
@@ -479,10 +486,8 @@ def normalize_mean_std_rolling(arr,
         first_mean_std = first_mean_var[:1] + (np.sqrt(first_mean_var[-1])
                                                )  # variance to std
 
-    rmean = np.insert(
-        rmean, slice(0, win_len - 1, 1), first_mean_std[0], axis=axis)
+    rmean = np.insert(rmean, slice(0, win_len - 1, 1), first_mean_std[0], axis=axis)
     if std_it:
-        rstd = np.insert(
-            rstd, slice(0, win_len - 1, 1), first_mean_std[1], axis=axis)
+        rstd = np.insert(rstd, slice(0, win_len - 1, 1), first_mean_std[1], axis=axis)
 
     return (arr - rmean) / rstd
