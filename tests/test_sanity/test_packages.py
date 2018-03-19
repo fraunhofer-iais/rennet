@@ -1,6 +1,8 @@
 import pytest
 from rennet.utils.audio_utils import get_codec
 
+# pylint: disable=unused-variable
+
 
 @pytest.mark.trivial
 @pytest.mark.sanity_check
