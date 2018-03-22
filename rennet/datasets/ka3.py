@@ -71,8 +71,23 @@ class Annotations(lu.SequenceLabels):
             speakers,
             starts_ends,
             labels,
-            samplerate=sr,
+            samplerate=sr
         )
+    
+    @classmethod
+    def from_eaf(cls, filepath, tiers=(), **kwargs):
+        parsed = super(Annotations, cls).from_eaf(filepath, tiers, **kwargs)
+        starts_ends, _labels, samplerate, _ = parsed
+        
+        unique_speakers = set()
+        labels = []
+        for l in _labels:
+            unique_speakers.add((l.tier_name, None, l.participant))  # Gender hasn't been deciphered
+            labels.append(Transcription(speakerid=l.tier_name, confidence=1.0, content=l.content))
+            
+        speakers = tuple(Speaker(*uspk) for uspk in sorted(unique_speakers))
+        
+        return cls(filepath, speakers, starts_ends, labels, samplerate=samplerate)
 
     @classmethod
     def from_file(cls, filepath, **kwargs):  # pylint: disable=too-many-locals
@@ -81,12 +96,20 @@ class Annotations(lu.SequenceLabels):
         Parameters
         ----------
         filepath: path to a valid file
-        use_tags: 'ns' or 'mpeg7' (optional, valid only when file is mpeg7)
+        use_tags: 'ns' or 'mpeg7' (optional, valid only when file is mpeg7 xml)
+            Check `rennet.utils.mpeg7_utils`.
+        tiers: list or tuple of strings or unary callable (optional, valid only when file is elan eaf)
+            list or tuple of tier names (as strings) to specify what tiers to be read.
+            By default, this is an empty tuple (or list), and all tiers will be read.
+            If it is an unary callable (i.e. taking one argument), the function will be
+            used as the predicated to filter which tiers should be kept.
         """
-        # IDEA: Try parse_eaf automatically if parse_mpeg7 fails.
         # We have dug ourselves in a hole here by using a generic name and
         # by being able to support reading ELAN files
-        return cls.from_mpeg7(filepath, **kwargs)
+        
+        # HACK: Relying on filename extensions to decide between elan eaf and mpeg7 xml
+        parser = cls.from_eaf if filepath.lower().endswith(".eaf") else cls.from_mpeg7
+        return parser(filepath, **kwargs)
 
     def __str__(self):
         s = "Source filepath: {}".format(self.sourcefile)
@@ -154,11 +177,6 @@ class ActiveSpeakers(lu.ContiguousSequenceLabels):
     @classmethod
     def from_file(cls, filepath, warn_duplicates=True, **kwargs):
         ann = Annotations.from_file(filepath, **kwargs)
-        return cls.from_annotations(ann, warn_duplicates)
-
-    @classmethod
-    def from_mpeg7(cls, filepath, use_tags='ns', warn_duplicates=True, **kwargs):
-        ann = Annotations.from_mpeg7(filepath, use_tags=use_tags, **kwargs)
         return cls.from_annotations(ann, warn_duplicates)
 
     def __str__(self):

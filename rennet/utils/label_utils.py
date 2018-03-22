@@ -647,18 +647,19 @@ class SequenceLabels(object):
             annots = eaf.get_annotation_data_for_tier(tier)
             if warnemptytier and len(annots) == 0:
                 warnings.warn(
-                    RuntimeWarning("No annotations found for tier: {}.".format(tier))
+                    RuntimeWarning("No annotations found for tier: {} in file\n{}.".format(tier, filepath))
                 )
                 continue
-
+            
+            n_rawannots = len(annots)
             annots = list(zip(*[a for a in annots if a[1] > a[0]]))
             # filter away annotations that are <= zero duration long
 
-            if warnemptytier and len(annots[0]) < len(annots):
+            if warnemptytier and len(annots[0]) < n_rawannots:
                 warnings.warn(
                     RuntimeWarning(
-                        "IGNORED {} zero- or negative-duration annotations of {} annotations in tier {}".
-                        format(len(annots) - len(annots[0]), len(annots), tier)
+                        "IGNORED {} zero- or negative-duration annotations of {} annotations in tier {} in file\n{}".
+                        format(len(annots) - len(annots[0]), len(annots), tier, filepath)
                     )
                 )
 
@@ -675,7 +676,7 @@ class SequenceLabels(object):
             )
 
         if len(starts_ends) == 0:
-            raise RuntimeError("All tiers {} were found to be empty".format(tiers))
+            raise RuntimeError("All tiers {} were found to be empty in file\n{}".format(tiers, filepath))
 
         if cls == SequenceLabels:
             return cls(starts_ends, labels, samplerate)
