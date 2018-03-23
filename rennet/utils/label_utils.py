@@ -1,8 +1,20 @@
-"""
+#  Copyright 2018 Fraunhofer IAIS. All rights reserved.
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+"""Utilities for working with labels
+
 @motjuste
 Created: 26-08-2016
-
-Utilities for working with labels
 """
 from __future__ import print_function, division, absolute_import
 from six.moves import zip, range
@@ -647,10 +659,14 @@ class SequenceLabels(object):
             annots = eaf.get_annotation_data_for_tier(tier)
             if warnemptytier and len(annots) == 0:
                 warnings.warn(
-                    RuntimeWarning("No annotations found for tier: {} in file\n{}.".format(tier, filepath))
+                    RuntimeWarning(
+                        "No annotations found for tier: {} in file\n{}.".format(
+                            tier, filepath
+                        )
+                    )
                 )
                 continue
-            
+
             n_rawannots = len(annots)
             annots = list(zip(*[a for a in annots if a[1] > a[0]]))
             # filter away annotations that are <= zero duration long
@@ -676,7 +692,9 @@ class SequenceLabels(object):
             )
 
         if len(starts_ends) == 0:
-            raise RuntimeError("All tiers {} were found to be empty in file\n{}".format(tiers, filepath))
+            raise RuntimeError(
+                "All tiers {} were found to be empty in file\n{}".format(tiers, filepath)
+            )
 
         if cls == SequenceLabels:
             return cls(starts_ends, labels, samplerate)

@@ -1,3 +1,16 @@
+#  Copyright 2018 Fraunhofer IAIS. All rights reserved.
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
 """A setuptools based setup module for rennet
 @motjuste
 Created: 19-03-2018
@@ -59,11 +72,11 @@ DEV_REQUIRES = TEST_REQUIRES + [
 setup_params = {
     "name": "rennet",
     "version": VERSION,
-    "description": "Deep Learning utilities, mainly for speech segmentation ... for now",
+    "description": "Deep Learning utilities, mainly for audio segmentation ... for now",
     "long_description_content_type": LONG_DESCRIPTION_CONTENT_TYPE,
     "long_description": LONG_DESCRIPTION,
     "author": "Fraunhofer IAIS",
-    "license": "Apache License, Version 2.0",
+    "license": "Apache License 2.0",
     "url": "https://github.com/fraunhofer-iais/rennet",
     "packages": find_packages(),
     "install_requires": INSTALL_REQUIRES,

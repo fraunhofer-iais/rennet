@@ -1,8 +1,20 @@
-"""
+#  Copyright 2018 Fraunhofer IAIS. All rights reserved.
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+"""Test the audio utilities module
+
 @mojuste
 Created: 18-08-2016
-
-Test the audio utilities module
 """
 from __future__ import print_function, division
 import pytest
@@ -23,7 +35,8 @@ test_1_wav = ValidAudioFile(
     32000,
     2,
     10.00946875,
-    320303)
+    320303
+)
 
 test_1_96k_wav = ValidAudioFile(
     "./data/test/test1_96k.wav",  # NOTE: Running from the project root
@@ -31,7 +44,8 @@ test_1_96k_wav = ValidAudioFile(
     96000,
     2,
     10.00946875,
-    960909)
+    960909
+)
 
 test_1_mp3 = ValidAudioFile(
     "./data/test/test1.mp3",  # NOTE: Running from the project root
@@ -39,7 +53,8 @@ test_1_mp3 = ValidAudioFile(
     32000,
     2,
     10.00946875,
-    320303)
+    320303
+)
 
 test_1_mp4 = ValidAudioFile(
     "./data/test/creative_common.mp4",  # NOTE: Running from the project root
@@ -47,7 +62,8 @@ test_1_mp4 = ValidAudioFile(
     48000,
     2,
     2.2613333333333334,
-    108544)
+    108544
+)
 
 WORKING_DATA_RAW_MEDIA = glob("./data/working/*/*/media/raw/*.*")
 
@@ -58,8 +74,7 @@ def working_data_raw_media(request):
     return request.param
 
 
-@pytest.fixture(
-    scope="module", params=[test_1_wav, test_1_mp3, test_1_96k_wav])
+@pytest.fixture(scope="module", params=[test_1_wav, test_1_mp3, test_1_96k_wav])
 def valid_audio_files(request):
     """ Valid audio files for testing """
     return request.param
@@ -71,8 +86,8 @@ def valid_wav_files(request):
 
 
 @pytest.fixture(
-    scope="module",
-    params=[test_1_mp3, test_1_mp4, test_1_wav, test_1_96k_wav])
+    scope="module", params=[test_1_mp3, test_1_mp4, test_1_wav, test_1_96k_wav]
+)
 def valid_media_files(request):
     """
     ultimate one to pass for get_samplerate(...) ... etc
@@ -145,7 +160,8 @@ def test_load_audio_as_is(valid_media_files):
     filepath = valid_media_files.filepath
 
     data, sr = au.load_audio(
-        filepath, mono=False, samplerate=correct_sr, return_samplerate=True)
+        filepath, mono=False, samplerate=correct_sr, return_samplerate=True
+    )
 
     assert sr == correct_sr
 
@@ -192,8 +208,7 @@ def test_AudioIO_from_audiometadata(valid_media_files):
             vm = valid_media_files
             sr = vm.samplerate
             assert abs(vm.nsamples - updated_metadata.nsamples) <= sr * 5e-2
-            assert_almost_equal(
-                updated_metadata.seconds, vm.seconds, decimal=1)
+            assert_almost_equal(updated_metadata.seconds, vm.seconds, decimal=1)
         else:
             assert valid_media_files == updated_metadata
     else:
@@ -208,8 +223,7 @@ def test_AudioIO_get_numpy_data(valid_media_files):
     correct_noc = valid_media_files.nchannels
 
     if valid_media_files.samplerate <= 48000:
-        data = pu.AudioIO.from_audiometadata(valid_media_files)[
-            0].get_numpy_data()
+        data = pu.AudioIO.from_audiometadata(valid_media_files)[0].get_numpy_data()
 
         # HACK: avconv and ffmpeg give different nsamples for mp3
         if valid_media_files.format == "mp3":

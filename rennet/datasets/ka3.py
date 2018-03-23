@@ -1,8 +1,20 @@
-"""
+#  Copyright 2018 Fraunhofer IAIS. All rights reserved.
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+"""Helpers for working with KA3 dataset
+
 @motjuste
 Created: 29-08-2016
-
-Helpers for working with KA3 dataset
 """
 from __future__ import print_function, division, absolute_import
 import numpy as np
@@ -66,27 +78,24 @@ class Annotations(lu.SequenceLabels):
 
         # speakers = tuple(map(Speaker, *sorted(unique_speakers)))  # Doesn't work, but the one below does, FML
         speakers = tuple(Speaker(*uspk) for uspk in sorted(unique_speakers))
-        return cls(
-            filepath,
-            speakers,
-            starts_ends,
-            labels,
-            samplerate=sr
-        )
-    
+        return cls(filepath, speakers, starts_ends, labels, samplerate=sr)
+
     @classmethod
     def from_eaf(cls, filepath, tiers=(), **kwargs):
         parsed = super(Annotations, cls).from_eaf(filepath, tiers, **kwargs)
         starts_ends, _labels, samplerate, _ = parsed
-        
+
         unique_speakers = set()
         labels = []
         for l in _labels:
-            unique_speakers.add((l.tier_name, None, l.participant))  # Gender hasn't been deciphered
-            labels.append(Transcription(speakerid=l.tier_name, confidence=1.0, content=l.content))
-            
+            unique_speakers.add((l.tier_name, None,
+                                 l.participant))  # Gender hasn't been deciphered
+            labels.append(
+                Transcription(speakerid=l.tier_name, confidence=1.0, content=l.content)
+            )
+
         speakers = tuple(Speaker(*uspk) for uspk in sorted(unique_speakers))
-        
+
         return cls(filepath, speakers, starts_ends, labels, samplerate=samplerate)
 
     @classmethod
@@ -106,7 +115,7 @@ class Annotations(lu.SequenceLabels):
         """
         # We have dug ourselves in a hole here by using a generic name and
         # by being able to support reading ELAN files
-        
+
         # HACK: Relying on filename extensions to decide between elan eaf and mpeg7 xml
         parser = cls.from_eaf if filepath.lower().endswith(".eaf") else cls.from_mpeg7
         return parser(filepath, **kwargs)

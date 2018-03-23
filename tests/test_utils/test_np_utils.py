@@ -1,8 +1,20 @@
-"""
+#  Copyright 2018 Fraunhofer IAIS. All rights reserved.
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+"""Test the Numpy Utilities
+
 @motjuste
 Created: 08-02-2017
-
-Test the Numpy Utilities
 """
 from __future__ import division, print_function
 import pytest
@@ -22,15 +34,17 @@ def base_labels_cls3():
     that can be recombined to act as predicitons of each other
     """
 
-    return np.array([
-        [0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1],  # Exact
-        [1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],  # No 2_0
-        [0, 0, 2, 2, 1, 1, 2, 2, 2, 2, 0, 0, 1, 1],  # No 1_0
-        [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],  # No 2
-        [1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1],  # No 0
-        [1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 0, 0, 0],  # None correct
-        [4, 4, 3, 2, 2, 2, 2, 1, 1, 1, 1, 1, 0, 0],  # Extra class
-    ])
+    return np.array(
+        [
+            [0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1],  # Exact
+            [1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],  # No 2_0
+            [0, 0, 2, 2, 1, 1, 2, 2, 2, 2, 0, 0, 1, 1],  # No 1_0
+            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],  # No 2
+            [1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1],  # No 0
+            [1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 0, 0, 0],  # None correct
+            [4, 4, 3, 2, 2, 2, 2, 1, 1, 1, 1, 1, 0, 0],  # Extra class
+        ]
+    )
 
 
 ## FIXTURES AND TESTS FOR TO_CATEGORICAL ###########################################
@@ -58,11 +72,9 @@ def pred1_batB_seqL1_cls3_trues_preds_user_cat(request, base_labels_cls3):
     }
 
 
-def test_tocategorical_trues_preds_user(
-        pred1_batB_seqL1_cls3_trues_preds_user_cat):
+def test_tocategorical_trues_preds_user(pred1_batB_seqL1_cls3_trues_preds_user_cat):
     y, Y, nc = [
-        pred1_batB_seqL1_cls3_trues_preds_user_cat[k]
-        for k in ['y', 'Y', 'nclasses']
+        pred1_batB_seqL1_cls3_trues_preds_user_cat[k] for k in ['y', 'Y', 'nclasses']
     ]
 
     assert_almost_equal(nu.to_categorical(y, nclasses=nc), Y)
@@ -102,9 +114,7 @@ def batB_seqL1_cls3_trues_generic_cat(request, base_labels_cls3):
 
 
 def test_tocategorical_trues_generic(batB_seqL1_cls3_trues_generic_cat):
-    y, Y, nc = [
-        batB_seqL1_cls3_trues_generic_cat[k] for k in ['y', 'Y', 'nclasses']
-    ]
+    y, Y, nc = [batB_seqL1_cls3_trues_generic_cat[k] for k in ['y', 'Y', 'nclasses']]
 
     assert_almost_equal(nu.to_categorical(y, nclasses=nc), Y)
 
@@ -143,9 +153,7 @@ def pred1_batB_seqL1_cls3_generic_cat(request, base_labels_cls3):
 
 
 def test_tocategorical_pred1_generic(pred1_batB_seqL1_cls3_generic_cat):
-    y, Y, nc = [
-        pred1_batB_seqL1_cls3_generic_cat[k] for k in ['y', 'Y', 'nclasses']
-    ]
+    y, Y, nc = [pred1_batB_seqL1_cls3_generic_cat[k] for k in ['y', 'Y', 'nclasses']]
 
     assert_almost_equal(nu.to_categorical(y, nclasses=nc), Y)
 
@@ -177,9 +185,7 @@ def predP_batB_seqL1_cls3_user_cat(request, base_labels_cls3):
 
 
 def test_tocategorical_predP_user(predP_batB_seqL1_cls3_user_cat):
-    y, Y, nc = [
-        predP_batB_seqL1_cls3_user_cat[k] for k in ['y', 'Y', 'nclasses']
-    ]
+    y, Y, nc = [predP_batB_seqL1_cls3_user_cat[k] for k in ['y', 'Y', 'nclasses']]
 
     assert_almost_equal(nu.to_categorical(y, nclasses=nc), Y)
 
@@ -214,9 +220,7 @@ def predP_batB_seqL1_cls3_generic_cat(request, base_labels_cls3):
 
 
 def test_tocategorical_predsP_generic(predP_batB_seqL1_cls3_generic_cat):
-    y, Y, nc = [
-        predP_batB_seqL1_cls3_generic_cat[k] for k in ['y', 'Y', 'nclasses']
-    ]
+    y, Y, nc = [predP_batB_seqL1_cls3_generic_cat[k] for k in ['y', 'Y', 'nclasses']]
 
     print(y.shape, Y.shape, nu.to_categorical(y, nc).shape)
     assert_almost_equal(nu.to_categorical(y, nclasses=nc), Y)
@@ -250,11 +254,9 @@ def pred1_batB_seqlQ_cls3_trues_preds_user_cat(request, base_labels_cls3):
     }
 
 
-def test_tocategorical_batB_seqLQ_user(
-        pred1_batB_seqlQ_cls3_trues_preds_user_cat):
+def test_tocategorical_batB_seqLQ_user(pred1_batB_seqlQ_cls3_trues_preds_user_cat):
     y, Y, nc = [
-        pred1_batB_seqlQ_cls3_trues_preds_user_cat[k]
-        for k in ['y', 'Y', 'nclasses']
+        pred1_batB_seqlQ_cls3_trues_preds_user_cat[k] for k in ['y', 'Y', 'nclasses']
     ]
 
     assert_almost_equal(nu.to_categorical(y, nclasses=nc), Y)
@@ -292,11 +294,8 @@ def batB_seqlQ_cls3_trues_generic_cat(request, base_labels_cls3):
     }
 
 
-def test_tocategorical_batB_seqlQ_trues_generic(
-        batB_seqlQ_cls3_trues_generic_cat):
-    y, Y, nc = [
-        batB_seqlQ_cls3_trues_generic_cat[k] for k in ['y', 'Y', 'nclasses']
-    ]
+def test_tocategorical_batB_seqlQ_trues_generic(batB_seqlQ_cls3_trues_generic_cat):
+    y, Y, nc = [batB_seqlQ_cls3_trues_generic_cat[k] for k in ['y', 'Y', 'nclasses']]
 
     print(y.shape, Y.shape, nu.to_categorical(y, nc).shape)
     assert_almost_equal(nu.to_categorical(y, nclasses=nc), Y)
@@ -332,10 +331,10 @@ def pred1_batB_seqlQ_cls3_preds_generic_cat(request, base_labels_cls3):
 
 
 def test_tocategorical_pred1_batB_seqlQ_preds_generic(
-        pred1_batB_seqlQ_cls3_preds_generic_cat):
+    pred1_batB_seqlQ_cls3_preds_generic_cat
+):
     y, Y, nc = [
-        pred1_batB_seqlQ_cls3_preds_generic_cat[k]
-        for k in ['y', 'Y', 'nclasses']
+        pred1_batB_seqlQ_cls3_preds_generic_cat[k] for k in ['y', 'Y', 'nclasses']
     ]
 
     print(y.shape, Y.shape, nu.to_categorical(y, nc).shape)
@@ -379,12 +378,8 @@ def predP_batB_seqlQ_cls3_preds_user_cat(request, base_labels_cls3):
     }
 
 
-def test_tocategorical_predP_batB_seqLQ_user(
-        predP_batB_seqlQ_cls3_preds_user_cat):
-    y, Y, nc = [
-        predP_batB_seqlQ_cls3_preds_user_cat[k]
-        for k in ['y', 'Y', 'nclasses']
-    ]
+def test_tocategorical_predP_batB_seqLQ_user(predP_batB_seqlQ_cls3_preds_user_cat):
+    y, Y, nc = [predP_batB_seqlQ_cls3_preds_user_cat[k] for k in ['y', 'Y', 'nclasses']]
 
     print(y.shape, Y.shape, nu.to_categorical(y, nc).shape)
     assert_almost_equal(nu.to_categorical(y, nclasses=nc), Y)
@@ -431,11 +426,8 @@ def predP_batB_seqlQ_cls3_generic_cat(request, base_labels_cls3):
     }
 
 
-def test_tocategorical_predP_batB_seqLQ_generic(
-        predP_batB_seqlQ_cls3_generic_cat):
-    y, Y, nc = [
-        predP_batB_seqlQ_cls3_generic_cat[k] for k in ['y', 'Y', 'nclasses']
-    ]
+def test_tocategorical_predP_batB_seqLQ_generic(predP_batB_seqlQ_cls3_generic_cat):
+    y, Y, nc = [predP_batB_seqlQ_cls3_generic_cat[k] for k in ['y', 'Y', 'nclasses']]
 
     print(y.shape, Y.shape, nu.to_categorical(y, nc).shape)
     assert_almost_equal(nu.to_categorical(y, nclasses=nc), Y)
@@ -479,8 +471,9 @@ def batB_seql1_cls3_trues_confmat(request, base_labels_cls3):
     params=list(range(5)),
     ids=lambda i: "P={}".format(i),  #pylint: disable=unnecessary-lambda
 )  #pylint: disable=too-many-locals
-def pred1_batB_seql1_cls3_preds_confmat(request, base_labels_cls3,
-                                        batB_seql1_cls3_trues_confmat):
+def pred1_batB_seql1_cls3_preds_confmat(
+    request, base_labels_cls3, batB_seql1_cls3_trues_confmat
+):
     i = request.param
 
     yp = base_labels_cls3[i]
@@ -527,8 +520,7 @@ def pred1_batB_seql1_cls3_preds_confmat(request, base_labels_cls3,
 @pytest.mark.confmat
 def test_pred1_batB_seql1_user_confmat(pred1_batB_seql1_cls3_preds_confmat):
     Yt, Yp, confmat = [
-        pred1_batB_seql1_cls3_preds_confmat[k]
-        for k in ['Yt', 'Yp', 'confmat']
+        pred1_batB_seql1_cls3_preds_confmat[k] for k in ['Yt', 'Yp', 'confmat']
     ]
     print(Yt.shape, Yp.shape)
     assert_almost_equal(nu.confusion_matrix_forcategorical(Yt, Yp), confmat)
@@ -544,19 +536,18 @@ def test_pred1_batB_seql1_user_confmat(pred1_batB_seql1_cls3_preds_confmat):
 @pytest.mark.confmat
 def test_pred1_batB_seql1_generic_confmat(pred1_batB_seql1_cls3_preds_confmat):
     Yt, Yp, confmat = [
-        pred1_batB_seql1_cls3_preds_confmat[k]
-        for k in ['Ytg', 'Ypg', 'confmatg']
+        pred1_batB_seql1_cls3_preds_confmat[k] for k in ['Ytg', 'Ypg', 'confmatg']
     ]
     print("TEST", Yt.shape, Yp.shape)
 
     assert_almost_equal(
-        nu.confusion_matrix_forcategorical(Yt, Yp, keepdims=True), confmat)
+        nu.confusion_matrix_forcategorical(Yt, Yp, keepdims=True), confmat
+    )
 
     yt, yp = [pred1_batB_seql1_cls3_preds_confmat[k] for k in ['ytg', 'ypg']]
     nclasses = Yt.shape[-1]
     print(yt.shape, yp.shape)
-    assert_almost_equal(
-        nu.confusion_matrix(yt, yp, nclasses, keepdims=True), confmat)
+    assert_almost_equal(nu.confusion_matrix(yt, yp, nclasses, keepdims=True), confmat)
 
     assert True
 
@@ -566,8 +557,9 @@ def test_pred1_batB_seql1_generic_confmat(pred1_batB_seql1_cls3_preds_confmat):
     params=[list(range(2))],  # P: number of predictions
     ids=lambda i: "P={}".format(i),  #pylint: disable=unnecessary-lambda
 )  #pylint: disable=too-many-locals
-def predP_batB_seql1_cls3_preds_confmat(request, base_labels_cls3,
-                                        batB_seql1_cls3_trues_confmat):
+def predP_batB_seql1_cls3_preds_confmat(
+    request, base_labels_cls3, batB_seql1_cls3_trues_confmat
+):
     i = request.param
 
     yp = [base_labels_cls3[ii] for ii in i]
@@ -626,8 +618,7 @@ def predP_batB_seql1_cls3_preds_confmat(request, base_labels_cls3,
 @pytest.mark.confmat
 def test_predP_batB_seql1_user_confmat(predP_batB_seql1_cls3_preds_confmat):
     Yt, Yp, confmat = [
-        predP_batB_seql1_cls3_preds_confmat[k]
-        for k in ['Yt', 'Yp', 'confmat']
+        predP_batB_seql1_cls3_preds_confmat[k] for k in ['Yt', 'Yp', 'confmat']
     ]
     print("\nTEST", Yt.shape, Yp.shape, confmat.shape)
     print()
@@ -644,19 +635,18 @@ def test_predP_batB_seql1_user_confmat(predP_batB_seql1_cls3_preds_confmat):
 @pytest.mark.confmat
 def test_predP_batB_seql1_generic_confmat(predP_batB_seql1_cls3_preds_confmat):
     Yt, Yp, confmat = [
-        predP_batB_seql1_cls3_preds_confmat[k]
-        for k in ['Ytg', 'Ypg', 'confmatg']
+        predP_batB_seql1_cls3_preds_confmat[k] for k in ['Ytg', 'Ypg', 'confmatg']
     ]
     print("\nTEST", Yt.shape, Yp.shape, confmat.shape)
     print()
     assert_almost_equal(
-        nu.confusion_matrix_forcategorical(Yt, Yp, keepdims=True), confmat)
+        nu.confusion_matrix_forcategorical(Yt, Yp, keepdims=True), confmat
+    )
 
     yt, yp = [predP_batB_seql1_cls3_preds_confmat[k] for k in ['ytg', 'ypg']]
     nclasses = Yt.shape[-1]
     print(yt.shape, yp.shape)
-    assert_almost_equal(
-        nu.confusion_matrix(yt, yp, nclasses, keepdims=True), confmat)
+    assert_almost_equal(nu.confusion_matrix(yt, yp, nclasses, keepdims=True), confmat)
 
     assert True
 
@@ -693,8 +683,9 @@ def batB_seqlQ_cls3_trues_confmat(request, base_labels_cls3):
     params=[list(range(2))],  # B: batchsize, Q: SequenceLength
     ids=lambda i: "P={}".format(i),  #pylint: disable=unnecessary-lambda
 )  #pylint: disable=too-many-locals
-def pred1_batB_seqlQ_cls3_preds_confmat(request, base_labels_cls3,
-                                        batB_seqlQ_cls3_trues_confmat):
+def pred1_batB_seqlQ_cls3_preds_confmat(
+    request, base_labels_cls3, batB_seqlQ_cls3_trues_confmat
+):
     i = request.param
 
     yp = [base_labels_cls3[ii] for ii in i]
@@ -707,8 +698,7 @@ def pred1_batB_seqlQ_cls3_preds_confmat(request, base_labels_cls3,
 
     confmat, confrecall, confprecision = [], [], []
     for b, ybb in enumerate(yp):
-        _confmat = ext_confusionmatrix(
-            yt[b, ...], ybb, labels=np.arange(nclasses))
+        _confmat = ext_confusionmatrix(yt[b, ...], ybb, labels=np.arange(nclasses))
 
         _confrecall = _confmat / (_confmat.sum(axis=1))[:, np.newaxis]
         _confprecision = (_confmat.T / (_confmat.sum(axis=0))[:, np.newaxis]).T
@@ -754,8 +744,7 @@ def pred1_batB_seqlQ_cls3_preds_confmat(request, base_labels_cls3,
 @pytest.mark.confmat
 def test_pred1_batB_seqlQ_user_confmat(pred1_batB_seqlQ_cls3_preds_confmat):
     Yt, Yp, confmat = [
-        pred1_batB_seqlQ_cls3_preds_confmat[k]
-        for k in ['Yt', 'Yp', 'confmat']
+        pred1_batB_seqlQ_cls3_preds_confmat[k] for k in ['Yt', 'Yp', 'confmat']
     ]
     print("\nTEST", Yt.shape, Yp.shape, confmat.shape)
     print()
@@ -772,19 +761,18 @@ def test_pred1_batB_seqlQ_user_confmat(pred1_batB_seqlQ_cls3_preds_confmat):
 @pytest.mark.confmat
 def test_pred1_batB_seqlQ_generic_confmat(pred1_batB_seqlQ_cls3_preds_confmat):
     Yt, Yp, confmat = [
-        pred1_batB_seqlQ_cls3_preds_confmat[k]
-        for k in ['Ytg', 'Ypg', 'confmatg']
+        pred1_batB_seqlQ_cls3_preds_confmat[k] for k in ['Ytg', 'Ypg', 'confmatg']
     ]
     print("\nTEST", Yt.shape, Yp.shape, confmat.shape)
     print()
     assert_almost_equal(
-        nu.confusion_matrix_forcategorical(Yt, Yp, keepdims=True), confmat)
+        nu.confusion_matrix_forcategorical(Yt, Yp, keepdims=True), confmat
+    )
 
     yt, yp = [pred1_batB_seqlQ_cls3_preds_confmat[k] for k in ['ytg', 'ypg']]
     nclasses = Yt.shape[-1]
     print(yt.shape, yp.shape)
-    assert_almost_equal(
-        nu.confusion_matrix(yt, yp, nclasses, keepdims=True), confmat)
+    assert_almost_equal(nu.confusion_matrix(yt, yp, nclasses, keepdims=True), confmat)
 
     assert True
 
@@ -794,8 +782,9 @@ def test_pred1_batB_seqlQ_generic_confmat(pred1_batB_seqlQ_cls3_preds_confmat):
     params=[[list(range(4)), list(range(2))]],  # P: Predictors, B: batchsize,
     ids=lambda i: "P={}".format(i),  #pylint: disable=unnecessary-lambda
 )  #pylint: disable=too-many-locals
-def predP_batB_seqlQ_cls3_preds_confmat(request, base_labels_cls3,
-                                        batB_seqlQ_cls3_trues_confmat):
+def predP_batB_seqlQ_cls3_preds_confmat(
+    request, base_labels_cls3, batB_seqlQ_cls3_trues_confmat
+):
     p, b = request.param
 
     yp = []
@@ -815,12 +804,10 @@ def predP_batB_seqlQ_cls3_preds_confmat(request, base_labels_cls3,
     for pp, ypp in enumerate(yp):
         __confmat, __confrecall, __confprecision = [], [], []
         for bb, ybb in enumerate(ypp):
-            _confmat = ext_confusionmatrix(
-                yt[bb, ...], ybb, labels=np.arange(nclasses))
+            _confmat = ext_confusionmatrix(yt[bb, ...], ybb, labels=np.arange(nclasses))
 
             _confrecall = _confmat / (_confmat.sum(axis=1))[:, np.newaxis]
-            _confprecision = (_confmat.T /
-                              (_confmat.sum(axis=0))[:, np.newaxis]).T
+            _confprecision = (_confmat.T / (_confmat.sum(axis=0))[:, np.newaxis]).T
 
             __confmat.append(_confmat)
             __confrecall.append(_confrecall)
@@ -867,8 +854,7 @@ def predP_batB_seqlQ_cls3_preds_confmat(request, base_labels_cls3,
 @pytest.mark.confmat
 def test_predP_batB_seqlQ_user_confmat(predP_batB_seqlQ_cls3_preds_confmat):
     Yt, Yp, confmat = [
-        predP_batB_seqlQ_cls3_preds_confmat[k]
-        for k in ['Yt', 'Yp', 'confmat']
+        predP_batB_seqlQ_cls3_preds_confmat[k] for k in ['Yt', 'Yp', 'confmat']
     ]
     print("\nTEST", Yt.shape, Yp.shape, confmat.shape)
     print()
@@ -885,19 +871,18 @@ def test_predP_batB_seqlQ_user_confmat(predP_batB_seqlQ_cls3_preds_confmat):
 @pytest.mark.confmat
 def test_predP_batB_seqlQ_generic_confmat(predP_batB_seqlQ_cls3_preds_confmat):
     Yt, Yp, confmat = [
-        predP_batB_seqlQ_cls3_preds_confmat[k]
-        for k in ['Ytg', 'Ypg', 'confmatg']
+        predP_batB_seqlQ_cls3_preds_confmat[k] for k in ['Ytg', 'Ypg', 'confmatg']
     ]
     print("\nTEST", Yt.shape, Yp.shape, confmat.shape)
     print()
     assert_almost_equal(
-        nu.confusion_matrix_forcategorical(Yt, Yp, keepdims=True), confmat)
+        nu.confusion_matrix_forcategorical(Yt, Yp, keepdims=True), confmat
+    )
 
     yt, yp = [predP_batB_seqlQ_cls3_preds_confmat[k] for k in ['ytg', 'ypg']]
     nclasses = Yt.shape[-1]
     print(yt.shape, yp.shape)
-    assert_almost_equal(
-        nu.confusion_matrix(yt, yp, nclasses, keepdims=True), confmat)
+    assert_almost_equal(nu.confusion_matrix(yt, yp, nclasses, keepdims=True), confmat)
 
     assert True
 
@@ -1006,11 +991,9 @@ def test_predP_batB_seqlQ_normconfmat(predP_batB_seqlQ_cls3_preds_confmat):
 
 
 @pytest.mark.confmat
-def test_pred1_batB_seql1_confmat_printing(
-        pred1_batB_seql1_cls3_preds_confmat):
+def test_pred1_batB_seql1_confmat_printing(pred1_batB_seql1_cls3_preds_confmat):
     confrecall, confprecision = [
-        pred1_batB_seql1_cls3_preds_confmat[k]
-        for k in ['confrecall', 'confprecision']
+        pred1_batB_seql1_cls3_preds_confmat[k] for k in ['confrecall', 'confprecision']
     ]
 
     nu.print_prec_rec(confprecision, confrecall)
@@ -1022,7 +1005,8 @@ def test_pred1_batB_seql1_confmat_printing(
 
 
 @pytest.fixture(
-    scope='module', )
+    scope='module',
+)
 def base_2d_array(sourcefn=base_labels_cls3):
     """ Base 2D array fixture for numpy tricks tests
 
@@ -1046,12 +1030,12 @@ def test_1d_does_share_data_with_base_2d(base_2d_array, derived_1d_array):
     # striding creates a DummyArray with the same data
     # pure call to the as_strided function does just that, without any striding
     assert nu.arrays_do_share_data(
-        np.lib.stride_tricks.as_strided(derived_1d_array), base_2d_array)
+        np.lib.stride_tricks.as_strided(derived_1d_array), base_2d_array
+    )
 
 
 @pytest.mark.shared_data
-def test_1dcopy_does_not_share_data_with_base_2d(base_2d_array,
-                                                 derived_1d_array):
+def test_1dcopy_does_not_share_data_with_base_2d(base_2d_array, derived_1d_array):
     assert not nu.arrays_do_share_data(base_2d_array, derived_1d_array.copy())
 
 
@@ -1066,23 +1050,20 @@ def derived_2d_array_from_0(request, base_2d_array):
 
 
 @pytest.mark.shared_data
-def test_2d_does_share_data_with_base_2d(base_2d_array,
-                                         derived_2d_array_from_0):
+def test_2d_does_share_data_with_base_2d(base_2d_array, derived_2d_array_from_0):
     """ This should pass even for 0-length derived arrays """
     assert nu.arrays_do_share_data(base_2d_array, derived_2d_array_from_0)
     # striding creates a DummyArray with the same data
     # pure call to the as_strided function does just that, without any striding
     assert nu.arrays_do_share_data(
-        np.lib.stride_tricks.as_strided(derived_2d_array_from_0),
-        base_2d_array)
+        np.lib.stride_tricks.as_strided(derived_2d_array_from_0), base_2d_array
+    )
 
 
 @pytest.mark.shared_data
-def test_2dcopy_doesnot_share_data_with_base_2d(base_2d_array,
-                                                derived_2d_array_from_0):
+def test_2dcopy_doesnot_share_data_with_base_2d(base_2d_array, derived_2d_array_from_0):
     """ This should pass even for 0-length derived arrays """
-    assert not nu.arrays_do_share_data(base_2d_array,
-                                       derived_2d_array_from_0.copy())
+    assert not nu.arrays_do_share_data(base_2d_array, derived_2d_array_from_0.copy())
 
 
 # NOTE: Not testing for any other possible sub-arrays. Hope it is fine
