@@ -17,20 +17,20 @@
 Created: 01-02-2017
 """
 from __future__ import print_function, division, absolute_import
-from six.moves import zip
-import numpy as np
 import warnings
 from os.path import abspath
 from csv import reader
+import numpy as np
 import h5py as h
+from six.moves import zip
 
 from ..utils import label_utils as lu
 from ..utils import np_utils as nu
 from ..utils import h5_utils as hu
 from ..utils.py_utils import BaseSlotsOnlyClass
 
-samples_for_labelsat = lu.samples_for_labelsat
-times_for_labelsat = lu.times_for_labelsat
+samples_for_labelsat = lu.samples_for_labelsat  # pylint: disable=invalid-name
+times_for_labelsat = lu.times_for_labelsat  # pylint: disable=invalid-name
 
 
 class Speaker(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
@@ -60,12 +60,14 @@ class CallData(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
         return r
 
 
-callid_for_filename = lambda fn: fn.split('_')[-1].split('.')[0]
-# TODO: make proper function and raise errors?
+def callid_for_filename(fn):
+    """Parse callid from file-name/-path"""
+    return fn.split('_')[-1].split('.')[0]
 
-groupid_for_callid = lambda callid: callid[:3]
 
-# TODO: make proper function and raise errors?
+def groupid_for_callid(callid):
+    """Parse groupid from callid"""
+    return callid[:3]
 
 
 class AllCallData(object):
@@ -173,7 +175,7 @@ class Transcription(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-metho
 
 
 class Annotations(lu.SequenceLabels):
-    """
+    """Annotations
     TODO: [ ] Add proper docs
 
     NOTE: This is almost identical to ka3.Annotations, but copied here, cuz
@@ -195,11 +197,10 @@ class Annotations(lu.SequenceLabels):
 
     @property
     def callid(self):
-        if self.calldata is None:
-            # filenames are fe_03_CALLID.*
-            return callid_for_filename(self.sourcefile)
-        else:
-            return self.calldata.callid
+        return (
+            self.calldata.callid
+            if self.calldata is not None else callid_for_filename(self.sourcefile)
+        )
 
     def find_and_set_calldata(self, allcalldata):
         # IDEA: Since we know source's filepath, we may be able to guess allcalldata path
@@ -239,7 +240,7 @@ class Annotations(lu.SequenceLabels):
         with open(filepath, 'r') as f:
 
             for row in reader(f, delimiter=':'):
-                if len(row) == 0 or row[0][0] == '#':
+                if not row or row[0][0] == '#':
                     # ignore empty lines or comments
                     continue
                 else:
@@ -254,9 +255,9 @@ class Annotations(lu.SequenceLabels):
                     # Easy bad case is s and e ending with zeros after decimal.
                     s = s.split('.')
                     e = e.split('.')
-                    decimultiplier.append(tuple(map(len, (s[1], e[1]))))
-                    starts.append(tuple(map(int, s)))
-                    ends.append(tuple(map(int, e)))
+                    decimultiplier.append(tuple(map(len, (s[1], e[1]))))  # pylint: disable=bad-builtin
+                    starts.append(tuple(map(int, s)))  # pylint: disable=bad-builtin
+                    ends.append(tuple(map(int, e)))  # pylint: disable=bad-builtin
 
                     spk = spk.strip()
                     if spk.upper() == 'A':
@@ -298,10 +299,10 @@ class Annotations(lu.SequenceLabels):
 
     def __getitem__(self, idx):
         args = super(Annotations, self).__getitem__(idx)
-        if self.__class__ is Annotations:
-            return self.__class__(self.sourcefile, self.calldata, *args)
-        else:
-            return args
+        return (
+            self.__class__(self.sourcefile, self.calldata, *args)
+            if self.__class__ is Annotations else args
+        )
 
 
 class ActiveSpeakers(lu.ContiguousSequenceLabels):
@@ -321,11 +322,10 @@ class ActiveSpeakers(lu.ContiguousSequenceLabels):
 
     @property
     def callid(self):
-        if self.calldata is None:
-            # filenames are fe_03_CALLID.*
-            return callid_for_filename(self.sourcefile)
-        else:
-            return self.calldata.callid
+        return (
+            self.calldata.callid
+            if self.calldata is not None else callid_for_filename(self.sourcefile)
+        )
 
     def find_and_set_calldata(self, allcalldata):
         fn = self.sourcefile
@@ -353,16 +353,15 @@ class ActiveSpeakers(lu.ContiguousSequenceLabels):
             elif len(lix) > 1:
                 # for loop outside cuz there may be duplicate annots for the same speaker
                 # inline for loop will lead to numpy not incrementing for duplicates
-                for ix in lix:
-                    labels[i, ann.labels[ix].speakerchannel] += 1
+                for labelidx in lix:
+                    labels[i, ann.labels[labelidx].speakerchannel] += 1
 
         if labels.max() > 1:
             labels[labels > 1] = 1
             if warn_duplicates:
-                _w = "some speakers may have duplicate annotations for file:\n{}.\n!!! IGNORED !!!".format(
-                    ann.sourcefile
-                )
-                warnings.warn(_w)
+                msg = "some speakers may have duplicate annotations for file:\n"
+                msg += "{}.\n!!! IGNORED !!!".format(ann.sourcefile)
+                warnings.warn(msg)
 
         # IDEA: merge consecutive segments with the same label
         # Check rennet.datasets.ka3.ActiveSpeakers.from_annotations for explanation on skipping this
@@ -389,15 +388,15 @@ class ActiveSpeakers(lu.ContiguousSequenceLabels):
 
     def __getitem__(self, idx):
         args = super(ActiveSpeakers, self).__getitem__(idx)
-        if self.__class__ is ActiveSpeakers:
-            return self.__class__(self.sourcefile, self.calldata, *args)
-        else:
-            return args
+        return (
+            self.__class__(self.sourcefile, self.calldata, *args)
+            if self.__class__ is ActiveSpeakers else args
+        )
 
 
 # INPUTS PROVIDERS ######################################### INPUTS PROVIDERS #
 
-chosen_val_callids = [
+CHOSEN_VAL_CALLIDS = [
     '00007',
     '00013',
     '00028',
@@ -406,6 +405,7 @@ chosen_val_callids = [
     '00069',
     '00086',
 ]
+chosen_val_callids = CHOSEN_VAL_CALLIDS  # pylint: disable=invalid-name
 
 
 class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
@@ -429,8 +429,8 @@ class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
         with h.File(self.filepath, 'r') as f:
             root = f[self.audios_root]
 
-            for g in root.keys():  # groupids
-                grouped_callids[g] = set(root[g].keys())  # callids
+            for groupid in root.keys():  # groupids
+                grouped_callids[groupid] = set(root[groupid].keys())  # callids
 
         return grouped_callids
 
@@ -458,17 +458,17 @@ class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
         total_len = 0
 
         with h.File(self.filepath, 'r') as f:
-            a = f[self.audios_root]
-            l = f[self.labels_root]
+            audiog = f[self.audios_root]
+            labelg = f[self.labels_root]
 
             for groupid in sorted(self.grouped_callids.keys()):
                 for callid in sorted(self.grouped_callids[groupid]):
-                    ad = a[groupid][callid]  # h5 Dataset
-                    ld = l[groupid][callid]  # h5 Dataset
+                    audiod = audiog[groupid][callid]  # h5 Dataset
+                    labeld = labelg[groupid][callid]  # h5 Dataset
 
-                    totlen = ad.shape[0]
+                    totlen = audiod.shape[0]
 
-                    starts = np.arange(0, totlen, ad.chunks[0])
+                    starts = np.arange(0, totlen, audiod.chunks[0])
                     ends = np.empty_like(starts)
                     ends[:-1] = starts[1:]
                     ends[-1] = totlen
@@ -477,9 +477,9 @@ class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
 
                     chunkings.extend(
                         hu.Chunking(
-                            datapath=ad.name,
+                            datapath=audiod.name,
                             dataslice=np.s_[s:e, ...],
-                            labelpath=ld.name,
+                            labelpath=labeld.name,
                             labelslice=np.s_[s:e, ...]
                         ) for s, e in zip(starts, ends)
                     )
@@ -496,13 +496,13 @@ class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
 
     @classmethod
     def for_groupids(
-        cls,
-        filepath,
-        groupids='all',
-        audios_root='audios',
-        labels_root='labels',
-        **kwargs
-    ):
+            cls,
+            filepath,
+            groupids='all',
+            audios_root='audios',
+            labels_root='labels',
+            **kwargs
+    ):  # yapf: disable
         obj = cls(filepath, audios_root=audios_root, labels_root=labels_root, **kwargs)
 
         if groupids == 'all':
@@ -516,8 +516,8 @@ class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
             grouped_callids = dict()
 
             # NOTE: Doing like this to raise KeyError for incorrect groupids
-            for g in groupids:
-                grouped_callids[g] = obj.grouped_callids[g]
+            for groupid in groupids:
+                grouped_callids[groupid] = obj.grouped_callids[groupid]
 
             obj.grouped_callids = grouped_callids
 
@@ -525,8 +525,8 @@ class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
 
     @classmethod
     def for_groupids_at(
-        cls, filepath, at=np.s_[:], audios_root='audios', labels_root='labels', **kwargs
-    ):
+            cls, filepath, at=np.s_[:], audios_root='audios', labels_root='labels', **kwargs
+    ):  # yapf: disable
         obj = cls(filepath, audios_root=audios_root, labels_root=labels_root, **kwargs)
 
         if at == np.s_[:]:
@@ -546,8 +546,8 @@ class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
         else:
             grouped_callids = dict()
 
-            for g in groupids_at:
-                grouped_callids[g] = obj.grouped_callids[g]
+            for group_idx in groupids_at:
+                grouped_callids[group_idx] = obj.grouped_callids[group_idx]
 
             obj.grouped_callids = grouped_callids
 
@@ -555,13 +555,13 @@ class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
 
     @classmethod
     def for_callids(
-        cls,
-        filepath,
-        callids='all',
-        audios_root='audios',
-        labels_root='labels',
-        **kwargs
-    ):
+            cls,
+            filepath,
+            callids='all',
+            audios_root='audios',
+            labels_root='labels',
+            **kwargs
+    ):  # yapf: disable
         # FIXME: figure out proper way to kwargs
         obj = cls(filepath, audios_root=audios_root, labels_root=labels_root, **kwargs)
 
@@ -580,11 +580,11 @@ class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
 
             grouped_callids = dict()
 
-            for c in callids:
-                g = groupid_for_callid(c)
+            for callid in callids:
+                groupid = groupid_for_callid(callid)
 
-                v = grouped_callids.get(g, set())
-                grouped_callids[g] = v.union({c})
+                v = grouped_callids.get(groupid, set())
+                grouped_callids[groupid] = v.union({callid})
 
             obj.grouped_callids = grouped_callids
 
@@ -592,8 +592,8 @@ class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
 
     @classmethod
     def for_callids_at(
-        cls, filepath, at=np.s_[:], audios_root='audios', labels_root='labels', **kwargs
-    ):
+            cls, filepath, at=np.s_[:], audios_root='audios', labels_root='labels', **kwargs
+    ):  # yapf: disable
         obj = cls(filepath, audios_root=audios_root, labels_root=labels_root, **kwargs)
 
         if at == np.s_[:]:
@@ -613,11 +613,11 @@ class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
         else:
             grouped_callids = dict()
 
-            for c in callids_at:
-                g = groupid_for_callid(c)
+            for callid in callids_at:
+                groupid = groupid_for_callid(callid)
 
-                v = grouped_callids.get(g, set())
-                grouped_callids[g] = v.union({c})
+                v = grouped_callids.get(groupid, set())
+                grouped_callids[groupid] = v.union({callid})
 
             obj.grouped_callids = grouped_callids
 
@@ -702,9 +702,9 @@ class UnnormedFrameWithContextInputsProvider(  # pylint: disable=too-many-ancest
 
 
 class ChunkMeanVarianceNormalizingNActiveSpeakersPrepper(
-    hu.BaseChunkMeanVarianceNormalizer,
-    FramewiseNActiveSpeakersPrepper,
-):
+        hu.BaseChunkMeanVarianceNormalizer,
+        FramewiseNActiveSpeakersPrepper,
+):  # yapf: disable
     pass
 
 

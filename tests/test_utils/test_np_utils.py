@@ -25,7 +25,7 @@ from keras.utils.np_utils import to_categorical as ext_tocategorical
 
 from rennet.utils import np_utils as nu
 
-# pylint: disable=redefined-outer-name
+# pylint: disable=redefined-outer-name, invalid-name, missing-docstring
 
 
 @pytest.fixture(scope='module')
@@ -331,8 +331,8 @@ def pred1_batB_seqlQ_cls3_preds_generic_cat(request, base_labels_cls3):
 
 
 def test_tocategorical_pred1_batB_seqlQ_preds_generic(
-    pred1_batB_seqlQ_cls3_preds_generic_cat
-):
+        pred1_batB_seqlQ_cls3_preds_generic_cat
+):  # yapf: disable
     y, Y, nc = [
         pred1_batB_seqlQ_cls3_preds_generic_cat[k] for k in ['y', 'Y', 'nclasses']
     ]
@@ -472,8 +472,8 @@ def batB_seql1_cls3_trues_confmat(request, base_labels_cls3):
     ids=lambda i: "P={}".format(i),  #pylint: disable=unnecessary-lambda
 )  #pylint: disable=too-many-locals
 def pred1_batB_seql1_cls3_preds_confmat(
-    request, base_labels_cls3, batB_seql1_cls3_trues_confmat
-):
+        request, base_labels_cls3, batB_seql1_cls3_trues_confmat
+):  # yapf: disable
     i = request.param
 
     yp = base_labels_cls3[i]
@@ -518,16 +518,15 @@ def pred1_batB_seql1_cls3_preds_confmat(
 
 
 @pytest.mark.confmat
+@pytest.mark.filterwarnings('ignore:invalid value')
 def test_pred1_batB_seql1_user_confmat(pred1_batB_seql1_cls3_preds_confmat):
     Yt, Yp, confmat = [
         pred1_batB_seql1_cls3_preds_confmat[k] for k in ['Yt', 'Yp', 'confmat']
     ]
-    print(Yt.shape, Yp.shape)
     assert_almost_equal(nu.confusion_matrix_forcategorical(Yt, Yp), confmat)
 
     yt, yp = [pred1_batB_seql1_cls3_preds_confmat[k] for k in ['yt', 'yp']]
     nclasses = Yt.shape[-1]
-    print(yt.shape, yp.shape)
     assert_almost_equal(nu.confusion_matrix(yt, yp, nclasses), confmat)
 
     assert True
@@ -558,8 +557,8 @@ def test_pred1_batB_seql1_generic_confmat(pred1_batB_seql1_cls3_preds_confmat):
     ids=lambda i: "P={}".format(i),  #pylint: disable=unnecessary-lambda
 )  #pylint: disable=too-many-locals
 def predP_batB_seql1_cls3_preds_confmat(
-    request, base_labels_cls3, batB_seql1_cls3_trues_confmat
-):
+        request, base_labels_cls3, batB_seql1_cls3_trues_confmat
+):  # yapf: disable
     i = request.param
 
     yp = [base_labels_cls3[ii] for ii in i]
@@ -616,6 +615,7 @@ def predP_batB_seql1_cls3_preds_confmat(
 
 
 @pytest.mark.confmat
+@pytest.mark.filterwarnings('ignore:invalid value')
 def test_predP_batB_seql1_user_confmat(predP_batB_seql1_cls3_preds_confmat):
     Yt, Yp, confmat = [
         predP_batB_seql1_cls3_preds_confmat[k] for k in ['Yt', 'Yp', 'confmat']
@@ -684,8 +684,8 @@ def batB_seqlQ_cls3_trues_confmat(request, base_labels_cls3):
     ids=lambda i: "P={}".format(i),  #pylint: disable=unnecessary-lambda
 )  #pylint: disable=too-many-locals
 def pred1_batB_seqlQ_cls3_preds_confmat(
-    request, base_labels_cls3, batB_seqlQ_cls3_trues_confmat
-):
+        request, base_labels_cls3, batB_seqlQ_cls3_trues_confmat
+):  # yapf: disable
     i = request.param
 
     yp = [base_labels_cls3[ii] for ii in i]
@@ -742,6 +742,7 @@ def pred1_batB_seqlQ_cls3_preds_confmat(
 
 
 @pytest.mark.confmat
+@pytest.mark.filterwarnings('ignore:invalid value')
 def test_pred1_batB_seqlQ_user_confmat(pred1_batB_seqlQ_cls3_preds_confmat):
     Yt, Yp, confmat = [
         pred1_batB_seqlQ_cls3_preds_confmat[k] for k in ['Yt', 'Yp', 'confmat']
@@ -783,8 +784,8 @@ def test_pred1_batB_seqlQ_generic_confmat(pred1_batB_seqlQ_cls3_preds_confmat):
     ids=lambda i: "P={}".format(i),  #pylint: disable=unnecessary-lambda
 )  #pylint: disable=too-many-locals
 def predP_batB_seqlQ_cls3_preds_confmat(
-    request, base_labels_cls3, batB_seqlQ_cls3_trues_confmat
-):
+        request, base_labels_cls3, batB_seqlQ_cls3_trues_confmat
+):  # yapf: disable
     p, b = request.param
 
     yp = []
@@ -852,6 +853,7 @@ def predP_batB_seqlQ_cls3_preds_confmat(
 
 
 @pytest.mark.confmat
+@pytest.mark.filterwarnings('ignore:invalid value')
 def test_predP_batB_seqlQ_user_confmat(predP_batB_seqlQ_cls3_preds_confmat):
     Yt, Yp, confmat = [
         predP_batB_seqlQ_cls3_preds_confmat[k] for k in ['Yt', 'Yp', 'confmat']
@@ -893,6 +895,7 @@ def test_predP_batB_seqlQ_generic_confmat(predP_batB_seqlQ_cls3_preds_confmat):
 
 
 @pytest.mark.normconf
+@pytest.mark.filterwarnings('ignore:invalid value')
 def test_pred1_batB_seql1_normconfmat(pred1_batB_seql1_cls3_preds_confmat):
     confmat, confrecall, confprecision = [
         pred1_batB_seql1_cls3_preds_confmat[k]
@@ -918,6 +921,7 @@ def test_pred1_batB_seql1_normconfmat(pred1_batB_seql1_cls3_preds_confmat):
 
 
 @pytest.mark.normconf
+@pytest.mark.filterwarnings('ignore:invalid value')
 def test_predP_batB_seql1_normconfmat(predP_batB_seql1_cls3_preds_confmat):
     confmat, confrecall, confprecision = [
         predP_batB_seql1_cls3_preds_confmat[k]
@@ -943,6 +947,7 @@ def test_predP_batB_seql1_normconfmat(predP_batB_seql1_cls3_preds_confmat):
 
 
 @pytest.mark.normconf
+@pytest.mark.filterwarnings('ignore:invalid value')
 def test_pred1_batB_seqlQ_normconfmat(pred1_batB_seqlQ_cls3_preds_confmat):
     provider = pred1_batB_seqlQ_cls3_preds_confmat
     confmat, confrecall, confprecision = [
@@ -967,6 +972,7 @@ def test_pred1_batB_seqlQ_normconfmat(pred1_batB_seqlQ_cls3_preds_confmat):
 
 
 @pytest.mark.normconf
+@pytest.mark.filterwarnings('ignore:invalid value')
 def test_predP_batB_seqlQ_normconfmat(predP_batB_seqlQ_cls3_preds_confmat):
     provider = predP_batB_seqlQ_cls3_preds_confmat
     confmat, confrecall, confprecision = [

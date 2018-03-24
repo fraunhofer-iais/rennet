@@ -17,14 +17,14 @@
 Created: 29-08-2016
 """
 from __future__ import print_function, division, absolute_import
-import numpy as np
 import warnings
+import numpy as np
 
 from ..utils import label_utils as lu
 from ..utils.py_utils import BaseSlotsOnlyClass
 
-samples_for_labelsat = lu.samples_for_labelsat
-times_for_labelsat = lu.times_for_labelsat
+samples_for_labelsat = lu.samples_for_labelsat  # pylint: disable=invalid-name
+times_for_labelsat = lu.times_for_labelsat  # pylint: disable=invalid-name
 
 
 class Speaker(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-methods
@@ -58,7 +58,7 @@ class Annotations(lu.SequenceLabels):
 
     @classmethod
     def from_mpeg7(cls, filepath, use_tags='ns', **kwargs):
-        """ Read mpeg7 annotations for KA3 data.
+        """Read mpeg7 annotations for KA3 data.
 
         NOTE: Supported use_tags: "ns" (default), "mpeg7".
         Check `rennet.utils.mpeg7_utils`.
@@ -76,7 +76,8 @@ class Annotations(lu.SequenceLabels):
             # there are mutliple speakers with the same speakerid
             labels.append(Transcription(l.speakerid, float(l.confidence), l.content))
 
-        # speakers = tuple(map(Speaker, *sorted(unique_speakers)))  # Doesn't work, but the one below does, FML
+        # speakers = tuple(map(Speaker, *sorted(unique_speakers)))
+        # Doesn't work, but the one below does, FML
         speakers = tuple(Speaker(*uspk) for uspk in sorted(unique_speakers))
         return cls(filepath, speakers, starts_ends, labels, samplerate=sr)
 
@@ -100,14 +101,14 @@ class Annotations(lu.SequenceLabels):
 
     @classmethod
     def from_file(cls, filepath, **kwargs):  # pylint: disable=too-many-locals
-        """ Parse KA3 annotations from file.
+        """Parse KA3 annotations from file.
 
         Parameters
         ----------
         filepath: path to a valid file
-        use_tags: 'ns' or 'mpeg7' (optional, valid only when file is mpeg7 xml)
+        use_tags: 'ns' or 'mpeg7' (optional, only when file is mpeg7 xml)
             Check `rennet.utils.mpeg7_utils`.
-        tiers: list or tuple of strings or unary callable (optional, valid only when file is elan eaf)
+        tiers: list or tuple of strings or unary callable (optional, only when file is elan eaf)
             list or tuple of tier names (as strings) to specify what tiers to be read.
             By default, this is an empty tuple (or list), and all tiers will be read.
             If it is an unary callable (i.e. taking one argument), the function will be
@@ -129,10 +130,10 @@ class Annotations(lu.SequenceLabels):
 
     def __getitem__(self, idx):
         args = super(Annotations, self).__getitem__(idx)
-        if self.__class__ is Annotations:
-            return self.__class__(self.sourcefile, self.speakers, *args)
-        else:
-            return args
+        return (
+            self.__class__(self.sourcefile, self.speakers, *args)
+            if self.__class__ is Annotations else args
+        )
 
 
 class ActiveSpeakers(lu.ContiguousSequenceLabels):
@@ -197,7 +198,7 @@ class ActiveSpeakers(lu.ContiguousSequenceLabels):
 
     def __getitem__(self, idx):
         args = super(ActiveSpeakers, self).__getitem__(idx)
-        if self.__class__ is ActiveSpeakers:
-            return self.__class__(self.sourcefile, self.speakers, *args)
-        else:
-            return args
+        return (
+            self.__class__(self.sourcefile, self.speakers, *args)
+            if self.__class__ is ActiveSpeakers else args
+        )

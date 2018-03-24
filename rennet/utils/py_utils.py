@@ -17,19 +17,18 @@
 Created: 10-10-2016
 """
 from __future__ import print_function, division
-from six.moves import range
-from six import PY2
 import re
 from sys import getsizeof
 from numbers import Number
 from collections import Set, Mapping, deque, namedtuple
-try:
-    # FIXME: proper handling for py2
-    from math import gcd
-except ImportError:  # python2.7
-    from fractions import gcd
-
 from threading import Lock
+from six.moves import range
+from six import PY2
+
+if not PY2:
+    from math import gcd
+else:
+    from fractions import gcd
 
 
 def is_string(obj):
@@ -68,10 +67,10 @@ def cvsecs(time):
 
     elif isinstance(time, tuple):
         if len(time) == 3:
-            hr, mn, sec = time
+            hours, minutes, seconds = time
         elif len(time) == 2:
-            hr, mn, sec = 0, time[0], time[1]
-        return 3600 * hr + 60 * mn + sec
+            hours, minutes, seconds = 0, time[0], time[1]
+        return 3600 * hours + 60 * minutes + seconds
 
     else:
         return time
@@ -130,9 +129,9 @@ def getsize(obj_0):
     return inner(obj_0)
 
 
-def lowest_common_multiple(a, b):
+def lowest_common_multiple(x, y):
     # gcd expects integers, the whole thing is integers, returning integers
-    return abs(a * b) // gcd(a, b) if a and b else 0  # pylint: disable=deprecated-method
+    return abs(x * y) // gcd(x, y) if x and y else 0  # pylint: disable=deprecated-method
 
 
 class ThreadSafeIterator(object):  # pylint: disable=too-few-public-methods
@@ -152,10 +151,10 @@ class ThreadSafeIterator(object):  # pylint: disable=too-few-public-methods
 
 
 def threadsafe_generator(f):
-    def g(*a, **k):
+    def gen(*a, **k):
         return ThreadSafeIterator(f(*a, **k))
 
-    return g
+    return gen
 
 
 def namedtuple_with_defaults(typename, field_names, default_values=()):
@@ -178,7 +177,7 @@ def recursive_glob(rootdir, pattern):
     """Search recursively for files matching a specified pattern.
     eff you py2
 
-    Adapted from http://stackoverflow.com/questions/2186525/use-a-glob-to-find-files-recursively-in-python
+    Adapted from http://stackoverflow.com/questions/2186525
     """
     import fnmatch
     import os
@@ -192,7 +191,7 @@ def makedirs_with_existok(name, exist_ok=False):
     import os
 
     if not PY2:
-        os.makedirs(name, exist_ok=exist_ok)  # pylint: disable=unexpected-keyword-arg
+        os.makedirs(name, exist_ok=exist_ok)
     else:
         try:
             os.makedirs(name)

@@ -17,9 +17,9 @@
 Created: 21-11-2017
 """
 from __future__ import division, absolute_import, print_function
-from six.moves import zip, reduce
-import xml.etree.ElementTree as et
 import warnings
+import xml.etree.ElementTree as et
+from six.moves import zip, reduce
 
 from .py_utils import lowest_common_multiple
 
@@ -58,7 +58,7 @@ MPEG7_TAGS = {
 }
 
 
-def parse_mpeg7(filepath, use_tags="ns"):  # pylint: disable=too-many-locals
+def parse_mpeg7(filepath, use_tags="ns"):  # pylint: disable=too-many-locals,too-complex
     """ Parse MPEG7 speech annotations into lists of data
 
     """
@@ -66,15 +66,15 @@ def parse_mpeg7(filepath, use_tags="ns"):  # pylint: disable=too-many-locals
     root = tree.getroot()
 
     if use_tags == "mpeg7":
-        TAGS = MPEG7_TAGS
+        tags = MPEG7_TAGS
     elif use_tags == "ns":
-        TAGS = NS2_TAGS
+        tags = NS2_TAGS
     else:
         raise ValueError("Supported `use_tags` : 'mpeg7' and 'ns'.")
 
     # find all AudioSegments
-    segments = root.findall(TAGS["audiosegment"], MPEG7_NAMESPACES)
-    if len(segments) == 0:
+    segments = root.findall(tags["audiosegment"], MPEG7_NAMESPACES)
+    if not segments:
         raise ValueError("No AudioSegment tags found. Check your xml file.")
 
     starts_ends = []
@@ -86,7 +86,7 @@ def parse_mpeg7(filepath, use_tags="ns"):  # pylint: disable=too-many-locals
     transcriptions = []
     for i, s in enumerate(segments):
         try:
-            start_end_persec, descriptor = _parse_segment(s, TAGS)
+            start_end_persec, descriptor = _parse_segment(s, tags)
         except ValueError:
             print("Segment number :%d" % (i + 1))
             raise
@@ -108,15 +108,15 @@ def parse_mpeg7(filepath, use_tags="ns"):  # pylint: disable=too-many-locals
         persecs.append(start_end_persec[-1])
 
         try:
-            si, g, gn, conf, tr = _parse_descriptor(descriptor, TAGS)
+            sid, gen, gname, conf, tran = _parse_descriptor(descriptor, tags)
         except ValueError:
             print("Segment number:%d" % (i + 1))
 
-        speakerids.append(si)
-        genders.append(g)
-        givennames.append(gn)
+        speakerids.append(sid)
+        genders.append(gen)
+        givennames.append(gname)
         confidences.append(conf)
-        transcriptions.append(tr)
+        transcriptions.append(tran)
 
     starts_ends, persecs = _sanitize_starts_ends(starts_ends, persecs)
 
@@ -125,10 +125,10 @@ def parse_mpeg7(filepath, use_tags="ns"):  # pylint: disable=too-many-locals
     )
 
 
-def _parse_segment(segment, TAGS):
-    timepoint = segment.find(TAGS["timepoint"], MPEG7_NAMESPACES).text
-    duration = segment.find(TAGS["duration"], MPEG7_NAMESPACES).text
-    descriptor = segment.find(TAGS["descriptor"], MPEG7_NAMESPACES)
+def _parse_segment(segment, tags):
+    timepoint = segment.find(tags["timepoint"], MPEG7_NAMESPACES).text
+    duration = segment.find(tags["duration"], MPEG7_NAMESPACES).text
+    descriptor = segment.find(tags["descriptor"], MPEG7_NAMESPACES)
 
     if any(d is None for d in [timepoint, duration]):  #, descriptor]):
         raise ValueError("timepoint, duration or decriptor not found in segment")
@@ -185,14 +185,14 @@ def _parse_duration(duration):
     )  # need to send separately as the float sum is not great
 
 
-def _parse_descriptor(descriptor, TAGS):
-    speakerid = descriptor.find(TAGS["speakerid"], MPEG7_NAMESPACES).text
-    speakerinfo = descriptor.find(TAGS["speakerinfo"], MPEG7_NAMESPACES)
-    transcription = descriptor.find(TAGS["transcription"], MPEG7_NAMESPACES).text
-    confidence = descriptor.find(TAGS["confidence"], MPEG7_NAMESPACES).text
+def _parse_descriptor(descriptor, tags):
+    speakerid = descriptor.find(tags["speakerid"], MPEG7_NAMESPACES).text
+    speakerinfo = descriptor.find(tags["speakerinfo"], MPEG7_NAMESPACES)
+    transcription = descriptor.find(tags["transcription"], MPEG7_NAMESPACES).text
+    confidence = descriptor.find(tags["confidence"], MPEG7_NAMESPACES).text
 
-    gender = speakerinfo.get(TAGS["gender"])
-    givenname = speakerinfo.find(TAGS["givenname"], MPEG7_NAMESPACES).text
+    gender = speakerinfo.get(tags["gender"])
+    givenname = speakerinfo.find(tags["givenname"], MPEG7_NAMESPACES).text
 
     if any(x is None for x in [speakerid, gender, givenname, confidence, transcription]):
         raise ValueError("Some descriptor information is None / not found")

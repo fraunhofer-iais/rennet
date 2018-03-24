@@ -17,12 +17,12 @@
 Created: 09-11-2017
 """
 from __future__ import print_function, division, absolute_import
-import numpy as np
-from keras.models import load_model
-from itertools import chain, repeat
-from h5py import File as hFile
-import os
 import copy
+import os
+from itertools import chain, repeat
+import numpy as np
+from h5py import File as hFile
+from keras.models import load_model
 
 from .utils import model_utils as mu
 from .utils import audio_utils as au
@@ -38,7 +38,7 @@ from .utils.py_utils import makedirs_with_existok
 
 
 # DOUBLE TALK DETECTION #######################################################
-class DT_2_nosub_0zero20one_mono_mn(mu.BaseRennetModel):  # pylint: disable=too-many-instance-attributes
+class DT_2_nosub_0zero20one_mono_mn(mu.BaseRennetModel):  # pylint: disable=too-many-instance-attributes, invalid-name
     __version__ = '0.1.0'
 
     def __init__(self, model_fp):
@@ -116,8 +116,7 @@ class DT_2_nosub_0zero20one_mono_mn(mu.BaseRennetModel):  # pylint: disable=too-
         # output
         self.seq_minstart = (
             self.win_len // 2 +  # removed during feature extraction
-            int((self.data_context // 2) * self.hop_len
-                )  # removed during adding data-context
+            int((self.data_context // 2) * self.hop_len)  # rm during adding data-context
         ) / self.hop_len  # bringing to hop's samplerate. NOTE: yes, this can float
         self.seq_samplerate = self.samplerate // self.hop_len
         self.seq_keep = 'keys'
@@ -144,7 +143,8 @@ class DT_2_nosub_0zero20one_mono_mn(mu.BaseRennetModel):  # pylint: disable=too-
                     setattr(self, att, val)
 
                     # IDEA: move this to __setattr__ method to shout-out **all** changes.
-                    # It will shout even on __init__ then, which will have to be handled appropriately.
+                    #       It will shout even on __init__ then,
+                    #       which will have to be handled appropriately.
                     print(
                         "{}.{} updated from model file, from {} to {}".format(
                             self.__class__.__name__, att, prev, val
@@ -155,29 +155,26 @@ class DT_2_nosub_0zero20one_mono_mn(mu.BaseRennetModel):  # pylint: disable=too-
                 # there are unavailable `att` in the model file?
             print()
 
-    def preprocess(self, filepath, **kwargs):
-        d = self.loadaudio(filepath)
-        d = self.exttractfeat(d)
-        d = self.normalize(d)
-        return self.addcontext(d)
+    def preprocess(self, filepath, **kwargs):  # pylint: disable=arguments-differ
+        data = self.loadaudio(filepath)
+        data = self.exttractfeat(data)
+        data = self.normalize(data)
+        return self.addcontext(data)
 
-    def predict(self, X, model_fp=None, **kwargs):
-        nsteps, Xgen = self.get_inputsgenerator(X)
+    def predict(self, X, model_fp=None, **kwargs):  # pylint: disable=arguments-differ
+        nsteps, x_gen = self.get_inputsgenerator(X)
 
-        if model_fp is None:
-            model = self.model
-        else:
-            model = load_model(model_fp)
+        model = self.model if model_fp is None else load_model(model_fp)
 
         return model.predict_generator(
-            Xgen, steps=nsteps, verbose=self.verbose, max_q_size=self.max_q_size
+            x_gen, steps=nsteps, verbose=self.verbose, max_q_size=self.max_q_size
         )
 
-    def postprocess(self, preds, **kwargs):
+    def postprocess(self, preds, **kwargs):  # pylint: disable=arguments-differ
         pred = self.mergepreds_fn(preds)
         return lu.viterbi_smoothing(pred, self.vinit, self.vtran)
 
-    def output(self, pred, to_filepath, audio_path=None, **kwargs):
+    def output(self, pred, to_filepath, audio_path=None, **kwargs):  # pylint: disable=arguments-differ
         seq = lu.ContiguousSequenceLabels.from_dense_labels(
             pred,
             keep=self.seq_keep,
@@ -221,7 +218,7 @@ class DT_2_nosub_0zero20one_mono_mn(mu.BaseRennetModel):  # pylint: disable=too-
 
         return (to_filepath, x) if return_pred else to_filepath
 
-    def export(self, *args, **kwargs):
+    def export(self, *args, **kwargs):  # pylint: disable=arguments-differ
         raise NotImplementedError
 
     @classmethod

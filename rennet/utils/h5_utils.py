@@ -17,9 +17,9 @@
 Created: Mon, 10-Apr-2017
 """
 from __future__ import print_function, division, absolute_import
-from six.moves import zip, range
 from collections import namedtuple, Iterable
 from warnings import warn as warning
+from six.moves import zip, range
 import numpy as np
 import numpy.random as nr
 import h5py as h
@@ -229,10 +229,10 @@ class BaseWithContextPrepper(BaseH5ChunkPrepper):  # pylint: disable=abstract-me
         else:
             label = label[:, np.newaxis, ...]
 
-        if self.add_channel:
-            return data[..., None], self.lctxfn(label)
-        else:
-            return data, self.lctxfn(label)
+        return (
+            (data[..., None], self.lctxfn(label))
+            if self.add_channel else (data, self.lctxfn(label))
+        )
 
 
 # NORMALIZERS ################################################### NORMALIZERS #
@@ -245,10 +245,8 @@ class BaseDataNormalizer(BaseH5ChunkPrepper):
         )
 
     def prep_data(self, data, only_labels=False, **kwargs):
-        if only_labels:
-            return data  # This is dummy data
-        else:
-            return self.normalize_data(data, **kwargs)
+        # This is dummy data, if only_labels
+        return data if only_labels else self.normalize_data(data, **kwargs)
 
 
 class BaseChunkMeanVarianceNormalizer(BaseDataNormalizer):  # pylint: disable=abstract-method
@@ -319,15 +317,15 @@ class BaseInputsProvider(BaseH5ChunkingsReader, BaseH5ChunkPrepper):  # pylint: 
             self._cseeds = ((None, ) * self.nchunks, ) * self.npasses
         else:
             nseeds = self.npasses * (1 + self.nchunks)
-            nr.seed(self.shuffle_seed)  # pylint: disable=no-member
-            seeds = nr.randint(41184535, size=nseeds)  # pylint: disable=no-member
+            nr.seed(self.shuffle_seed)
+            seeds = nr.randint(41184535, size=nseeds)
 
             self._pseeds = tuple(seeds[:self.npasses])
 
             _corder = []
             for s in self._pseeds:
-                nr.seed(s)  # pylint: disable=no-member
-                _corder.append(nr.permutation(self.nchunks))  # pylint: disable=no-member
+                nr.seed(s)
+                _corder.append(nr.permutation(self.nchunks))
 
             self._corder = tuple(_corder)
             self._cseeds = nu.totuples(seeds[self.npasses:].reshape((self.npasses, -1)))
@@ -338,19 +336,19 @@ class BaseInputsProvider(BaseH5ChunkingsReader, BaseH5ChunkPrepper):  # pylint: 
 
         return self._corder[p]
 
-    def _seed_for_chunk_in_pass(self, p, c):
+    def _seed_for_chunk_in_pass(self, p, chunkidx):
         if self._cseeds is None:
             self._setup_shuffling_seeds()
 
-        return self._cseeds[p][c]
+        return self._cseeds[p][chunkidx]
 
     @staticmethod
     def maybe_shuffle_array(arr, shuffle_seed):
         if shuffle_seed is None:
             return arr
         elif isinstance(shuffle_seed, (int, np.int_)):
-            nr.seed(shuffle_seed)  # pylint: disable=no-member
-            nr.shuffle(arr)  # pylint: disable=no-member
+            nr.seed(shuffle_seed)
+            nr.shuffle(arr)
             return arr
         else:
             raise ValueError(
@@ -359,8 +357,8 @@ class BaseInputsProvider(BaseH5ChunkingsReader, BaseH5ChunkPrepper):  # pylint: 
             )
 
     def get_prepped_inputs(
-        self, chunking, array_shuffle_seed=None, only_labels=False, **kwargs
-    ):
+            self, chunking, array_shuffle_seed=None, only_labels=False, **kwargs
+    ):  # yapf: disable
         """ The method that will be called by InputsProvider (below).
 
         Override if, for example, you want to also have sample_weights returned.
@@ -379,16 +377,16 @@ class BaseInputsProvider(BaseH5ChunkingsReader, BaseH5ChunkPrepper):  # pylint: 
         )
 
     def flow_for_pass(
-        self, at, starting_chunk_at=0, only_labels=False, with_chunking=False, **kwargs
-    ):
-        co = self._chunk_order_for_pass(at)
-        ii = 0
+            self, at, starting_chunk_at=0, only_labels=False, with_chunking=False, **kwargs
+    ):  # yapf: disable
+        chunk_order = self._chunk_order_for_pass(at)
+        n_seen_chunks = 0
         try:
-            for i in range(starting_chunk_at, len(co)):
-                ii = i
-                c = co[i]
-                chunking = self.chunkings[c]
-                seed = self._seed_for_chunk_in_pass(at, c)
+            for i in range(starting_chunk_at, len(chunk_order)):
+                n_seen_chunks = i
+                chunkidx = chunk_order[i]
+                chunking = self.chunkings[chunkidx]
+                seed = self._seed_for_chunk_in_pass(at, chunkidx)
 
                 inputs = self.get_prepped_inputs(
                     chunking=chunking,
@@ -398,7 +396,7 @@ class BaseInputsProvider(BaseH5ChunkingsReader, BaseH5ChunkPrepper):  # pylint: 
                 )
 
                 if with_chunking:
-                    yield inputs, ((c, ), chunking)
+                    yield inputs, ((chunkidx, ), chunking)
                 else:
                     yield inputs
 
@@ -408,7 +406,7 @@ class BaseInputsProvider(BaseH5ChunkingsReader, BaseH5ChunkPrepper):  # pylint: 
         except:  # print info helpful to resume if any error happened
             s = ".".join((self.__module__.split('.')[-1], self.__class__.__name__))
             print("{}: An Error has stopped the flow at:".format(s))
-            print("pass: {}\nchunk: {}".format(at, ii))
+            print("pass: {}\nchunk: {}".format(at, n_seen_chunks))
             print("npasses: {}\nshuffle_seed: {}".format(self.npasses, self.shuffle_seed))
             print("soucefile:\n{}".format(self.filepath))
             raise
@@ -425,12 +423,12 @@ class BaseInputsProvider(BaseH5ChunkingsReader, BaseH5ChunkPrepper):  # pylint: 
         while True:
             for p in range(starting_pass_at, self.npasses):
                 for inputs in self.flow_for_pass(
-                    at=p,
-                    starting_chunk_at=starting_chunk_at,
-                    only_labels=only_labels,
-                    with_chunking=with_chunking,
-                    **kwargs
-                ):
+                        at=p,
+                        starting_chunk_at=starting_chunk_at,
+                        only_labels=only_labels,
+                        with_chunking=with_chunking,
+                        **kwargs
+                ):  # yapf: disable
                     if only_data:
                         inputs = inputs[0]
 
@@ -515,23 +513,23 @@ class BaseClassSubsamplingInputsProvider(BaseInputsProvider):  # pylint: disable
     def _prep_keep(segs_keeps, keep_seed=None, **kwargs):  # pylint: disable=unused-argument
         if keep_seed is None:
             return np.sort(np.concatenate([seg[:keep] for seg, keep in segs_keeps]))
-        else:
-            nr.seed(keep_seed)  # pylint: disable=no-member
-            seeds = nr.randint(41184535, size=len(segs_keeps))  # pylint: disable=no-member
 
-            keeps = []
-            for i, (s, k) in enumerate(segs_keeps):
-                if len(s) == k:
-                    # we're keeping all
-                    keeps.append(s)
-                else:
-                    nr.seed(seeds[i])  # pylint: disable=no-member
-                    keeps.append(nr.permutation(s)[:k])  # pylint: disable=no-member
+        nr.seed(keep_seed)
+        seeds = nr.randint(41184535, size=len(segs_keeps))
 
-            # NOTE: We only do random sampling, not shuffling
-            return np.sort(np.concatenate(keeps))
+        keeps = []
+        for i, (s, k) in enumerate(segs_keeps):
+            if len(s) == k:
+                # we're keeping all
+                keeps.append(s)
+            else:
+                nr.seed(seeds[i])
+                keeps.append(nr.permutation(s)[:k])
 
-    def keeping_decision(self, inputs, keep_seed=None, **kwargs):
+        # NOTE: We only do random sampling, not shuffling
+        return np.sort(np.concatenate(keeps))
+
+    def keeping_decision(self, inputs, keep_seed=None, **kwargs):  # pylint: disable=too-many-locals
         labels = inputs[1]  # this is usually the case, esp for Keras inputs
         if all(l == 1. for l in self.ratios.values()):
             # we're keeping all ...
@@ -569,7 +567,7 @@ class BaseClassSubsamplingInputsProvider(BaseInputsProvider):  # pylint: disable
 
         return self._prep_keep(seg_keep, keep_seed=keep_seed, **kwargs)
 
-    def get_prepped_inputs(self, chunking, array_shuffle_seed=None, **kwargs):
+    def get_prepped_inputs(self, chunking, array_shuffle_seed=None, **kwargs):  # pylint: disable=arguments-differ
         sup = super(BaseClassSubsamplingInputsProvider, self)
         inputs = sup.get_prepped_data_label(chunking, **kwargs)
 
@@ -577,14 +575,14 @@ class BaseClassSubsamplingInputsProvider(BaseInputsProvider):  # pylint: disable
         if array_shuffle_seed is None:
             kseed, aseed = None, None
         elif isinstance(array_shuffle_seed, (int, np.int_)):
-            nr.seed(array_shuffle_seed)  # pylint: disable=no-member
-            kseed, aseed = nr.randint(41184535, size=2)  # pylint: disable=no-member
+            nr.seed(array_shuffle_seed)
+            kseed, aseed = nr.randint(41184535, size=2)
 
         keeps = self.keeping_decision(inputs, keep_seed=kseed, **kwargs)
 
         keeps = self.maybe_shuffle_array(keeps, aseed)
 
-        if len(keeps) == 0:
+        if not keeps:
             warning(
                 "Sub-sampling has resulted in zero-length selection, "
                 "ratios used: {} from given {}".format(self.ratios, self._user_ratios)
@@ -601,8 +599,8 @@ class BaseSteppedInputsProvider(BaseInputsProvider):  # pylint: disable=abstract
     """
 
     def __init__(
-        self, filepath, steps_per_chunk=1, shuffle_seed=None, npasses=1, **kwargs
-    ):
+            self, filepath, steps_per_chunk=1, shuffle_seed=None, npasses=1, **kwargs
+    ):  # yapf: disable
         assert steps_per_chunk >= 1, (
             "steps_per_chunk should be >= 1, v/s {}".format(steps_per_chunk)
         )
@@ -631,9 +629,9 @@ class BaseSteppedInputsProvider(BaseInputsProvider):  # pylint: disable=abstract
         else:
             spc = self.steps_per_chunk
 
-        si = len_input // spc
+        nsteps = len_input // spc
 
-        starts = tuple(range(0, si * spc, si))
+        starts = tuple(range(0, nsteps * spc, nsteps))
         ends = starts[1:] + (len_input, )
 
         # NOTE: I know that we can get pre-shuffled data from sup.get_prepped_inputs,
@@ -644,8 +642,8 @@ class BaseSteppedInputsProvider(BaseInputsProvider):  # pylint: disable=abstract
         if shuffle_seed is None:
             oseed, aseed = None, None
         elif isinstance(shuffle_seed, (int, np.int_)):
-            nr.seed(shuffle_seed)  # pylint: disable=no-member
-            oseed, aseed = nr.randint(41184535, size=2)  # pylint: disable=no-member
+            nr.seed(shuffle_seed)
+            oseed, aseed = nr.randint(41184535, size=2)
 
         starts = self.maybe_shuffle_array(np.array(starts), oseed)
         ends = self.maybe_shuffle_array(np.array(ends), oseed)
@@ -653,8 +651,8 @@ class BaseSteppedInputsProvider(BaseInputsProvider):  # pylint: disable=abstract
         return starts, ends, aseed
 
     def get_prepped_inputs(
-        self, chunking, array_shuffle_seed=None, only_labels=False, **kwargs
-    ):
+            self, chunking, array_shuffle_seed=None, only_labels=False, **kwargs
+    ):  # yapf: disable
         sup = super(BaseSteppedInputsProvider, self)
         inputs = sup.get_prepped_data_label(chunking, only_labels=only_labels, **kwargs)
 
@@ -668,15 +666,15 @@ class BaseSteppedInputsProvider(BaseInputsProvider):  # pylint: disable=abstract
         for s, e in zip(starts, ends):
             yield [i[keeps[s:e], ...] for i in inputs]
 
-    def flow(  # pylint: disable=too-many-arguments, too-many-locals
+    def flow(  # pylint: disable=too-many-arguments, too-many-locals, arguments-differ
             self,
+            *args,
             indefinitely=False,
             starting_pass_at=0,
             starting_chunk_at=0,
             only_labels=False,
             only_data=False,
             with_chunking=False,
-            *args,
             **kwargs):
         sup = super(BaseSteppedInputsProvider, self)
         gen = sup.flow(
@@ -689,23 +687,23 @@ class BaseSteppedInputsProvider(BaseInputsProvider):  # pylint: disable=abstract
             **kwargs
         )
 
-        for stepped_ip in gen:
+        for stepped_inputs in gen:
             if with_chunking:
-                stepped_ip, (c, chunking) = stepped_ip
+                stepped_inputs, (chunkidx, chunking) = stepped_inputs
 
-            for i, ip in enumerate(stepped_ip):
+            for i, inputs in enumerate(stepped_inputs):
                 if only_data:
-                    ip = ip[0]
+                    inputs = inputs[0]
 
                 if with_chunking:
-                    yield ip, (c + (i, ), chunking)
+                    yield inputs, (chunkidx + (i, ), chunking)
                 else:
-                    yield ip
+                    yield inputs
 
 
 class BaseClassSubsamplingSteppedInputsProvider(  # pylint: disable=abstract-method
         BaseClassSubsamplingInputsProvider, BaseSteppedInputsProvider):
-    """
+    """Base Class-Subsampling Stepped Inputs-Provider
     NOTE: Sub-sampling is done before making steps out of the chunk, hence it is
     still likely that there can be empty chunks, and hence,
     consecutive empty steps for such chunks.
@@ -746,11 +744,11 @@ class BaseClassSubsamplingSteppedInputsProvider(  # pylint: disable=abstract-met
         if array_shuffle_seed is None:
             kseed, seed = None, None
         elif isinstance(array_shuffle_seed, (int, np.int_)):
-            nr.seed(array_shuffle_seed)  # pylint: disable=no-member
-            kseed, seed = nr.randint(41184535, size=2)  # pylint: disable=no-member
+            nr.seed(array_shuffle_seed)
+            kseed, seed = nr.randint(41184535, size=2)
 
         keeps = self.keeping_decision(inputs, keep_seed=kseed, **kwargs)
-        if len(keeps) == 0:
+        if not keeps:
             warning(
                 "Sub-sampling has resulted in zero-length selection, "
                 "ratios used: {} from given {}".format(self.ratios, self._user_ratios)
@@ -770,7 +768,7 @@ class BaseClassSubsamplingSteppedInputsProvider(  # pylint: disable=abstract-met
 
 class BaseWithContextSteppedInputsProvider(  # pylint: disable=abstract-method
         BaseWithContextPrepper, BaseSteppedInputsProvider):
-    """
+    """ Base With-Context Stepped Inputs-Provider
     NOTE: Assumes that the data and labels have been read and prepped, and
     that the labels are in categorical/softmax form.
     """
@@ -843,7 +841,7 @@ class BaseWithContextSteppedInputsProvider(  # pylint: disable=abstract-method
 
 
 class BaseWithContextClassSubsamplingSteppedInputsProvider(  # pylint: disable=abstract-method, too-many-ancestors
-    BaseWithContextPrepper, BaseClassSubsamplingSteppedInputsProvider):
+        BaseWithContextPrepper, BaseClassSubsamplingSteppedInputsProvider):
     def __init__(  # pylint: disable=too-many-arguments
             self,
             filepath,
@@ -874,7 +872,7 @@ class BaseWithContextClassSubsamplingSteppedInputsProvider(  # pylint: disable=a
             **kwargs
         )
 
-    def get_prepped_inputs(  # pylint: disable=too-many-locals
+    def get_prepped_inputs(  # pylint: disable=too-many-locals, arguments-differ
             self,
             chunking,
             array_shuffle_seed=None,
@@ -898,20 +896,20 @@ class BaseWithContextClassSubsamplingSteppedInputsProvider(  # pylint: disable=a
         inputs = sup.get_prepped_data_label(chunking, only_labels=only_labels, **kwargs)
 
         if array_shuffle_seed is not None or not all(
-            v == 1. for v in self.ratios.values()
-        ):
+                v == 1. for v in self.ratios.values()
+        ):  # yapf: disable
             # there will be copying, whether due to shuffling or subsampling
 
             # shuffle seeds for order of steps, and shuffling keeps
             if array_shuffle_seed is None:
                 kseed, seed = None, None
             elif isinstance(array_shuffle_seed, (int, np.int_)):
-                nr.seed(array_shuffle_seed)  # pylint: disable=no-member
-                kseed, seed = nr.randint(41184535, size=2)  # pylint: disable=no-member
+                nr.seed(array_shuffle_seed)
+                kseed, seed = nr.randint(41184535, size=2)
 
             # decide which to keep
             keeps = self.keeping_decision(inputs, keep_seed=kseed, **kwargs)
-            if len(keeps) == 0:
+            if not keeps:
                 warning(
                     "Sub-sampling has resulted in zero-length selection, "
                     "ratios used: {} from given {}".format(

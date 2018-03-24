@@ -25,7 +25,7 @@ import numpy.testing as npt
 
 from rennet.utils import label_utils as lu
 
-# pylint: disable=redefined-outer-name
+# pylint: disable=redefined-outer-name, invalid-name, missing-docstring
 
 
 def test_SequenceLabels_doesnt_init():
@@ -240,8 +240,10 @@ def seqlabelinst_small_seqdata(request, init_small_seqdata):
     sr = init_small_seqdata['samplerate']
     l = init_small_seqdata['labels']
 
-    if (not init_small_seqdata['isconti']
-            and request.param is lu.ContiguousSequenceLabels):
+    if (
+            not init_small_seqdata['isconti']
+            and request.param is lu.ContiguousSequenceLabels
+    ):  # yapf: disable
         pytest.skip(
             "Non-Contiguous Sequence data for ContiguousSequenceLabels "
             "will fail to initialize"
@@ -289,8 +291,7 @@ def se_to_sr_small_seqdata_SequenceLabels(request, seqlabelinst_small_seqdata):
 
 def test_se_to_sr_SeqLabels(se_to_sr_small_seqdata_SequenceLabels):
     s, osr, tsr, tse, tms, tme = [
-        se_to_sr_small_seqdata_SequenceLabels[k]
-        for k in [
+        se_to_sr_small_seqdata_SequenceLabels[k] for k in [
             'seqlabelinst',
             'orig_sr',
             'target_sr',
@@ -409,8 +410,8 @@ def SequenceLabels_small_seqdata_labels_at_allwithin(request, init_small_seqdata
 
 
 def test_SequenceLabels_labels_at_allwithin(
-    SequenceLabels_small_seqdata_labels_at_allwithin
-):
+        SequenceLabels_small_seqdata_labels_at_allwithin
+):  # yapf: disable
     s, la_ends, lasr, target_labels = [
         SequenceLabels_small_seqdata_labels_at_allwithin[k]
         for k in ['seqlabelinst', 'ends', 'at_sr', 'target_labels']
@@ -532,9 +533,9 @@ def test_SequenceLabels_labels_at_general(SequenceLabels_small_seqdata_labels_at
 
     labels = s.labels_at(la_ends, lasr, None)
 
-    assert all(
-        [e == r for e, r in zip(target_labels, labels)]
-    ), ", ".join("({} {})".format(e, t) for e, t in zip(target_labels, labels))
+    assert all([e == r for e, r in zip(target_labels, labels)]), ", ".join(
+        "({} {})".format(e, t) for e, t in zip(target_labels, labels)
+    )
 
     assert s.labels_at(la_ends[0], lasr, None)[-1] == labels[0]
 
@@ -580,8 +581,8 @@ def ContiSequenceLabels_small_seqdata_labels_at_allwithin(request, init_small_se
 
 
 def test_ContiSequenceLabels_labels_at_allwithin(
-    ContiSequenceLabels_small_seqdata_labels_at_allwithin
-):
+        ContiSequenceLabels_small_seqdata_labels_at_allwithin
+):  # yapf: disable
     s, la_ends, lasr, target_labels = [
         ContiSequenceLabels_small_seqdata_labels_at_allwithin[k]
         for k in ['seqlabelinst', 'ends', 'at_sr', 'target_labels']
@@ -638,8 +639,8 @@ def ContiSequenceLabels_small_seqdata_labels_at_outside(request, init_small_seqd
 
 
 def test_ContiSequenceLabels_labels_at_outside_with_deflabel(
-    ContiSequenceLabels_small_seqdata_labels_at_outside
-):
+        ContiSequenceLabels_small_seqdata_labels_at_outside
+):  # yapf: disable
     s, ends, tlabels, deflabel = [
         ContiSequenceLabels_small_seqdata_labels_at_outside[k]
         for k in ['seqlabelinst', 'ends', 'target_labels', 'default_label']
@@ -655,8 +656,8 @@ def test_ContiSequenceLabels_labels_at_outside_with_deflabel(
 
 
 def test_ContiSequenceLabels_labels_at_outside_with_auto_deflabel(
-    ContiSequenceLabels_small_seqdata_labels_at_outside
-):
+        ContiSequenceLabels_small_seqdata_labels_at_outside
+):  # yapf: disable
     s, ends = [
         ContiSequenceLabels_small_seqdata_labels_at_outside[k]
         for k in ['seqlabelinst', 'ends']
@@ -727,8 +728,8 @@ def ContiSequenceLabels_small_seqdata_labels_at_general(request, init_small_seqd
 
 
 def test_ContiSequenceLabels_labels_at_general_with_auto_deflabel(
-    ContiSequenceLabels_small_seqdata_labels_at_general
-):
+        ContiSequenceLabels_small_seqdata_labels_at_general
+):  # yapf: disable
     s, la_ends, lasr, target_labels = [
         ContiSequenceLabels_small_seqdata_labels_at_general[k]
         for k in ['seqlabelinst', 'ends', 'at_sr', 'target_labels']
@@ -736,9 +737,9 @@ def test_ContiSequenceLabels_labels_at_general_with_auto_deflabel(
 
     labels = s.labels_at(la_ends, lasr, default_label='zeros')
 
-    assert all(
-        [e == r for e, r in zip(target_labels, labels)]
-    ), ", ".join("({} {})".format(e, t) for e, t in zip(target_labels, labels))
+    assert all([e == r for e, r in zip(target_labels, labels)]), ", ".join(
+        "({} {})".format(e, t) for e, t in zip(target_labels, labels)
+    )
 
     assert s.labels_at(la_ends[0], lasr, default_label='zeros')[-1] == target_labels[0]
 
@@ -749,8 +750,8 @@ def test_ContiSequenceLabels_labels_at_general_with_auto_deflabel(
     ids=lambda x: "laSR={}".format(x)  #pylint: disable=unnecessary-lambda
 )
 def ContiSequenceLabels_small_seqdata_labels_at_general_with_deflabel(
-    request, init_small_seqdata
-):
+        request, init_small_seqdata
+):  # yapf: disable
     """ fixture with labels_at at different samplerates for general case
 
     General case where ends can be outside the starts_ends as well
@@ -803,8 +804,8 @@ def ContiSequenceLabels_small_seqdata_labels_at_general_with_deflabel(
 
 
 def test_ContiSequenceLabels_labels_at_general_with_deflabel(
-    ContiSequenceLabels_small_seqdata_labels_at_general_with_deflabel
-):
+        ContiSequenceLabels_small_seqdata_labels_at_general_with_deflabel
+):  # yapf: disable
     s, la_ends, lasr, target_labels, deflabel = [
         ContiSequenceLabels_small_seqdata_labels_at_general_with_deflabel[k]
         for k in ['seqlabelinst', 'ends', 'at_sr', 'target_labels', 'deflabel']
@@ -812,9 +813,9 @@ def test_ContiSequenceLabels_labels_at_general_with_deflabel(
 
     labels = s.labels_at(la_ends, lasr, default_label=deflabel)
 
-    assert all(
-        [e == r for e, r in zip(target_labels, labels)]
-    ), ", ".join("({} {})".format(e, t) for e, t in zip(target_labels, labels))
+    assert all([e == r for e, r in zip(target_labels, labels)]), ", ".join(
+        "({} {})".format(e, t) for e, t in zip(target_labels, labels)
+    )
 
 
 @pytest.fixture(
@@ -849,8 +850,7 @@ def shifted_start_same_sr_small_seqdata(request, seqlabelinst_small_seqdata):
 
 def test_shifted_start_same_sr(shifted_start_same_sr_small_seqdata):
     s, osr, tsr, tse, tms, tme = [
-        shifted_start_same_sr_small_seqdata[k]
-        for k in [
+        shifted_start_same_sr_small_seqdata[k] for k in [
             'seqlabelinst',
             'orig_sr',
             't_sr',
@@ -922,8 +922,7 @@ def shifted_start_param_sr_small_seqdata(request, shifted_start_same_sr_small_se
 def test_shifted_start_param_sr(  # pylint: disable=too-many-statements
         shifted_start_param_sr_small_seqdata):
     s, osr, tsr, tse, tms, tme, ose, oms, ome = [
-        shifted_start_param_sr_small_seqdata[k]
-        for k in [
+        shifted_start_param_sr_small_seqdata[k] for k in [
             'seqlabelinst',
             'orig_sr',
             't_sr',
@@ -1013,10 +1012,10 @@ def from_dense_labels_start_and_sr_small_seqdata(shifted_start_param_sr_small_se
             se, li = s._flattened_indices()  # pylint: disable=protected-access
             l = []
             for i in li:
-                if len(i) > 0:
-                    l.append(tuple(s.labels[i, ...]))
-                else:
+                if not i:
                     l.append(i)
+                else:
+                    l.append(tuple(s.labels[i, ...]))
         else:
             se, l = s.starts_ends, s.labels
 
@@ -1130,7 +1129,8 @@ def viterbi_priors_for_small_contiseqdata(  # pylint: disable=too-many-locals
     samplerate = fixt['at_sr']
     if samplerate % 10 != 0:  #or S.samplerate % 10 != 0:
         pytest.skip(
-            "Testing for ContiguousSequenceLabels with non-zero decimal ends is not clear and not tested"
+            "Testing for ContiguousSequenceLabels with non-zero decimal "
+            "ends is not clear and not tested"
         )
         # TODO: Clarify and testing Viterbi Priors for non-integral multiples of samplerates
         # and perhaps chnage round_to_int

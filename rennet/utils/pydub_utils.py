@@ -18,12 +18,12 @@ Separated from `audio_utils` to remove dependency, I guess.
 Created: 11-10-2017
 """
 from __future__ import print_function, division, absolute_import
-from six.moves import range
-from pydub import AudioSegment
-from tempfile import NamedTemporaryFile
 import subprocess as sp
 import os
 import warnings
+from tempfile import NamedTemporaryFile
+from six.moves import range
+from pydub import AudioSegment
 
 from .audio_utils import (
     AudioMetadata,
@@ -36,7 +36,7 @@ class AudioIO(AudioSegment):
     """ A extension of the pydub.AudioSegment class with some added methods"""
 
     @classmethod
-    def from_file(cls, file, format=None, **kwargs):  # pylint: disable=redefined-builtin
+    def from_file(cls, file, format=None, **kwargs):  # pylint: disable=redefined-builtin, arguments-differ
         meta = get_audio_metadata(file)
 
         if meta.format == 'sph' or format == 'sph':
@@ -46,14 +46,16 @@ class AudioIO(AudioSegment):
             converterpath = kwargs.get("sph2pipe_path", get_sph2pipe())
 
             if not converterpath:
-                _e = (
+                msg = (
                     "sph2pipe was not found on PATH."
-                    "\n\nPlease install the `sph2pipe_v2.5` tool for converting sph files, it can be found at:\n"
+                    "\n\nPlease install the `sph2pipe_v2.5` tool for converting sph files, "
+                    "it can be found at:\n"
                     "https://www.ldc.upenn.edu/language-resources/tools/sphere-conversion-tools"
                     "\n\nPlease make sure it is available on PATH after installation"
-                    "\nOR, provide fullpath as `AudioIO.from_file(file, format='sph', sph2pipe_path=SPH2PIPE)``"
+                    "\nOR, provide fullpath as "
+                    "`AudioIO.from_file(file, format='sph', sph2pipe_path=SPH2PIPE)``"
                 )
-                raise RuntimeError(_e)
+                raise RuntimeError(msg)
 
             conversion_command = [
                 converterpath,
@@ -140,28 +142,21 @@ class AudioIO(AudioSegment):
         return nparr([data[i::nchannels] for i in range(nchannels)]).T
 
     def export_standard(self, outfilepath, samplerate=16000, channels=1, fmt="wav"):
-
         channeled = self.set_channels(channels)
         framed = channeled.set_frame_rate(samplerate)
         return framed.export(outfilepath, format=fmt)
 
 
 def convert_to_standard(
-    filepath, todir, tofmt="wav", samplerate=16000, channels=1, **kwargs
-):
+        filepath, todir, tofmt="wav", samplerate=16000, channels=1, **kwargs
+):  # yapf: disable
     """ Convert a single media file to the standard format """
     tofilename = os.path.splitext(os.path.basename(filepath))[0] + "." + tofmt
     tofilepath = os.path.join(todir, tofilename)
     s = AudioIO.from_file(filepath, **kwargs)
-    f = s.export_standard(  # pylint: disable=no-member
-        tofilepath,
-        samplerate=samplerate,
-        channels=channels,
-        fmt=tofmt)
+    f = s.export_standard(tofilepath, samplerate=samplerate, channels=channels, fmt=tofmt)
     f.close()
-    return [
-        tofilename,
-    ]
+    return [tofilename]
 
 
 def convert_to_standard_split(filepath, todir, tofmt="wav", samplerate=16000, **kwargs):

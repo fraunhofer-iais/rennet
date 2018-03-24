@@ -17,14 +17,14 @@
 Created: 26-08-2016
 """
 from __future__ import print_function, division, absolute_import
-from six.moves import zip, range
-import numpy as np
 from collections import Iterable, OrderedDict
 from contextlib import contextmanager
 from itertools import groupby
 from os.path import abspath
 import sys
 import warnings
+import numpy as np
+from six.moves import zip, range
 
 from pympi import Eaf
 
@@ -59,7 +59,7 @@ class SequenceLabels(object):
     )
 
     # To save memory, maybe? I just wanted to learn about them.
-    # NOTE: Add at least ``__slots__ = ()`` at the top if you want to keep the functionality in a subclass.
+    # NOTE: Add at least ``__slots__ = ()`` at the top to keep the functionality in a subclass.
 
     def __init__(self, starts_ends, labels, samplerate=1):
         """Initialize a SequenceLabels instance with starts_ends and labels"""
@@ -154,17 +154,19 @@ class SequenceLabels(object):
             )
 
         if to_samplerate == from_samplerate or (
-            not isinstance(value, np.ndarray) and value == 0
-        ):
+                not isinstance(value, np.ndarray) and value == 0
+        ):  # yapf: disable
             return value
 
         if to_samplerate > from_samplerate and to_samplerate % from_samplerate == 0:
             # avoid definitely floating a potential int
             # will still return float if any of the three is float
             # worth a try I guess
-            return value * (to_samplerate // from_samplerate)
+            res = value * (to_samplerate // from_samplerate)
         else:
-            return value * (to_samplerate / from_samplerate)
+            res = value * (to_samplerate / from_samplerate)
+
+        return res
 
     @property
     def min_start(self):
@@ -243,7 +245,8 @@ class SequenceLabels(object):
         """
         old_sr = self._samplerate
         new_sr = old_sr if new_samplerate is None else new_samplerate
-        if new_sr <= 0: raise ValueError("new_samplerate <=0 not supported")
+        if new_sr <= 0:
+            raise ValueError("new_samplerate <=0 not supported")
 
         self._samplerate = new_sr
         try:
@@ -355,10 +358,12 @@ class SequenceLabels(object):
 
         if return_bins:
             # return as bins for `numpy.digitize`
-            return bins, labels_indices
+            res = bins, labels_indices
         else:
             # return as `starts_ends` for `ContiguousSequenceLabels`
-            return np.stack((bins[:-1], bins[1:]), axis=1), labels_indices
+            res = np.stack((bins[:-1], bins[1:]), axis=1), labels_indices
+
+        return res
 
     def labels_at(self, ends, samplerate=None, default_label=(), rounded=10):
         """ TODO: [ ] Proper Dox
@@ -379,8 +384,8 @@ class SequenceLabels(object):
             bins = np.round(bins, rounded)
             ends = np.round(ends, rounded)
 
-        # We only know about what happened in the `(1/_orig_samplerate)` seconds starting at an `end`
-        # Hence choose side='right'.
+        # We only know about what happened in the `(1/_orig_samplerate)` seconds which was
+        # starting at an `end`. Hence choose side='right'.
         # ends outside bins will have value 0 or len(bins)
         bin_idx = np.searchsorted(bins, ends, side='right')
 
@@ -403,7 +408,7 @@ class SequenceLabels(object):
         return unique_res_labels[bin_idx, ...]
 
     @classmethod
-    def from_dense_labels(  # pylint: disable=too-many-arguments
+    def from_dense_labels(  # pylint: disable=too-many-arguments, too-many-locals
             cls,
             labels,
             groupby_keyfn=None,
@@ -426,7 +431,7 @@ class SequenceLabels(object):
             See example below.
         keep: 'both', 'keys', 'labels'
             - 'keys': keep only the result of groupby_keyfn(label) in final labels.
-            - 'labels': keep only list of consecutive labels that have the same groupby_keyfn(label) result.
+            - 'labels': keep only list of consecutive labels that have same groupby_keyfn result.
             - 'both': keep both in a tuple.
         min_start: int or float
             The start of the first segmentation. By default zero.
@@ -442,16 +447,16 @@ class SequenceLabels(object):
         >>> sr = 2000
         >>> ms = 0.016 * sr  # 32
         >>> key = np.argmax
-        >>> s = SequenceLabels.from_dense_labels(labels, key, keep='keys', min_start=ms, samplerate=sr)
+        >>> s = SequenceLabels.from_dense_labels(labels, key, keep='keys', ms, sr)
         >>> list(s)
         [(array([ 32.,  34.]), 1), (array([ 34.,  36.]), 0), (array([ 36.,  37.]), 1)]
         >>>
-        >>> list(SequenceLabels.from_dense_labels(labels, key, keep='labels', min_start=ms, samplerate=sr))
+        >>> list(SequenceLabels.from_dense_labels(labels, key, keep='labels', ms, sr))
         [(array([ 32.,  34.]), ([0.2, 0.8], [0.3, 0.7])),
          (array([ 34.,  36.]), ([0.51, 0.49], [0.55, 0.45])),
          (array([ 36.,  37.]), ([0.4, 0.6],))]
         >>>
-        >>> list(SequenceLabels.from_dense_labels(labels, key, keep='both', min_start=ms, samplerate=sr))
+        >>> list(SequenceLabels.from_dense_labels(labels, key, keep='both', ms, sr))
         [(array([ 32.,  34.]), array([1, ([0.2, 0.8], [0.3, 0.7])], dtype=object)),
          (array([ 34.,  36.]), array([0, ([0.51, 0.49], [0.55, 0.45])], dtype=object)),
          (array([ 36.,  37.]), array([1, ([0.4, 0.6],)], dtype=object))]
@@ -470,8 +475,8 @@ class SequenceLabels(object):
 
         keylabels = []
         bins = [0]
-        for k, it in groupby(labels, groupby_keyfn):
-            lit = tuple(it)
+        for k, itr in groupby(labels, groupby_keyfn):
+            lit = tuple(itr)
             keylabels.append((k, lit))
             bins.append(bins[-1] + len(lit))
 
@@ -487,10 +492,10 @@ class SequenceLabels(object):
             elif keep == 'labels':
                 keylabels = label_list
 
-        if cls == SequenceLabels:
-            return cls(se, keylabels, samplerate)
-        else:
-            return se, keylabels, samplerate, kwargs
+        return (
+            cls(se, keylabels, samplerate)
+            if cls == SequenceLabels else (se, keylabels, samplerate, kwargs)
+        )
 
     def __len__(self):
         return len(self.labels)
@@ -506,11 +511,13 @@ class SequenceLabels(object):
         # create the sub-SequenceLabel instance with the contextually correct samplerate
         # and *NOT* the original samplerate
         if self.__class__ is SequenceLabels:
-            return self.__class__(se, l, self.samplerate)
+            res = self.__class__(se, l, self.samplerate)
         else:
             # some child class
             # let's honor kwargs, they should too
-            return se, l, self.samplerate
+            res = se, l, self.samplerate
+
+        return res
 
     def __iter__(self):
         # NOTE: Yes, it is known that there is a disparity between __getitem__
@@ -567,7 +574,7 @@ class SequenceLabels(object):
         parsed = parse_mpeg7(filepath, use_tags=use_tags)
         starts_ends, samplerate = parsed[:2]
 
-        if len(starts_ends) == 0:
+        if not starts_ends:
             raise RuntimeError(
                 "No Annotations were found from file {}.\n".format(filepath) + \
                 "Check `use_tags` parameter for `mpeg7_utils.parse_mpeg7` "+\
@@ -586,14 +593,16 @@ class SequenceLabels(object):
         ]
 
         if cls == SequenceLabels:
-            return cls(starts_ends, labels, samplerate)
+            res = cls(starts_ends, labels, samplerate)
         else:
             # some child class
             # let's honor kwargs, they should too
-            return starts_ends, labels, samplerate, kwargs
+            res = starts_ends, labels, samplerate, kwargs
+
+        return res
 
     @classmethod
-    def from_eaf(cls, filepath, tiers=(), **kwargs):
+    def from_eaf(cls, filepath, tiers=(), **kwargs):  # pylint: disable=too-many-locals
         """ Create instance of SequenceLabels from an ELAN annotation file.
 
         NOTE: Not all features of ELAN files are supported. For example:
@@ -635,7 +644,7 @@ class SequenceLabels(object):
         # FIXME: Check if the each element is a string, and support py2 as well.
         if not (isinstance(tiers, (tuple, list)) or callable(tiers)):
             raise TypeError(
-                "`tiers` is expected to be a tuple or list of strings, or a predicate function, got: {}".
+                "`tiers` should be a tuple or a list of strings, or a predicate function, got: {}".
                 format(tiers)
             )
 
@@ -648,7 +657,7 @@ class SequenceLabels(object):
         elif callable(tiers):
             tiers = tuple(name for name in eaf.get_tier_names() if tiers(name))
 
-        if len(tiers) == 0:
+        if not tiers:
             raise RuntimeError("No tiers found in the given file:\n{}".format(filepath))
 
         starts_ends = []
@@ -657,7 +666,7 @@ class SequenceLabels(object):
 
         for tier in tiers:
             annots = eaf.get_annotation_data_for_tier(tier)
-            if warnemptytier and len(annots) == 0:
+            if warnemptytier and not annots:
                 warnings.warn(
                     RuntimeWarning(
                         "No annotations found for tier: {} in file\n{}.".format(
@@ -672,12 +681,12 @@ class SequenceLabels(object):
             # filter away annotations that are <= zero duration long
 
             if warnemptytier and len(annots[0]) < n_rawannots:
-                warnings.warn(
-                    RuntimeWarning(
-                        "IGNORED {} zero- or negative-duration annotations of {} annotations in tier {} in file\n{}".
-                        format(len(annots) - len(annots[0]), len(annots), tier, filepath)
-                    )
+                msg = "IGNORED {} zero- or negative-duration ".format(
+                    n_rawannots - len(annots[0])
                 )
+                msg += "annotations of {} annotations ".format(n_rawannots)
+                msg += "in tier {} in file\n{}".format(tier, filepath)
+                warnings.warn(RuntimeWarning(msg))
 
             starts_ends.extend(zip(*annots[:2]))
             attrs = eaf.tiers[tier][2]  # tier attributes
@@ -691,19 +700,17 @@ class SequenceLabels(object):
                 ) for content in contents
             )
 
-        if len(starts_ends) == 0:
+        if not starts_ends:
             raise RuntimeError(
                 "All tiers {} were found to be empty in file\n{}".format(tiers, filepath)
             )
 
-        if cls == SequenceLabels:
-            return cls(starts_ends, labels, samplerate)
-        else:
-            # some child class
-            # let's honor kwargs, they should too
-            return starts_ends, labels, samplerate, kwargs
+        return (
+            cls(starts_ends, labels, samplerate)
+            if cls == SequenceLabels else (starts_ends, labels, samplerate, kwargs)
+        )
 
-    def to_eaf(  # pylint: disable=too-many-arguments
+    def to_eaf(  # pylint: disable=too-many-arguments, too-many-locals, too-complex
             self,
             to_filepath=None,
             eafobj=None,
@@ -711,18 +718,18 @@ class SequenceLabels(object):
             author="rennet.{}".format(rennet_version),
             annotinfo_fn=lambda label: EAFAnnotationInfo(tier_name=str(label)),
     ):
-        labels = np.array(list(map(annotinfo_fn, self.labels)))
+        labels = np.array([annotinfo_fn(label) for label in self.labels])
         assert all(
             isinstance(l, EAFAnnotationInfo) for l in labels
         ), "`annotinfo_fn` should return an `EafAnnotationInfo` object for each label"
 
         # flatten everything
         with self.samplerate_as(1000):  # pympi only supports milliseconds
-            se, li = self._flattened_indices()
+            se, label_idx = self._flattened_indices()
             if se.dtype != np.int:
                 # EAF requires integers as starts and ends
                 # IDEA: Warn rounding?
-                se = np.rint(se).astype(np.int)  # pylint: disable=no-member
+                se = np.rint(se).astype(np.int)
 
         if eafobj is None:
             eaf = Eaf(author=author)
@@ -738,15 +745,16 @@ class SequenceLabels(object):
             except:  # pylint: disable=bare-except
                 warnings.warn(
                     RuntimeWarning(
-                        "Provided file was not added as linked file due to `pympi` errors. Provided File:\n{}\nError:\n{}".
+                        "Provided file was not added as linked file due to `pympi` errors. "
+                        + "Provided File:\n{}\nError:\n{}".
                         format(linked_media_filepath, sys.exc_info())
                     )
                 )
 
         # seen_tier_names = set()
-        for (start, end), lix in zip(se, li):
+        for (start, end), lix in zip(se, label_idx):
             curr_seen_tier_names = set()
-            if len(lix) > 0:
+            if lix:
                 for ann in labels[lix, ...]:
                     if ann.tier_name not in eaf.tiers:
                         # FIXME: handle different participant and annotator for same tier_name
@@ -760,7 +768,7 @@ class SequenceLabels(object):
                             "the same time-slot is not valid in ELAN.\n"
                             "Found at time-slot {} ms \n{}".format(
                                 (start, end),
-                                "\n".join(map(str, labels[lix, ...])),
+                                "\n".join(map(str, labels[lix, ...])),  # pylint: disable=bad-builtin
                             )
                         )
 
@@ -790,12 +798,12 @@ class EAFAnnotationInfo(BaseSlotsOnlyClass):  # pylint: disable=too-few-public-m
     __slots__ = ("tier_name", "annotator", "participant", "content")
 
     def __init__(
-        self,
-        tier_name,
-        annotator="rennet.{}".format(rennet_version),
-        participant="",
-        content=""
-    ):
+            self,
+            tier_name,
+            annotator="rennet.{}".format(rennet_version),
+            participant="",
+            content=""
+    ):  # yapf: disable
         self.tier_name = str(tier_name)
         self.annotator = str(annotator)
         self.participant = str(participant)
@@ -841,7 +849,8 @@ class ContiguousSequenceLabels(SequenceLabels):
         super(ContiguousSequenceLabels, self).__init__(*args, **kwargs)
         # the starts_ends were sorted in __init__ on starts
         if not np.all(self.starts_ends[1:, 0] == self.starts_ends[:-1, 1]):
-            msg = "All ends should be the starts of the next segment, except in the case of the last segment."
+            msg = "All ends should be the starts of the next segment,"
+            msg += "\nexcept in the case of the last segment."
             msg += "\nEvery time-step should belong to 1 and only 1 segment."
             msg += "\nNo duplicate or missing segments allowed between min-start and max-end"
             raise AssertionError(msg)
@@ -868,8 +877,8 @@ class ContiguousSequenceLabels(SequenceLabels):
             bins = np.round(bins, rounded)
             ends = np.round(ends, rounded)
 
-        # We only know about what happened in the `(1/_orig_samplerate)` seconds starting at an `end`
-        # Hence choose side='right'.
+        # We only know about what happened in the `(1/_orig_samplerate)` seconds which was
+        # starting at an `end`. Hence choose side='right'.
         # np.digitize is slower!!!
         bin_idx = np.searchsorted(bins, ends, side='right')
 
@@ -882,9 +891,14 @@ class ContiguousSequenceLabels(SequenceLabels):
             # there are some ends outside the bins
             if default_label == 'raise':
                 with self.samplerate_as(samplerate):
-                    msg = "Some ends are outside the segments and default_label has been chosen to be 'raise'. "+\
-                        "Choose an appropriate default_label, or ammend the provided ends to be in range ="+\
-                        " ({}, {}] at samplerate {}".format(bins[0], bins[-1], self.samplerate)
+                    msg = (
+                        "Some ends are outside the segments and default_label has been " +
+                        "chosen to be 'raise'. Choose an appropriate default_label, " +
+                        "or ammend the provided ends to be in range =" +
+                        " ({}, {}] at samplerate {}".format(
+                            bins[0], bins[-1], self.samplerate
+                        )
+                    )
                     raise KeyError(msg)
 
             bin_idx_within = np.invert(bin_idx_outside)
@@ -899,7 +913,7 @@ class ContiguousSequenceLabels(SequenceLabels):
                 pass
             elif default_label == 'ones':
                 res[bin_idx_outside] = 1
-            elif type(default_label) == res.dtype:
+            elif isinstance(default_label, res.dtype.type):
                 # IDEA: provide way to handle numpy.ndarray type of default_label
                 # if it has the right shape (and maybe type as well)
 
@@ -907,15 +921,16 @@ class ContiguousSequenceLabels(SequenceLabels):
                 # perhaps by casting to np.object
                 # may require extra parameter like force_fill=True or something
 
-                # The user is probably asking to fill the array with default_label where ends are outside
+                # The user is probably asking to fill the array with default_label where
+                # ends are outside
                 res[bin_idx_outside] = default_label
             else:
                 # IDEA: provide more options for default_label, like, Nones, etc.
 
                 # fallback case to handle a provided default_label
                 res = res.tolist()
-                for oi in np.where(bin_idx_outside)[0]:
-                    res[oi] = default_label
+                for idx_outside in np.where(bin_idx_outside)[0]:
+                    res[idx_outside] = default_label
 
             return res
         else:
@@ -942,7 +957,7 @@ class ContiguousSequenceLabels(SequenceLabels):
             See example below.
         keep: 'both', 'keys', 'labels'
             - 'keys': keep only the result of groupby_keyfn(label) in final labels.
-            - 'labels': keep only list of consecutive labels that have the same groupby_keyfn(label) result.
+            - 'labels': keep only list of consecutive labels that have same groupby_keyfn result.
             - 'both': keep both in a tuple.
         min_start: int or float
             The start of the first segmentation. By default zero.
@@ -958,16 +973,16 @@ class ContiguousSequenceLabels(SequenceLabels):
         >>> sr = 2000
         >>> ms = 0.016 * sr  # 32
         >>> key = np.argmax
-        >>> s = SequenceLabels.from_dense_labels(labels, key, keep='keys', min_start=ms, samplerate=sr)
+        >>> s = SequenceLabels.from_dense_labels(labels, key, keep='keys', ms, sr)
         >>> list(s)
         [(array([ 32.,  34.]), 1), (array([ 34.,  36.]), 0), (array([ 36.,  37.]), 1)]
         >>>
-        >>> list(SequenceLabels.from_dense_labels(labels, key, keep='labels', min_start=ms, samplerate=sr))
+        >>> list(SequenceLabels.from_dense_labels(labels, key, keep='labels', ms, sr))
         [(array([ 32.,  34.]), ([0.2, 0.8], [0.3, 0.7])),
          (array([ 34.,  36.]), ([0.51, 0.49], [0.55, 0.45])),
          (array([ 36.,  37.]), ([0.4, 0.6],))]
         >>>
-        >>> list(SequenceLabels.from_dense_labels(labels, key, keep='both', min_start=ms, samplerate=sr))
+        >>> list(SequenceLabels.from_dense_labels(labels, key, keep='both', ms, sr))
         [(array([ 32.,  34.]), array([1, ([0.2, 0.8], [0.3, 0.7])], dtype=object)),
          (array([ 34.,  36.]), array([0, ([0.51, 0.49], [0.55, 0.45])], dtype=object)),
          (array([ 36.,  37.]), array([1, ([0.4, 0.6],)], dtype=object))]
@@ -975,17 +990,13 @@ class ContiguousSequenceLabels(SequenceLabels):
         params = super(ContiguousSequenceLabels, cls).from_dense_labels(
             labels, groupby_keyfn, keep, min_start, samplerate, **kwargs
         )
-        if cls == ContiguousSequenceLabels:
-            return cls(*params[:-1])
-        else:
-            return params
+        return cls(*params[:-1]) if cls == ContiguousSequenceLabels else params
 
     def __getitem__(self, idx):
         res = super(ContiguousSequenceLabels, self).__getitem__(idx)
-        if self.__class__ is ContiguousSequenceLabels:
-            return self.__class__(*res)
-        else:
-            return res
+        return (
+            self.__class__(*res) if self.__class__ is ContiguousSequenceLabels else res
+        )
 
     @classmethod
     def from_mpeg7(cls, filepath, use_tags='ns', **kwargs):
@@ -1004,14 +1015,11 @@ class ContiguousSequenceLabels(SequenceLabels):
         res = super(ContiguousSequenceLabels, cls).from_mpeg7(
             filepath, use_tags=use_tags, **kwargs
         )
-        if cls == ContiguousSequenceLabels:
-            return cls(*res)
-        else:
-            return res
+        return cls(*res) if cls == ContiguousSequenceLabels else res
 
     def calc_raw_viterbi_priors(
-        self, state_keyfn=lambda label: label, samplerate=None, round_to_int=False
-    ):
+            self, state_keyfn=lambda label: label, samplerate=None, round_to_int=False
+    ):  # yapf: disable
         """ Calculate raw priors for Markov states of labels. aka raw Viterbi priors.
 
         The Markov state corresponding to a label is determined by the calling the provided
@@ -1026,12 +1034,13 @@ class ContiguousSequenceLabels(SequenceLabels):
             samplerate at which to calculate the priors.
             This is the safe parameter to change if you are getting priors that are floats
             Although, it does not guarantee that the results will be float, but,
-            with an appropriately safe value chosen, you can force it to int later by passing `round_to_int` as True.
+            with an appropriately safe value chosen, you can force it to int later by
+            passing `round_to_int` as True.
         round_to_int: bool, (default: False)
             Whether or not to round the priors calculations to integer values.
             This will be a hard and unsafe casting (yet following rounding rules), so
-            only do this when it is safe to discard all values after the decimal point for each start/end.
-            Try setting appropriate samplerate first to fix floating priors.
+            only do this when it is safe to discard all values after the decimal point for
+            each start/end. Try setting appropriate samplerate first to fix floating priors.
 
         Returns
         -------
@@ -1045,7 +1054,7 @@ class ContiguousSequenceLabels(SequenceLabels):
             with number of occurrences (at the given `samplerate`) for each of the
             `unique_states`.
         """
-        states = np.array(list(map(state_keyfn, self.labels)))
+        states = np.array([state_keyfn(label) for label in self.labels])
         unique_states = np.array(sorted(set(states)))
 
         state_ids = unique_states[np.newaxis, :] == states[..., np.newaxis]
@@ -1054,7 +1063,7 @@ class ContiguousSequenceLabels(SequenceLabels):
             durations = np.diff(self.starts_ends, axis=1)[..., 0]
 
             # FIXME: What should be done if durations is float with digits after decimal?
-            # They won't make much difference since all the priors are going to get normalized later.
+            # They won't make much difference since all the priors are going to get normalized later
             # HACK: round the durations to int, and hence also all the priors later
             if round_to_int:
                 durations = np.round(durations, 0).astype(np.int)
@@ -1067,8 +1076,9 @@ class ContiguousSequenceLabels(SequenceLabels):
         confmatcat = confusion_matrix_forcategorical
         trans = confmatcat(state_ids[:-1, ...],
                            state_ids[1:, ...]).astype(durations.dtype)
-        self_trans = (priors - state_ids.astype(np.int).sum(axis=0)
-                      )  # e.g. segment of length 5 has 4 transitions to the same state
+
+        # segment of length 5 has 4 transitions to the same state
+        self_trans = priors - state_ids.astype(np.int).sum(axis=0)
 
         # NOTE: Consecutive segments with the same state_id would
         # already have been accounted for in the confusion_matrix calculation
@@ -1105,9 +1115,9 @@ def normalize_raw_viterbi_priors(init, tran):
 
 
 def viterbi_smoothing(obs, init, tran, amin=1e-15):
-    obs = np.log(np.maximum(amin, obs))  # pylint: disable=no-member
-    init = np.log(np.maximum(amin, init))  # pylint: disable=no-member
-    tran = np.log(np.maximum(amin, tran))  # pylint: disable=no-member
+    obs = np.log(np.maximum(amin, obs))
+    init = np.log(np.maximum(amin, init))
+    tran = np.log(np.maximum(amin, tran))
 
     backpt = np.ones_like(obs, dtype=np.int) * -1
     trellis_last = init + obs[0, ...]

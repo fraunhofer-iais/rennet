@@ -16,7 +16,8 @@ persistent=yes
 
 # List of plugins (as comma separated values of python modules names) to load,
 # usually to register additional checkers.
-load-plugins=
+load-plugins=pylint.extensions.bad_builtin,pylint.extensions.check_elif,pylint.extensions.docstyle,pylint.extensions.emptystring,pylint.extensions.mccabe,pylint.extensions.overlapping_exceptions,
+#pylint.extensions.docparams
 
 # Use multiple processes to speed up Pylint.
 jobs=4
@@ -48,7 +49,7 @@ confidence=
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
 # multiple time. See also the "--disable" option for examples.
-#enable=
+enable=locally-disabled
 
 # Disable the message, report, category or checker with the given id(s). You
 # can either give multiple identifiers separated by comma (,) or put this
@@ -59,7 +60,7 @@ confidence=
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use"--disable=all --enable=classes
 # --disable=W"
-disable=import-star-module-level,unichr-builtin,buffer-builtin,intern-builtin,old-division,unicode-builtin,suppressed-message,range-builtin-not-iterating,old-raise-syntax,cmp-builtin,dict-iter-method,setslice-method,long-suffix,reduce-builtin,coerce-builtin,backtick,metaclass-assignment,getslice-method,round-builtin,indexing-exception,zip-builtin-not-iterating,old-octal-literal,xrange-builtin,reload-builtin,input-builtin,long-builtin,basestring-builtin,standarderror-builtin,map-builtin-not-iterating,dict-view-method,print-statement,file-builtin,cmp-method,no-absolute-import,nonzero-method,old-ne-operator,apply-builtin,next-method-called,execfile-builtin,unpacking-in-except,delslice-method,parameter-unpacking,filter-builtin-not-iterating,oct-method,useless-suppression,hex-method,coerce-method,raising-string,raw_input-builtin,using-cmp-argument,C,W0511
+disable=import-star-module-level,unichr-builtin,buffer-builtin,intern-builtin,old-division,unicode-builtin,suppressed-message,range-builtin-not-iterating,old-raise-syntax,cmp-builtin,dict-iter-method,setslice-method,long-suffix,reduce-builtin,coerce-builtin,backtick,metaclass-assignment,getslice-method,round-builtin,indexing-exception,zip-builtin-not-iterating,old-octal-literal,xrange-builtin,reload-builtin,input-builtin,long-builtin,basestring-builtin,standarderror-builtin,map-builtin-not-iterating,dict-view-method,print-statement,file-builtin,cmp-method,no-absolute-import,nonzero-method,old-ne-operator,apply-builtin,next-method-called,execfile-builtin,unpacking-in-except,delslice-method,parameter-unpacking,filter-builtin-not-iterating,oct-method,useless-suppression,hex-method,coerce-method,raising-string,raw_input-builtin,using-cmp-argument,W0511
 
 
 [REPORTS]
@@ -95,7 +96,7 @@ evaluation=10.0 - ((float(5 * error + warning + refactor + convention) / stateme
 bad-functions=map,filter
 
 # Good variable names which should always be accepted, separated by a comma
-good-names=i,j,k,ex,Run,_
+good-names=i,j,k,x,y,xy,z,t,u,v,ex,Run,_,f,fp,l,n,fn,Xtrue,Ytrue,Xpred,Ypred,s,e,se,p,r,sr,at,T
 
 # Bad variable names which should always be refused, separated by a comma
 bad-names=foo,bar,baz,toto,tutu,tata
@@ -105,7 +106,7 @@ bad-names=foo,bar,baz,toto,tutu,tata
 name-group=
 
 # Include a hint for the correct naming format with invalid-name
-include-naming-hint=no
+include-naming-hint=yes
 
 # Regular expression matching correct inline iteration names
 inlinevar-rgx=[A-Za-z_][A-Za-z0-9_]*$

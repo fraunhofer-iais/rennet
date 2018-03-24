@@ -77,14 +77,9 @@ def get_codec():
     # Returns
         False or executable: bool or str : executable of the codec if available
     """
-    if os.name == "nt":
-        return which("ffmpeg.exe")
-    else:
-        ffmpeg = which("ffmpeg")
-        if not ffmpeg:
-            return which("avconv")
-        else:
-            return ffmpeg
+    return (
+        which("ffmpeg.exe") if os.name == "nt" else (which("ffmpeg") or which("avconv"))
+    )
 
 
 def get_sph2pipe():
@@ -93,10 +88,7 @@ def get_sph2pipe():
     # Retruns
         False, or executable: bool or str : path to sph2pipe
     """
-    if os.name == "nt":
-        return which("sph2pipe.exe")
-    else:
-        return which("sph2pipe")
+    return which("sph2pipe.exe") if os.name == "nt" else which("sph2pipe")
 
 
 CODEC_EXEC = get_codec()  # NOTE: Available codec; False when none available
@@ -166,7 +158,7 @@ def read_wavefile_metadata(filepath):
 
 
 def read_sph_metadata(filepath):
-    """
+    """Read metadata of SPHERE audio files
     TODO: [ ] Add documentation
     NOTE: Tested and developed specifically for the Fisher Dataset
     """
@@ -222,8 +214,8 @@ def read_sph_metadata(filepath):
         )
 
 
-def read_audio_metadata_codec(filepath):
-    """
+def read_audio_metadata_codec(filepath):  # pylint: disable=too-complex
+    """Read metadata of audio using a codec
     TODO: [A] Add documentation
     """
     import re
@@ -245,7 +237,7 @@ def read_audio_metadata_codec(filepath):
         proc.stdout.readline()
         proc.terminate()
 
-        # Ref: http://stackoverflow.com/questions/19699367/unicodedecodeerror-utf-8-codec-cant-decode-byte
+        # Ref: http://stackoverflow.com/questions/19699367
         infos = proc.stderr.read().decode('ISO-8859-1')
         del proc
 
@@ -361,11 +353,10 @@ def get_audio_metadata(filepath):
 
     # TODO: [ ] Do better reading of audiometadata
     try:
-        # possibly a sphere file
-        if filepath.lower().endswith('sph'):
-            return read_sph_metadata(filepath)
-        else:  # if it is a WAV file (most likely)
-            return read_wavefile_metadata(filepath)
+        return (
+            read_sph_metadata(filepath)
+            if filepath.lower().endswith('sph') else read_wavefile_metadata(filepath)
+        )
     except ValueError:
         # Was not a wavefile
         if get_codec():
@@ -389,10 +380,7 @@ def load_audio(filepath, samplerate=8000, mono=True, return_samplerate=False, **
     """
     data, sr = lr.core.load(filepath, sr=samplerate, mono=mono, **kwargs)
     data = data.T  # librosa loads data in shape (n, ) or (2, n), which is stupid
-    if return_samplerate:
-        return data, sr
-    else:
-        return data
+    return (data, sr) if return_samplerate else data
 
 
 def powspectrogram(y, n_fft, hop_len, win_len=None, window='hann'):
@@ -451,4 +439,4 @@ def logmelspectrogram(  # pylint: disable=too-many-arguments
             **kwargs
         )
 
-    return np.log10(np.maximum(amin, melspec))  # pylint: disable=no-member
+    return np.log10(np.maximum(amin, melspec))

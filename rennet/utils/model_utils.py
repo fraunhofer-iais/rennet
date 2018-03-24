@@ -17,8 +17,8 @@
 Created: 08-11-2017
 """
 from __future__ import print_function, division
-import numpy as np
 import warnings
+import numpy as np
 
 
 class BaseRennetModel(object):
@@ -51,11 +51,11 @@ def mergepreds_avg(preds, weights=None, **kwargs):  # pylint: disable=unused-arg
     ----------
     preds: list of numpy.ndarrays, checked, so far, only for softmax outputs
         - All should be of the same shape.
-    weights:
-        - If it is None, all predictions are given the weight of 1.
-        - If it is int or float, all predictions are given this weight. Unnecessary, but supported.
-        - If it is a list of ints or floats, it's first axis's length should be equal to the number of predictions.
-            + `weights` can, then also be a numpy.ndarray, but then the second axis onwards shape should match a prediction's shape.
+    weights: None, int or float, or list of int or floats
+        - If None, all predictions are given the weight of 1.
+        - If int or float, all predictions are given this weight. Unnecessary, but supported.
+        - If a list of ints or floats, the first axis's length should be equal to len(preds).
+            + `weights` can also be a numpy.ndarray, the weights.shape[1:] should match preds.shape
     """
     # IDEA: handle single pred provided as preds.
     # `numpy.stack` will probably raise errors for all the possible mishaps from the user, I guess.
@@ -67,8 +67,8 @@ def mergepreds_avg(preds, weights=None, **kwargs):  # pylint: disable=unused-arg
         assert len(weights) == len(preds), "provide weights for each pred: "+\
             "not {} vs expected {}".format(len(weights), len(preds))
 
-        for i, w in enumerate(weights):
-            p[..., i] *= w
+        for i, weight in enumerate(weights):
+            p[..., i] *= weight
 
     p = p.sum(axis=-1)
 
@@ -78,7 +78,7 @@ def mergepreds_avg(preds, weights=None, **kwargs):  # pylint: disable=unused-arg
 def validate_rennet_version(minversion, srcversion):
     from rennet import __version__ as curversion
 
-    getversion = lambda version: tuple(map(int, version.split('.')))
+    getversion = lambda version: tuple(int(i) for i in version.split('.'))
     _curversion = getversion(curversion)
     _minversion = getversion(minversion)
     _srcversion = getversion(srcversion)

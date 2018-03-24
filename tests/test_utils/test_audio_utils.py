@@ -17,16 +17,16 @@
 Created: 18-08-2016
 """
 from __future__ import print_function, division
-import pytest
-from numpy.testing import assert_almost_equal
 from glob import glob
 from tempfile import NamedTemporaryFile
 from math import ceil
+import pytest
+from numpy.testing import assert_almost_equal
 
-import rennet.utils.audio_utils as au  # pylint: disable=import-error
-import rennet.utils.pydub_utils as pu  # pylint: disable=import-error
+import rennet.utils.audio_utils as au
+import rennet.utils.pydub_utils as pu
 
-# pylint: disable=redefined-outer-name
+# pylint: disable=redefined-outer-name, invalid-name
 ValidAudioFile = au.AudioMetadata
 
 test_1_wav = ValidAudioFile(
@@ -89,7 +89,7 @@ def valid_wav_files(request):
     scope="module", params=[test_1_mp3, test_1_mp4, test_1_wav, test_1_96k_wav]
 )
 def valid_media_files(request):
-    """
+    """ All valid media files
     ultimate one to pass for get_samplerate(...) ... etc
     """
     return request.param
@@ -103,7 +103,7 @@ def test_valid_wav_metadata(valid_wav_files):
     assert au.read_wavefile_metadata(filepath) == valid_wav_files
 
 
-# AUDIOMETADATA ############################################### AUDIOMETADATA #
+# AUDIOMETADATA ######################################################## AUDIOMETADATA #
 @pytest.mark.skipif(not au.get_codec(), reason="No FFMPEG or AVCONV found")
 def test_valid_media_metadata_codec(valid_media_files):
     """ test au.read_audio_metadata_codec(...)
@@ -116,8 +116,8 @@ def test_valid_media_metadata_codec(valid_media_files):
     correct_noc = valid_media_files.nchannels
     correct_duration = valid_media_files.seconds
 
-    # TODO: [A] Test for raised warnings
-    metadata = au.read_audio_metadata_codec(filepath)
+    with pytest.warns(RuntimeWarning):
+        metadata = au.read_audio_metadata_codec(filepath)
 
     assert metadata.samplerate == correct_sr
     assert metadata.nchannels == correct_noc
@@ -126,11 +126,11 @@ def test_valid_media_metadata_codec(valid_media_files):
 
 
 @pytest.mark.skipif(not au.get_codec(), reason="No FFMPEG or AVCONV found")
+@pytest.mark.filterwarnings('ignore:Metadata')
 def test_valid_audio_metadata(valid_media_files):
     """ Test the audio_utils.get_audio_metadata(...) for valid wav file"""
     filepath = valid_media_files.filepath
     fmt = valid_media_files.format
-
     metadata = au.get_audio_metadata(filepath)
     if fmt == 'wav':
         assert valid_media_files == metadata
@@ -152,7 +152,7 @@ def test_valid_audio_metadata(valid_media_files):
 #         assert True
 
 
-# LOAD_AUDIO ##################################################### LOAD_AUDIO #
+# LOAD_AUDIO ############################################################## LOAD_AUDIO #
 def test_load_audio_as_is(valid_media_files):
     correct_sr = valid_media_files.samplerate
     correct_ns = valid_media_files.nsamples
@@ -190,12 +190,13 @@ def test_load_audio_with_defaults(valid_media_files):
         assert data.shape == (correct_ns, )  # mono
 
     data_defaults = au.load_audio(filepath)
-    assert data_defaults.shape == data.shape  # pylint: disable=no-member
+    assert data_defaults.shape == data.shape
     assert_almost_equal(data_defaults, data)
 
 
-# PYDUB_UTILS ################################################### PYDUB_UTILS #
+# PYDUB_UTILS ############################################################ PYDUB_UTILS #
 @pytest.mark.skipif(not au.get_codec(), reason="No FFMPEG or AVCONV found")
+@pytest.mark.filterwarnings('ignore:Metadata')
 def test_AudioIO_from_audiometadata(valid_media_files):
     """Test if the returned updated metadata is accurate"""
 
@@ -216,6 +217,7 @@ def test_AudioIO_from_audiometadata(valid_media_files):
 
 
 @pytest.mark.skipif(not au.get_codec(), reason="No FFMPEG or AVCONV found")
+@pytest.mark.filterwarnings('ignore:Metadata')
 def test_AudioIO_get_numpy_data(valid_media_files):
     """ Test for correct nsamples and nchannels """
 
@@ -250,6 +252,7 @@ def test_AudioIO_get_numpy_data(valid_media_files):
 #         assert True
 
 
+@pytest.mark.filterwarnings('ignore:Metadata')
 def test_AudioIO_export_standard(valid_media_files):
     vml = valid_media_files
     if vml.samplerate > 48000:
@@ -257,7 +260,7 @@ def test_AudioIO_export_standard(valid_media_files):
     s, um = pu.AudioIO.from_audiometadata(vml)
 
     with NamedTemporaryFile() as tfp:
-        s.export_standard(tfp)  # pylint: disable=no-member
+        s.export_standard(tfp)
         nm = au.get_audio_metadata(tfp.name)
         assert nm.samplerate == 16000
         assert nm.nchannels == 1

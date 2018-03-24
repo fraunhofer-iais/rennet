@@ -93,10 +93,10 @@ class Annotations(lu.SequenceLabels):
 
     def __getitem__(self, idx):
         args = super(Annotations, self).__getitem__(idx)
-        if self.__class__ is Annotations:
-            return self.__class__(self.sourcefile, *args)
-        else:
-            return args
+        return (
+            self.__class__(self.sourcefile, *args)
+            if self.__class__ is Annotations else args
+        )
 
     def __str__(self):
         s = "Source filepath:\n{}\n".format(self.sourcefile)
