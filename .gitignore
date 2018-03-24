@@ -95,3 +95,4 @@ rennet/utils/sph*/sph2pipe
 .temp
 .rennet_env
 outputs/*.*
+.pytest_cache
