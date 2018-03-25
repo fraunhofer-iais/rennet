@@ -228,13 +228,12 @@ class BaseWithContextPrepper(BaseH5ChunkPrepper):  # pylint: disable=abstract-me
                 label = label[:, self.dctx:self.dctx + 1, ...]
             else:
                 label = label[:, self.dctx - self.lctx:self.dctx + self.lctx + 1, ...]
+
+            label = self.lctxfn(label)
         else:
             label = label[:, np.newaxis, ...]
 
-        return (
-            (data[..., None], self.lctxfn(label))
-            if self.add_channel else (data, self.lctxfn(label))
-        )
+        return (data[..., None], label) if self.add_channel else (data, label)
 
 
 # NORMALIZERS ################################################### NORMALIZERS #
