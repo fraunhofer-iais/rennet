@@ -18,10 +18,13 @@ Created: 29-08-2016
 """
 from __future__ import print_function, division, absolute_import
 import warnings
+from collections import namedtuple
 import numpy as np
+import h5py as h
 
 from ..utils import label_utils as lu
 from ..utils.py_utils import BaseSlotsOnlyClass
+from ..utils import h5_utils as hu
 
 samples_for_labelsat = lu.samples_for_labelsat  # pylint: disable=invalid-name
 times_for_labelsat = lu.times_for_labelsat  # pylint: disable=invalid-name
@@ -164,7 +167,7 @@ class ActiveSpeakers(lu.ContiguousSequenceLabels):
             labels[labels > 1] = 1
             if warn_duplicates:
                 warnings.warn(
-                    "Some speakers may have duplicate annotations for file {}.\nDUPLICATES IGNORED".
+                    "Some speakers may have duplicate annotations for file\n{}\nDUPLICATES IGNORED".
                     format(ann.sourcefile)
                 )
 
@@ -202,3 +205,171 @@ class ActiveSpeakers(lu.ContiguousSequenceLabels):
             self.__class__(self.sourcefile, self.speakers, *args)
             if self.__class__ is ActiveSpeakers else args
         )
+
+
+# INPUTS PROVIDERS ################################################## INPUTS PROVIDERS #
+
+Chunking = namedtuple(
+    'Chunking', [
+        'datapath',
+        'dataslice',
+        'swapchannels',
+        'labelpath',
+        'labelslice',
+    ]
+)
+
+
+class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
+    def __init__(
+            self,
+            filepath,
+            audios_root='audios',
+            labels_root='labels',
+            duplicate_swap_channels=True,
+            **kwargs
+    ):  # yapf: disable
+
+        self.audios_root = audios_root
+        self.labels_root = labels_root
+
+        self._conversations = None
+        self._dupswap_channels = duplicate_swap_channels
+
+        self._totlen = None
+        self._chunkings = None
+
+        super(H5ChunkingsReader, self).__init__(filepath, **kwargs)
+
+    def _read_all_conversations(self):
+        conversations = tuple()
+
+        # NOTE: Assuming labels and audios have the same group and dset names
+        # use audio root to visit all the groups, and subsequent conversations
+        # They group/
+        with h.File(self.filepath, 'r') as f:
+            root = f[self.audios_root]
+            conversations += tuple(
+                "{}/{}".format(group, conv) for group in root.keys()
+                for conv in root[group].keys()
+            )
+
+        return conversations
+
+    @property
+    def conversations(self):
+        if self._conversations is None:
+            self._conversations = self._read_all_conversations()
+        return self._conversations
+
+    @conversations.setter
+    def conversations(self, value):
+        self._conversations = value
+
+    @property
+    def totlen(self):
+        if self._totlen is None:
+            self._read_all_chunkings()
+
+        return self._totlen
+
+    def _read_all_chunkings(self):
+        # NOTE: We use the chunking info from the audios
+        # and use the same for labels.
+        chunkings = []
+        total_len = 0
+
+        with h.File(self.filepath, 'r') as f:
+            audior = f[self.audios_root]
+            labelr = f[self.labels_root]
+
+            for conversation in sorted(self.conversations):
+                audiod = audior[conversation]  # h5 Dataset
+                labeld = labelr[conversation]  # h5 Dataset
+
+                totlen = audiod.shape[0]
+
+                starts = np.arange(0, totlen, audiod.chunks[0])
+                ends = np.empty_like(starts)
+                ends[:-1] = starts[1:]
+                ends[-1] = totlen
+
+                total_len += totlen
+                chunkings.extend(
+                    Chunking(
+                        datapath=audiod.name,
+                        dataslice=np.s_[s:e, ...],
+                        swapchannels=False,
+                        labelpath=labeld.name,
+                        labelslice=np.s_[s:e, ...]
+                    ) for s, e in zip(starts, ends)
+                )
+
+                if self._dupswap_channels:
+                    if len(audiod.shape) < 3 or audiod.shape[-1] != 2:
+                        msg = "Audio data does not seem to have 2 channels. "
+                        msg += "Found chunk of shape: {}\n".format(audiod.shape)
+                        msg += "Channels are expected to be the last dimension. "
+                        msg += "Only stereo channels are supported."
+                        raise ValueError(msg)
+
+                    total_len += totlen
+                    chunkings.extend(
+                        Chunking(
+                            datapath=audiod.name,
+                            dataslice=np.s_[s:e, ...],
+                            swapchannels=True,
+                            labelpath=labeld.name,
+                            labelslice=np.s_[s:e, ...]
+                        ) for s, e in zip(starts, ends)
+                    )
+
+        self._totlen = total_len
+        self._chunkings = chunkings
+
+    @property
+    def chunkings(self):
+        if self._chunkings is None:
+            self._read_all_chunkings()
+
+        return self._chunkings
+
+    @classmethod
+    def for_conversations_at(  # pylint: disable=too-many-arguments
+            cls,
+            filepath,
+            at=np.s_[:],
+            audios_root='audios',
+            labels_root='labels',
+            duplicate_swap_channels=True,
+            **kwargs
+    ):  # yapf: disable
+        obj = cls(
+            filepath,
+            audios_root=audios_root,
+            labels_root=labels_root,
+            duplicate_swap_channels=duplicate_swap_channels,
+            **kwargs
+        )
+
+        if at == np.s_[:]:
+            return obj
+
+        allconversations = np.sort(obj.conversations)
+
+        try:
+            conversations_at = allconversations[at]
+        except IndexError:
+            print("\nTotal number of CallIDs: {}\n".format(len(allconversations)))
+            raise
+
+        if not isinstance(conversations_at, np.ndarray):
+            # HACK: single conversation
+            obj.conversations = (conversations_at, )
+        else:
+            obj.conversations = tuple(conversations_at)
+
+        return obj
+
+
+# TODO: set add_channel_at_end to False by default
