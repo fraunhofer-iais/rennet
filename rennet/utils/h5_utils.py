@@ -144,8 +144,10 @@ class BaseH5ChunkPrepper(object):
         )
 
         return self.prep_data(
-            data, only_labels=only_labels, **kwargs
-        ), self.prep_label(label, **kwargs)
+            data, only_labels=only_labels, chunking=chunking, **kwargs
+        ), self.prep_label(
+            label, chunking=chunking, **kwargs
+        )
 
 
 class AsIsChunkPrepper(BaseH5ChunkPrepper):

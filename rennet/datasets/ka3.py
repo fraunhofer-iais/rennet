@@ -372,4 +372,80 @@ class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
         return obj
 
 
-# TODO: set add_channel_at_end to False by default
+class CategoricalLabelsPrepper(hu.AsIsChunkPrepper):
+    def prep_label(self, label, **kwargs):
+        return label.astype(float)  # NOTE: Assuming stored labels are categorical
+
+class FrameWithContextSubsamplingInputsProvider(  # pylint: disable=too-many-ancestors
+        H5ChunkingsReader,
+        CategoricalLabelsPrepper,
+        hu.BaseWithContextClassSubsamplingSteppedInputsProvider,
+):  # yapf: disable
+    pass
+
+
+class ChunkMeanVarianceNormalizingChannelSwappingCategoricalPrepper(
+        hu.BaseChunkMeanVarianceNormalizer,
+        CategoricalLabelsPrepper,
+):  # yapf: disable
+    def prep_data(self, data, only_labels=False, chunking=None, **kwargs):  # pylint: disable=arguments-differ
+        if only_labels:  # This is dummy data, if only_labels
+            return data
+
+        if chunking is not None and chunking.swapchannels:
+            data = data[..., ::-1]  # NOTE: Assuming last dim is for channels
+
+        return self.normalize_data(data, **kwargs)
+
+
+class ChMVNChannelSwappingFrameWithContextSubsamplingInputsProvider(  # pylint: disable=too-many-ancestors
+        ChunkMeanVarianceNormalizingChannelSwappingCategoricalPrepper,
+        FrameWithContextSubsamplingInputsProvider,
+):  # yapf: disable
+    def __init__(  # pylint: disable=too-many-arguments, too-many-locals
+            self,
+            filepath,
+
+            # audio ops
+            audios_root='audios',
+            data_context=0,
+            duplicate_swap_channels=True,
+            mean_it=False,
+            std_it=False,
+            add_channel_at_end=False,  # working with stereo
+
+            # label ops
+            labels_root='labels',
+            label_subcontext=0,  # 0 for choosing only the center label as label
+            label_from_subcontext_fn=hu.dominant_label_for_subcontext,
+
+            # sub-sampling ops
+            classkeyfn=np.argmax,  # for categorical labels
+            class_subsample_to_ratios=1.,  # float, tuple or dict, default keeps all
+
+            # flow ops
+            npasses=1,
+            steps_per_chunk=1,
+            shuffle_seed=None,
+            **kwargs):
+
+        # Mainly here for documentation and auto-completion
+        sup = super(ChMVNChannelSwappingFrameWithContextSubsamplingInputsProvider, self)
+        sup.__init__(
+            filepath,
+            audios_root=audios_root,
+            labels_root=labels_root,
+            data_context=data_context,
+            label_subcontext=label_subcontext,
+            label_from_subcontext_fn=label_from_subcontext_fn,
+            classkeyfn=classkeyfn,
+            class_subsample_to_ratios=class_subsample_to_ratios,
+            steps_per_chunk=steps_per_chunk,
+            shuffle_seed=shuffle_seed,
+            npasses=npasses,
+            add_channel_at_end=add_channel_at_end,
+            duplicate_swap_channels=duplicate_swap_channels,
+            mean_it=mean_it,
+            std_it=std_it,
+            **kwargs
+        )
