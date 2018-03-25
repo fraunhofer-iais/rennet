@@ -582,7 +582,7 @@ class BaseClassSubsamplingInputsProvider(BaseInputsProvider):  # pylint: disable
 
         keeps = self.maybe_shuffle_array(keeps, aseed)
 
-        if not keeps:
+        if keeps.shape[0] < 1:
             warning(
                 "Sub-sampling has resulted in zero-length selection, "
                 "ratios used: {} from given {}".format(self.ratios, self._user_ratios)
@@ -748,7 +748,7 @@ class BaseClassSubsamplingSteppedInputsProvider(  # pylint: disable=abstract-met
             kseed, seed = nr.randint(41184535, size=2)
 
         keeps = self.keeping_decision(inputs, keep_seed=kseed, **kwargs)
-        if not keeps:
+        if keeps.shape[0] < 1:
             warning(
                 "Sub-sampling has resulted in zero-length selection, "
                 "ratios used: {} from given {}".format(self.ratios, self._user_ratios)
@@ -909,7 +909,7 @@ class BaseWithContextClassSubsamplingSteppedInputsProvider(  # pylint: disable=a
 
             # decide which to keep
             keeps = self.keeping_decision(inputs, keep_seed=kseed, **kwargs)
-            if not keeps:
+            if keeps.shape[0] < 1:
                 warning(
                     "Sub-sampling has resulted in zero-length selection, "
                     "ratios used: {} from given {}".format(
