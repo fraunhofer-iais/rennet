@@ -44,8 +44,7 @@ INSTALL_REQUIRES = [
     "matplotlib >= 2.0.2",
     "librosa >= 0.5.0",
     "h5py >= 2.7.0",
-    "tensorflow >= 1.0.0",
-    "keras >= 2.0.2",
+    "tensorflow >= 1.4.0",
     "pydub >= 0.18.0",
     "pympi-ling >= 1.69",
 ]

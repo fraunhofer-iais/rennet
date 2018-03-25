@@ -22,7 +22,7 @@ import os
 from itertools import chain, repeat
 import numpy as np
 from h5py import File as hFile
-from keras.models import load_model
+import tensorflow
 
 from .utils import model_utils as mu
 from .utils import audio_utils as au
@@ -35,6 +35,8 @@ from .utils.py_utils import makedirs_with_existok
 # class instance.
 # Inspiration: Keras.
 # Problems: Time, Worthiness for such limited set of tasks, Debugging.
+
+load_model = tensorflow.keras.models.load_model  # pylint: disable=invalid-name
 
 
 # DOUBLE TALK DETECTION #######################################################

@@ -21,11 +21,12 @@ import pytest
 import numpy as np
 from numpy.testing import assert_almost_equal
 from sklearn.metrics import confusion_matrix as ext_confusionmatrix
-from keras.utils.np_utils import to_categorical as ext_tocategorical
+import tensorflow
 
 from rennet.utils import np_utils as nu
 
 # pylint: disable=redefined-outer-name, invalid-name, missing-docstring
+ext_tocategorical = tensorflow.keras.utils.to_categorical
 
 
 @pytest.fixture(scope='module')

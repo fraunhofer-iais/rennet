@@ -21,15 +21,19 @@ from os.path import join as pjoin
 from six.moves import zip
 import numpy as np
 from h5py import File as hFile
-
-from keras.callbacks import Callback, ModelCheckpoint, TensorBoard
-from keras.models import Sequential, Model
-import keras.layers as kl
+import tensorflow
 
 from .np_utils import (
     to_categorical, confusion_matrix_forcategorical, normalize_confusion_matrix,
     printoptions, print_prec_rec
 )
+
+kl = tensorflow.keras.layers  # pylint: disable=invalid-name
+Callback = tensorflow.keras.callbacks.Callback
+ModelCheckpoint = tensorflow.keras.callbacks.ModelCheckpoint
+TensorBoard = tensorflow.keras.callbacks.TensorBoard
+Sequential = tensorflow.keras.Sequential
+Model = tensorflow.keras.Model
 
 
 # CALLBACKS ####################################################### CALLBACKS #
