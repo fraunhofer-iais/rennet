@@ -65,7 +65,7 @@ def plot_multi(  # pylint: disable=too-many-arguments, too-many-locals, too-many
     elif func == "pie":
         for i, x_i in enumerate(x_list):
             axs[at(i)].pie(x_i, labels=labels[i], *args, **kwargs)
-            axs[at(i)].axsis("equal")
+            axs[at(i)].axis("equal")
     elif func == "hist":
         for i, x_i in enumerate(x_list):
             axs[at(i)].hist(x_i, *args, **kwargs)
@@ -132,7 +132,7 @@ def plot_speclike(  # pylint: disable=too-many-arguments
     plt.figure(figsize=figsize)
     specshow(
         np.vstack(reversed(orderedlist)),
-        x_axsis=x_axsis,
+        x_axis=x_axsis,
         sr=sr,
         hop_length=hop_len,
         cmap=cmap,
