@@ -61,6 +61,8 @@ class ChattyConfusionHistory(Callback):
             self.export_to = None
 
         self.trues, self.nsteps = self._read_trues()
+        self.nsteps = kwargs.get('steps_per_epoch', self.nsteps) or self.nsteps
+
         self.prefixtr = "{:<9} "
 
         super(ChattyConfusionHistory, self).__init__()
