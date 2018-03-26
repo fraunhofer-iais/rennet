@@ -250,7 +250,8 @@ class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
         with h.File(self.filepath, 'r') as f:
             root = f[self.audios_root]
             conversations += tuple(
-                "{}/{}".format(group, conv) for group in root.keys()
+                "{}/{}".format(group, conv)
+                for group in root.keys()
                 for conv in root[group].keys()
             )
 
@@ -289,10 +290,11 @@ class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
 
                 totlen = audiod.shape[0]
 
-                starts = np.arange(0, totlen, audiod.chunks[0])
+                chunksize = audiod.chunks[0] if audiod.chunks else totlen
+                starts = np.arange(0, totlen, chunksize)
                 ends = np.empty_like(starts)
-                ends[:-1] = starts[1:]
                 ends[-1] = totlen
+                ends[:-1] = starts[1:]
 
                 total_len += totlen
                 chunkings.extend(
@@ -418,6 +420,7 @@ class ChMVNChannelSwappingFrameWithContextSubsamplingInputsProvider(  # pylint: 
             labels_root='labels',
             label_subcontext=0,  # 0 for choosing only the center label as label
             label_from_subcontext_fn=hu.dominant_label_for_subcontext,
+            nclasses=3,
 
             # sub-sampling ops
             classkeyfn=np.argmax,  # for categorical labels
@@ -447,5 +450,6 @@ class ChMVNChannelSwappingFrameWithContextSubsamplingInputsProvider(  # pylint: 
             duplicate_swap_channels=duplicate_swap_channels,
             mean_it=mean_it,
             std_it=std_it,
+            nclasses=nclasses,
             **kwargs
         )
