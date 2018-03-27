@@ -187,34 +187,40 @@ model_checkpoint_pattern = MODEL_CHECKPOINT_PATTERN  # pylint: disable=invalid-n
 
 
 def create_callbacks(
-        inputs_provider,
-        activity_dir,
-        epochs_per_pass,
+        inputs_provider=None,
+        activity_dir=None,
+        epochs_per_pass=None,
         checkpoints_pattern=MODEL_CHECKPOINT_PATTERN,
         **kwargs
 ):  # yapf: disable
-    return [
-        ModelCheckpoint(
-            pjoin(activity_dir, checkpoints_pattern),
-            save_best_only=False,
-            save_weights_only=False,
-            period=1,
-            verbose=0,
-        ),
-        TensorBoard(
-            log_dir=activity_dir,
-            histogram_freq=1,  # FIXME: may not work with val data as generator
-            write_images=True,
-            write_graph=False,
-        ),
-        ChattyConfusionHistory(
-            inputs_provider,
-            epochs_per_pass=epochs_per_pass,
-            export_dir=activity_dir,
-            **kwargs
-        ),
-        # IDEA: A predictions saver at the end of training?
-    ]
+    callbacks = []
+    if activity_dir:
+        callbacks += [
+            ModelCheckpoint(
+                pjoin(activity_dir, checkpoints_pattern),
+                save_best_only=False,
+                save_weights_only=False,
+                period=1,
+                verbose=0,
+            ),
+            TensorBoard(
+                log_dir=activity_dir,
+                histogram_freq=1,  # FIXME: may not work with val data as generator
+                write_images=True,
+                write_graph=False,
+            ),
+        ]
+        if inputs_provider:
+            callbacks += [
+                ChattyConfusionHistory(
+                    inputs_provider,
+                    epochs_per_pass=epochs_per_pass,
+                    export_dir=activity_dir,
+                    **kwargs
+                ),
+                # IDEA: A predictions saver at the end of training?
+            ]
+    return callbacks
 
 
 def predict_on_inputs_provider(model, inputs_provider, export_to_dir, **kwargs):
