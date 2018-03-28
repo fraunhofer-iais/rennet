@@ -228,8 +228,7 @@ class BaseWithContextPrepper(BaseH5ChunkPrepper):  # pylint: disable=abstract-me
                 label = label[:, self.dctx:self.dctx + 1, ...]
             else:
                 label = label[:, self.dctx - self.lctx:self.dctx + self.lctx + 1, ...]
-
-            label = self.lctxfn(label)
+                label = self.lctxfn(label)
         else:
             label = label[:, np.newaxis, ...]
 
@@ -540,12 +539,10 @@ class BaseClassSubsamplingInputsProvider(BaseInputsProvider):  # pylint: disable
         # Ref:
         # http://stackoverflow.com/questions/4651683/numpy-grouping-using-itertools-groupby-performance
         # FIXME: Assumes categorical labels ... 2D
-        diff = np.concatenate(
-            [
-                np.ones((1, ) + labels.shape[1:], dtype=labels.dtype),
-                np.diff(labels, axis=0),
-            ]
-        )
+        diff = np.concatenate([
+            np.ones((1, ) + labels.shape[1:], dtype=labels.dtype),
+            np.diff(labels, axis=0),
+        ])
         starts = np.unique(np.where(diff)[0])
         ends = np.concatenate([starts[1:], [len(labels)]])
 
