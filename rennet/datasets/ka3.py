@@ -220,18 +220,20 @@ Chunking = namedtuple(
 )
 
 
-class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
-    def __init__(
+class H5ChunkingsReader(hu.BaseH5ChunkingsReader):  # pylint: disable=too-many-instance-attributes
+    def __init__(  # pylint: disable=too-many-arguments
             self,
             filepath,
             audios_root='audios',
             labels_root='labels',
             duplicate_swap_channels=True,
+            data_context=0,
             **kwargs
     ):  # yapf: disable
 
         self.audios_root = audios_root
         self.labels_root = labels_root
+        self._data_context = 2 * data_context
 
         self._conversations = None
         self._dupswap_channels = duplicate_swap_channels
@@ -239,7 +241,9 @@ class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
         self._totlen = None
         self._chunkings = None
 
-        super(H5ChunkingsReader, self).__init__(filepath, **kwargs)
+        super(H5ChunkingsReader, self).__init__(
+            filepath, data_context=data_context, **kwargs
+        )
 
     def _read_all_conversations(self):
         conversations = tuple()
@@ -274,7 +278,7 @@ class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
 
         return self._totlen
 
-    def _read_all_chunkings(self):
+    def _read_all_chunkings(self):  # pylint: disable=too-many-locals
         # NOTE: We use the chunking info from the audios
         # and use the same for labels.
         chunkings = []
@@ -283,6 +287,18 @@ class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
         with h.File(self.filepath, 'r') as f:
             audior = f[self.audios_root]
             labelr = f[self.labels_root]
+
+            # NOTE: assuming the same chunk_overlap for labels
+            chunkoverlap = audior.attrs.get('chunk_overlap', 0)
+            skipoverlap = chunkoverlap - self._data_context
+            if skipoverlap < 0:
+                skipoverlap = 0
+                warnings.warn(
+                    "data_context is larger than chunk-overlap: {} > {} \n".format(
+                        self._data_context, chunkoverlap
+                    ) + "This may result in missed data-points when reading from:\n{}".
+                    format(self.filepath)
+                )
 
             for conversation in sorted(self.conversations):
                 audiod = audior[conversation]  # h5 Dataset
@@ -295,6 +311,8 @@ class H5ChunkingsReader(hu.BaseH5ChunkingsReader):
                 ends = np.empty_like(starts)
                 ends[-1] = totlen
                 ends[:-1] = starts[1:]
+
+                starts[1:, ...] += skipoverlap
 
                 total_len += totlen
                 chunkings.extend(
