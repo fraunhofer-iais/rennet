@@ -206,7 +206,7 @@ def create_callbacks(
             ),
             TensorBoard(
                 log_dir=activity_dir,
-                histogram_freq=1,  # FIXME: may not work with val data as generator
+                histogram_freq=0,  # FIXME: Does not work with val data as generator
                 write_images=True,
                 write_graph=False,
             ),
