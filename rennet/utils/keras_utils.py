@@ -62,6 +62,7 @@ class ChattyConfusionHistory(Callback):
 
         self.trues, self.nsteps = self._read_trues()
         self.nsteps = kwargs.get('steps_per_epoch', self.nsteps) or self.nsteps
+        self.trues = np.concatenate(self.trues[:self.nsteps])
 
         self.prefixtr = "{:<9} "
 
@@ -78,7 +79,7 @@ class ChattyConfusionHistory(Callback):
             trues.append(x_y_[1])  # as per keras's expectations
             nsteps += 1
 
-        trues = np.concatenate(trues)
+        # trues = np.concatenate(trues)
         return trues, nsteps
 
     def _predict_calculate(self):
