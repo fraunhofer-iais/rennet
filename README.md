@@ -7,18 +7,6 @@ RENNET is the library of useful classes, functions, parsers, etc., (and may be a
 >
 > curdled milk from the stomach of an unweaned calf, containing rennin and used in curdling milk for cheese.
 
-***
-
-> **Note:**
->
-> This library is in active development.
-> Please wait for a release version before using it for a serious project.
-> Please raise an issue if you find any problems in the mean-time via GitHub.
->
-> The upcoming release v0.3 will support both Python 2.7 and Python 3.5 and above,
-> but it will be the last release to do so.
-> After that, only Python 3.6 and above will be supported.
-
 ## Installation
 At the moment, RENNET is not available on PyPI as a downloadable package.
 
