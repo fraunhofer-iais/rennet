@@ -18,6 +18,7 @@ Created: 18-08-2016
 """
 from __future__ import print_function, division
 from glob import glob
+import sys
 from tempfile import NamedTemporaryFile
 from math import ceil
 import pytest
@@ -252,6 +253,10 @@ def test_AudioIO_get_numpy_data(valid_media_files):
 #         assert True
 
 
+@pytest.mark.skipif(
+    sys.platform.startswith("win"),
+    reason="Windows throws issues with reading recently written NameTemporaryFiles"
+)
 @pytest.mark.filterwarnings('ignore:Metadata')
 def test_AudioIO_export_standard(valid_media_files):
     vml = valid_media_files
