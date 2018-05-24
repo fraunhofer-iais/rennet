@@ -2,3 +2,4 @@ include LICENSE.txt
 include README.md
 graft tests
 graft data
+graft examples

@@ -84,7 +84,6 @@ setup_params = {
         "test": TEST_REQUIRES,
         "dev": DEV_REQUIRES,
     },
-    # TODO: Add console-script for annonet, or a better replacement
     # TODO: Add PyPI classifiers and keywords
 }
 

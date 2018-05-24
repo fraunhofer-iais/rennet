@@ -41,12 +41,7 @@ and follow their respective guidelines to install any specific versions of these
 `TODO`
 
 ## Replicating [Double-Talk Detection Paper Submitted to Interspeech 2018]()
-To replicate the experiments done in the full [thesis](http://publica.fraunhofer.de/documents/N-477004.html) behind the [Double-Talk detection paper submitted to Interspeech 2018](), please follow the instructions in `examples/dt-interspeech/README.md`.
-
-`TODO`
-
-## Using `annonet`
-`TODO`
+To replicate the experiments done in the full [thesis](http://publica.fraunhofer.de/documents/N-477004.html) behind the [Double-Talk detection paper submitted to Interspeech 2018](), please follow the instructions in `examples/double-talk-detection/README.md`.
 
 ## License
 Apache License 2.0
