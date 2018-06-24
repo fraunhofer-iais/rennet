@@ -1,7 +1,7 @@
 # Double Talk Detection using [`RENNET`](https://github.com/fraunhofer-iais/rennet)
 
 This repository contains the notebooks and scripts with the actual experiments and workflow steps carried out during Abdullah's research on Double-Talk Detection using Deep Learning during 2016-2017 period.
-The outcomes of the research are part of a [full master's thesis](http://publica.fraunhofer.de/documents/N-477004.html). The results have also been summarized in the [Interspeech 2018 Submission]() **(pending acceptance)**.
+The outcomes of the research are part of a [full master's thesis](http://publica.fraunhofer.de/documents/N-477004.html).
 
 The entire workflow has been implemented in Python.
 `Keras` with `Tensorflow` as the backend was used to implement, train and evaluate the deep learning models.

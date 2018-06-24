@@ -28,8 +28,10 @@ and follow their respective guidelines to install any specific versions of these
 ## Documentation
 `TODO`
 
-## Replicating [Double-Talk Detection Paper Submitted to Interspeech 2018]()
-To replicate the experiments done in the full [thesis](http://publica.fraunhofer.de/documents/N-477004.html) behind the [Double-Talk detection paper submitted to Interspeech 2018](), please follow the instructions in `examples/double-talk-detection/README.md`.
+## Replicating Double-Talk Detection Research
+To replicate the experiments done in the full [thesis](http://publica.fraunhofer.de/documents/N-477004.html) on Double-Talk detection in conversations using deep learning, please follow the instructions in `examples/double-talk-detection/README.md`.
+This also serves as an example workflow of using RENNET for deep learning based
+research in speech segmentation.
 
 ## License
 Apache License 2.0
