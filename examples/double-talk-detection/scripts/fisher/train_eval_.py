@@ -6,7 +6,6 @@ The configuration to use is determined by the environment variable 'ACTIVITY_NAM
 """
 from __future__ import division, print_function
 import os
-import sys
 import numpy as np
 from datetime import datetime as d
 import tensorflow
